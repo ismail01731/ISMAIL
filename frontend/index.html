@@ -1,0 +1,153 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ISMAIL AI</title>
+
+    <meta name="theme-color" content="#ffffff">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- Header -->
+    <header class="top-bar">
+        <div class="brand">
+            <h1>ISMAIL AI</h1>
+            <span class="online-dot"></span>
+        </div>
+<!-- Menu -->
+        <div class="menu-wrapper">
+
+            <button class="menu-button" aria-label="Menu">
+                ⋯
+            </button>
+
+            <div class="menu-dropdown">
+
+                <button id="newChatButton" class="menu-item">
+                    + New chat
+                </button>
+
+                <button id="clearChatButton" class="menu-item">
+                    Clear
+                </button>
+
+                <button id="exportChatButton" class="menu-item">
+                    Export
+                </button>
+
+                <button id="historyMenuButton" class="menu-item">
+                    Chat History
+                </button>
+
+                <button id="clearAllHistoryMenuButton" class="menu-item">
+                    Clear All History
+                </button>
+
+            </div>
+
+        </div>
+
+        <div id="historyPanel" class="history-panel">
+            <div class="history-header">
+                <h3>Chat History</h3>
+
+                <button id="closeHistoryButton" class="close-history-button">
+                    ×
+                </button>
+
+                <button id="clearAllHistoryButton" class="clear-all-history-button">
+                    Clear All
+                </button>
+            </div>
+            <input
+                type="text"
+                id="historySearchInput"
+                class="history-search-input"
+                placeholder="Search chats..."
+                autocomplete="off"
+            >
+
+            <div id="historyList" class="history-list"></div>
+        </div>
+
+    </header>
+
+
+    <!-- Chat -->
+    <main class="chat-container" id="chatContainer">
+
+        <div class="welcome" id="welcome">
+
+            <div class="welcome-logo">
+                ✦
+            </div>
+
+            <h2>How can I help you?</h2>
+
+            <p>
+                Ask anything and chat with ISMAIL AI.
+            </p>
+
+        </div>
+
+    </main>
+
+
+    <!-- Input -->
+    <footer class="chat-input-area">
+
+        <div class="input-wrapper">
+
+            <button
+                class="attach-button"
+                type="button"
+                aria-label="Attach"
+            >
+                +
+            </button>
+
+            <textarea
+                id="messageInput"
+                placeholder="Message ISMAIL AI..."
+                rows="1"
+            ></textarea>
+
+            <button
+                id="sendButton"
+                class="send-button"
+                type="button"
+                aria-label="Send message"
+            >
+                ➤
+            </button>
+
+        </div>
+
+        <div class="input-note">
+            ISMAIL AI can make mistakes. Check important information.
+        </div>
+
+    </footer>
+
+</div>
+
+<script src="script.js"></script>
+
+<script>
+    if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("sw.js");
+    }
+</script>
+
+</body>
+</html>
+

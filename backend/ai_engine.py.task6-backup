@@ -1,0 +1,193 @@
+﻿import json
+import os
+import re
+import urllib.error
+import urllib.request
+from dotenv import load_dotenv
+from backend.knowledge_base import KnowledgeBase
+load_dotenv("config/.env")
+
+
+
+class AIEngine:
+    """Core AI engine and unified question-understanding layer for ISMAIL AI."""
+    KNOWLEDGE_KEYWORDS = {
+        "what is",
+        "what are",
+        "who is",
+        "who was",
+        "explain",
+        "define",
+        "meaning of",
+        "how does",
+        "how do",
+        "why does",
+        "why do",
+        "python",
+        "programming",
+        "physics",
+        "mathematics",
+        "math",
+        "science",
+        "history",
+        "grammar",
+        "algorithm",
+        "database",
+        "computer",
+        "coding",
+    }
+    LIVE_KEYWORDS = {
+        "today",
+        "tonight",
+        "now",
+        "currently",
+        "current",
+        "latest",
+        "recent",
+        "recently",
+        "this week",
+        "this month",
+        "breaking",
+        "news",
+        "weather",
+        "temperature",
+        "forecast",
+        "price",
+        "prices",
+        "stock",
+        "score",
+        "scores",
+        "match",
+        "matches",
+        "population",
+        "fire",
+        "earthquake",
+        "outage",
+        "version",
+        "release",
+        "available",
+        "availability",
+        "status",
+    }
+
+
+
+    def __init__(self) -> None:
+        self.knowledge_base = KnowledgeBase()        
+        self.provider = os.getenv("AI_PROVIDER", "").strip().lower()
+        self.model = os.getenv("AI_MODEL", "").strip()
+        self.ollama_url = os.getenv(
+            "OLLAMA_URL",
+            "http://127.0.0.1:11434/api/generate"
+        ).strip()
+
+
+
+    def status(self) -> dict:
+        connected = False
+        if self.provider == "ollama":
+            try:
+                request = urllib.request.Request(
+                    self.ollama_url,
+                    method="GET",
+                )
+                with urllib.request.urlopen(request, timeout=3):
+                    connected = True
+            except Exception:
+                connected = False
+        return {
+            "provider": self.provider or None,
+            "model": self.model or None,
+            "connected": connected,
+        }
+
+
+    
+    def understand_question(self, message: str) -> dict:
+        """
+        Decide whether a question should use permanent knowledge,
+        live research, or general AI handling.
+        This is the routing layer only.
+        It does not perform web research or database access.
+        """
+        text = message.strip()
+        if not text:
+            raise ValueError("Message cannot be empty.")
+        normalized = re.sub(r"\s+", " ", text.lower()).strip()
+        live_matches = [
+            keyword
+            for keyword in self.LIVE_KEYWORDS
+            if keyword in normalized
+        ]
+        knowledge_matches = [
+            keyword
+            for keyword in self.KNOWLEDGE_KEYWORDS
+            if keyword in normalized
+        ]
+        # Live information always gets priority over static knowledge.
+        if live_matches:
+            route = "live"
+            reason = "The question appears to require current or time-sensitive information."
+            confidence = "high"
+        elif knowledge_matches:
+            route = "knowledge"
+            reason = "The question appears to concern stable or general knowledge."
+            confidence = "high"
+        else:
+            route = "general"
+            reason = "The question does not clearly require live research or a knowledge lookup."
+            confidence = "medium"
+        return {
+            "route": route,
+            "normalized_question": normalized,
+            "confidence": confidence,
+            "reason": reason,
+        }
+
+
+    
+    def generate(self, message: str) -> str:
+        message = message.strip()
+        if not message:
+            raise ValueError("Message cannot be empty.")
+        # Knowledge Base gets priority for stable knowledge questions.
+        # Live questions continue through the existing AI/research flow.
+        question_info = self.understand_question(message)
+        if question_info["route"] == "knowledge":
+            stored = self.knowledge_base.get(message)
+            if stored is not None:
+                return stored["answer"]
+        if self.provider != "ollama":
+            return "ISMAIL AI engine is not configured for Ollama."
+        if not self.model:
+            return "Ollama model is not configured."
+        payload = json.dumps({
+            "model": self.model,
+            "prompt": message,
+            "stream": False,
+        }).encode("utf-8")
+        request = urllib.request.Request(
+            self.ollama_url,
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=300) as response:
+                result = json.loads(response.read().decode("utf-8"))
+        except urllib.error.URLError as exc:
+            raise RuntimeError(
+                "Unable to connect to Ollama. Make sure Ollama is running."
+            ) from exc
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(
+                "Ollama returned an invalid response."
+            ) from exc
+        response_text = str(result.get("response", "")).strip()
+        if not response_text:
+            raise RuntimeError("Ollama returned an empty response.")
+        return response_text
+
+
