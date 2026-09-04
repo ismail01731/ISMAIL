@@ -282,7 +282,7 @@ class AIEngine:
                 evidence
             )
 
-        if self.provider == "openai":
+        if self.provider in ("openai", "groq"):
             return self.openai_provider.generate(prompt)
 
         if self.provider == "ollama":
