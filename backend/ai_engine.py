@@ -248,20 +248,21 @@ class AIEngine:
         return response_text
 
 
-
-    
     def generate(self, message: str) -> str:
         """Generate a final answer using knowledge, live evidence, or general AI."""
         message = message.strip()
         if not message:
             raise ValueError("Message cannot be empty.")
+
         question_info = self.understand_question(message)
         route = question_info["route"]
+
         # Stable knowledge: use a non-expired stored answer first.
         if route == "knowledge":
             stored = self.knowledge_base.get(message)
             if stored is not None:
                 return stored["answer"]
+
         # Live questions must be researched before final answer generation.
         evidence = []
         if route == "live":
@@ -273,22 +274,23 @@ class AIEngine:
             except (ValueError, RuntimeError):
                 evidence = []
 
+        prompt = message
 
-                prompt = message
+        if route == "live":
+            prompt = self._build_grounded_prompt(
+                message,
+                evidence
+            )
 
-                if route == "live":
-                    prompt = self._build_grounded_prompt(
-                        message,
-                        evidence
-                    )
+        if self.provider == "openai":
+            return self.openai_provider.generate(prompt)
 
-                if self.provider == "openai":
-                    return self.openai_provider.generate(prompt)
+        if self.provider == "ollama":
+            if not self.model:
+                return "Ollama model is not configured."
 
-                if self.provider == "ollama":
-                    if not self.model:
-                        return "Ollama model is not configured."
+            return self._generate_with_ollama(prompt)
 
-                    return self._generate_with_ollama(prompt)
+        return "ISMAIL AI engine provider is not configured."
 
-                return "ISMAIL AI engine provider is not configured."
+

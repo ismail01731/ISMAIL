@@ -4,7 +4,7 @@ from openai import OpenAI
 
 class OpenAIProvider:
     def __init__(self):
-        self.api_key = os.getenv("OPENAI_API_KEY", "").strip()
+        self.api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
         self.model = os.getenv(
             "OPENAI_MODEL",
             "gpt-5-mini"
@@ -14,7 +14,8 @@ class OpenAIProvider:
 
         if self.api_key:
             self.client = OpenAI(
-                api_key=self.api_key
+                api_key=self.api_key,
+                base_url="https://openrouter.ai/api/v1"
             )
 
     def status(self) -> dict:
@@ -27,12 +28,17 @@ class OpenAIProvider:
     def generate(self, prompt: str) -> str:
         if self.client is None:
             raise RuntimeError(
-                "OpenAI API key is not configured."
+                "OpenRouter API key is not configured."
             )
 
-        response = self.client.responses.create(
+        response = self.client.chat.completions.create(
             model=self.model,
-            input=prompt,
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
         )
 
-        return response.output_text.strip()
+        return response.choices[0].message.content.strip()
