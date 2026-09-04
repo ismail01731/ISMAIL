@@ -13,6 +13,26 @@ const API_URL = "https://ismail01731-ismail.onrender.com/api/chat";
 
 const HISTORY_KEY = "ismail_ai_chat_history";
 
+const USER_ID_KEY = "ismail_ai_user_id";
+
+function getUserId() {
+    let userId = localStorage.getItem(USER_ID_KEY);
+
+    if (!userId) {
+        userId =
+            "user-" +
+            Date.now().toString(36) +
+            "-" +
+            Math.random().toString(36).slice(2, 10);
+
+        localStorage.setItem(USER_ID_KEY, userId);
+    }
+
+    return userId;
+}
+
+const USER_ID = getUserId();
+
 let currentChat = {
     id: Date.now(),
     title: "New chat",
@@ -367,8 +387,10 @@ async function regenerateAnswer(question, aiMessageElement) {
             },
 
             body: JSON.stringify({
-                message: question
+                message: question,
+                user_id: USER_ID
             })
+
         });
 
         if (!response.ok) {
@@ -441,9 +463,12 @@ async function sendMessage() {
             },
 
             body: JSON.stringify({
-                message: message
+                message: message,
+                user_id: USER_ID
             })
+
         });
+
 
 
         if (!response.ok) {

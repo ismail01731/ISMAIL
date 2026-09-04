@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from backend.ai_engine import AIEngine
@@ -19,11 +19,18 @@ app.add_middleware(
 ai_engine = AIEngine()
 web_research = WebResearch()
 knowledge_base = KnowledgeBase()
+
+
 class ChatRequest(BaseModel):
     message: str
+    user_id: str = ""
+
+
 class ResearchRequest(BaseModel):
     question: str
     max_sources: int = 5
+
+
 class KnowledgeSaveRequest(BaseModel):
     question: str
     answer: str
@@ -34,9 +41,13 @@ class KnowledgeSaveRequest(BaseModel):
     confidence: str = "medium"
     expires_at: str | None = None
     knowledge_type: str = "permanent"
+
+
 class KnowledgeLookupRequest(BaseModel):
     question: str
     knowledge_type: str | None = None
+
+
 @app.get("/")
 def root():
     return {
@@ -45,12 +56,16 @@ def root():
         "version": "0.1.0"
     }
 @app.get("/api/ai/status")
+
+
 def ai_status():
     return {
         "name": "ISMAIL AI",
         "engine": ai_engine.status()
     }
 @app.post("/api/question/understand")
+
+
 def understand_question(request: ChatRequest):
     try:
         return {
@@ -65,6 +80,8 @@ def understand_question(request: ChatRequest):
             detail=str(exc)
         )
 @app.post("/api/research")
+
+
 def research(request: ResearchRequest):
     try:
         if request.max_sources < 2:
@@ -98,6 +115,8 @@ def research(request: ResearchRequest):
             detail=str(exc)
         )
 @app.post("/api/knowledge/save")
+
+
 def save_knowledge(request: KnowledgeSaveRequest):
     try:
         knowledge_id = knowledge_base.save(
@@ -122,6 +141,8 @@ def save_knowledge(request: KnowledgeSaveRequest):
             detail=str(exc)
         )
 @app.post("/api/knowledge/lookup")
+
+
 def lookup_knowledge(request: KnowledgeLookupRequest):
     try:
         result = knowledge_base.get(
@@ -139,24 +160,33 @@ def lookup_knowledge(request: KnowledgeLookupRequest):
             detail=str(exc)
         )
 @app.post("/api/chat")
+
+
 def chat(request: ChatRequest):
     try:
         question = ai_engine.understand_question(
             request.message
         )
+
+
         response = ai_engine.generate(
-            request.message
+            request.message,
+            request.user_id,
         )
+
+
         return {
             "name": "ISMAIL AI",
             "question": question,
             "response": response
         }
+
     except ValueError as exc:
         raise HTTPException(
             status_code=400,
             detail=str(exc)
         )
+
     except Exception as exc:
         raise HTTPException(
             status_code=500,

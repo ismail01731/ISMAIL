@@ -1,4 +1,4 @@
-﻿import sqlite3
+import sqlite3
 import os
 import re
 from datetime import datetime, timezone
@@ -42,7 +42,7 @@ class KnowledgeBase:
                     knowledge_type TEXT DEFAULT 'permanent'
                 )
             ''')
-            
+
             # --- [নতুন যোগ করার কাস্টম লাইনগুলো এখানে বসবে] ---
             # Migration check: Ensure UNIQUE index exists for ON CONFLICT
             cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_normalized_question ON knowledge(normalized_question);")
@@ -52,9 +52,33 @@ class KnowledgeBase:
             columns = [info[1] for info in cursor.fetchall()]
             if 'knowledge_type' not in columns:
                 cursor.execute("ALTER TABLE knowledge ADD COLUMN knowledge_type TEXT DEFAULT 'permanent'")
+
+
             # --------------------------------------------------------
-            
-            
+            # Persistent user memory
+            # --------------------------------------------------------
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS memory (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    memory_key TEXT NOT NULL,
+                    memory_value TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    UNIQUE(user_id, memory_key)
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_memory_user_id
+                ON memory(user_id)
+            ''')
+            # --------------------------------------------------------
+
+
+            # --------------------------------------------------------
+
+
             conn.commit()
 
 
@@ -90,6 +114,9 @@ class KnowledgeBase:
             ''', (question, norm_q, answer, topic, source, source_url, 1 if verified else 0, confidence, now_str, expires_at, knowledge_type, knowledge_type))
             conn.commit()
             return int(cursor.lastrowid)
+
+
+
     def get(self, question: str, knowledge_type: Optional[str] = None) -> Optional[Dict[str, Any]]:
         norm_q = self.normalize_question(question)
         if not norm_q:
@@ -137,16 +164,73 @@ class KnowledgeBase:
                 except ValueError:
                     pass
             return res
+
+
     def count(self) -> int:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('SELECT COUNT(*) FROM knowledge')
             return cursor.fetchone()[0]
+
+
     def clear(self):
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('DELETE FROM knowledge')
             conn.commit()
+
+    def save_memory(self, user_id: str, memory_key: str, memory_value: str) -> bool:
+        user_id = str(user_id).strip()
+        memory_key = str(memory_key).strip().lower()
+        memory_value = str(memory_value).strip()
+
+        if not user_id or not memory_key or not memory_value:
+            return False
+
+        now_str = datetime.now(timezone.utc).isoformat()
+
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO memory
+                (user_id, memory_key, memory_value, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(user_id, memory_key) DO UPDATE SET
+                    memory_value=excluded.memory_value,
+                    updated_at=excluded.updated_at
+            ''', (
+                user_id,
+                memory_key,
+                memory_value,
+                now_str,
+                now_str,
+            ))
+            conn.commit()
+
+        return True
+
+
+    def get_memories(self, user_id: str) -> Dict[str, str]:
+        user_id = str(user_id).strip()
+
+        if not user_id:
+            return {}
+
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT memory_key, memory_value
+                FROM memory
+                WHERE user_id = ?
+                ORDER BY updated_at DESC
+            ''', (user_id,))
+
+            rows = cursor.fetchall()
+
+        return {
+            str(memory_key): str(memory_value)
+            for memory_key, memory_value in rows
+        }
 
 
 
