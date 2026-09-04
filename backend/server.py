@@ -1,7 +1,8 @@
-from fastapi import FastAPI, HTTPException
+﻿from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from backend.ai_engine import AIEngine
+from backend.input_security import InputSecurity
 from backend.web_research import WebResearch
 from backend.knowledge_base import KnowledgeBase
 app = FastAPI(
@@ -16,9 +17,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 ai_engine = AIEngine()
 web_research = WebResearch()
 knowledge_base = KnowledgeBase()
+input_security = InputSecurity()
 
 
 class ChatRequest(BaseModel):
@@ -159,11 +163,23 @@ def lookup_knowledge(request: KnowledgeLookupRequest):
             status_code=400,
             detail=str(exc)
         )
+
+    
 @app.post("/api/chat")
 
 
 def chat(request: ChatRequest):
     try:
+
+        security = input_security.scan(request.message)
+
+        if not security.allowed:
+            raise HTTPException(
+                status_code=400,
+                detail=security.reason,
+            )
+
+
         question = ai_engine.understand_question(
             request.message
         )
@@ -180,6 +196,9 @@ def chat(request: ChatRequest):
             "question": question,
             "response": response
         }
+
+    except HTTPException:
+        raise
 
     except ValueError as exc:
         raise HTTPException(
