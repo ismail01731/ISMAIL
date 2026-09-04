@@ -1,4 +1,4 @@
-﻿import json
+import json
 import os
 import re
 import urllib.error
@@ -379,7 +379,14 @@ class AIEngine:
             except (ValueError, RuntimeError):
                 evidence = []
 
-        prompt = message
+        prompt = (
+            "You are ISMAIL AI. Your name is ISMAIL AI. "
+            "When the user asks your name, identity, or who you are, "
+            "answer that you are ISMAIL AI. "
+            "Do not identify yourself as ChatGPT, OpenAI, or another AI name. "
+            "The user's name is separate from your own identity.\n\n"
+            f"User message:\n{message}"
+        )
 
         if route == "live":
             prompt = self._build_grounded_prompt(
@@ -403,3 +410,4 @@ class AIEngine:
             return self._generate_with_ollama(prompt)
 
         return "ISMAIL AI engine provider is not configured."
+
