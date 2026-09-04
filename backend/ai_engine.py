@@ -6,6 +6,7 @@ import urllib.request
 from dotenv import load_dotenv
 from backend.knowledge_base import KnowledgeBase
 from backend.web_research import WebResearch
+from backend.openai_provider import OpenAIProvider
 load_dotenv("config/.env")
 
 
@@ -75,7 +76,8 @@ class AIEngine:
 
     def __init__(self) -> None:
         self.knowledge_base = KnowledgeBase()
-        self.web_research = WebResearch()        
+        self.web_research = WebResearch()
+        self.openai_provider = OpenAIProvider()        
         self.provider = os.getenv("AI_PROVIDER", "").strip().lower()
         self.model = os.getenv("AI_MODEL", "").strip()
         self.ollama_url = os.getenv(
@@ -270,23 +272,24 @@ class AIEngine:
                 )
             except (ValueError, RuntimeError):
                 evidence = []
-        # Ollama remains the final answer generator.
-        if self.provider != "ollama":
-            if route == "live":
-                verified = [
-                    item for item in evidence
-                    if getattr(item, "verification_status", "") == "corroborated"
-                ]
-                if verified:
-                    return str(
-                        getattr(verified[0], "content", "")
-                        or getattr(verified[0], "snippet", "")
-                    ).strip()
-            return "ISMAIL AI engine is not configured for Ollama."
-        if not self.model:
-            return "Ollama model is not configured."
-        prompt = message
-        if route == "live":
-            prompt = self._build_grounded_prompt(message, evidence)
-        return self._generate_with_ollama(prompt)
+
+                
+                prompt = message
+
+                if route == "live":
+                    prompt = self._build_grounded_prompt(
+                        message,
+                        evidence
+                    )
+
+                if self.provider == "openai":
+                    return self.openai_provider.generate(prompt)
+
+                if self.provider == "ollama":
+                    if not self.model:
+                        return "Ollama model is not configured."
+
+                    return self._generate_with_ollama(prompt)
+
+                return "ISMAIL AI engine provider is not configured."
 
