@@ -273,7 +273,7 @@ class AIEngine:
             except (ValueError, RuntimeError):
                 evidence = []
 
-                
+
                 prompt = message
 
                 if route == "live":
@@ -292,4 +292,3 @@ class AIEngine:
                     return self._generate_with_ollama(prompt)
 
                 return "ISMAIL AI engine provider is not configured."
-
