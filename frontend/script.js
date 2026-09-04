@@ -1,4 +1,4 @@
-﻿const chatContainer = document.getElementById("chatContainer");
+const chatContainer = document.getElementById("chatContainer");
 const messageInput = document.getElementById("messageInput");
 const sendButton = document.getElementById("sendButton");
 const newChatButton = document.getElementById("newChatButton");
@@ -9,7 +9,7 @@ const welcome = document.getElementById("welcome");
 const exportChatButton =
     document.getElementById("exportChatButton");
 
-const API_URL = "http://192.168.0.102:8000/api/chat";
+const API_URL = "https://ismail01731-ismail.onrender.com/api/chat";
 
 const HISTORY_KEY = "ismail_ai_chat_history";
 
