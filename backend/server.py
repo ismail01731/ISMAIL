@@ -1,6 +1,6 @@
 ﻿from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from backend.ai_engine import AIEngine
 from backend.input_security import InputSecurity
 from backend.web_research import WebResearch
@@ -61,8 +61,8 @@ chat_rate_limiter = ChatRateLimiter()
 
 
 class ChatRequest(BaseModel):
-    message: str
-    user_id: str = ""
+    message: str = Field(..., max_length=12000)
+    user_id: str = Field("", max_length=200)
 
 
 class ResearchRequest(BaseModel):
