@@ -1,10 +1,14 @@
-﻿from fastapi import FastAPI, HTTPException
+﻿from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from backend.ai_engine import AIEngine
 from backend.input_security import InputSecurity
 from backend.web_research import WebResearch
 from backend.knowledge_base import KnowledgeBase
+import time
+
+
+
 app = FastAPI(
     title="ISMAIL AI",
     version="0.1.0",
@@ -23,6 +27,37 @@ ai_engine = AIEngine()
 web_research = WebResearch()
 knowledge_base = KnowledgeBase()
 input_security = InputSecurity()
+
+
+class ChatRateLimiter:
+    """Simple in-memory per-IP rate limiter for the chat endpoint."""
+
+    MAX_REQUESTS = 10
+    WINDOW_SECONDS = 60
+
+    def __init__(self):
+        self._requests = {}
+
+    def check(self, client_ip: str) -> bool:
+        now = time.monotonic()
+        timestamps = self._requests.get(client_ip, [])
+
+        timestamps = [
+            timestamp
+            for timestamp in timestamps
+            if now - timestamp < self.WINDOW_SECONDS
+        ]
+
+        if len(timestamps) >= self.MAX_REQUESTS:
+            self._requests[client_ip] = timestamps
+            return False
+
+        timestamps.append(now)
+        self._requests[client_ip] = timestamps
+        return True
+
+
+chat_rate_limiter = ChatRateLimiter()
 
 
 class ChatRequest(BaseModel):
@@ -166,10 +201,19 @@ def lookup_knowledge(request: KnowledgeLookupRequest):
 
     
 @app.post("/api/chat")
-
-
-def chat(request: ChatRequest):
+def chat(request: ChatRequest, http_request: Request):
     try:
+        client_ip = (
+            http_request.client.host
+            if http_request.client
+            else "unknown"
+        )
+
+        if not chat_rate_limiter.check(client_ip):
+            raise HTTPException(
+                status_code=429,
+                detail="Too many requests. Please try again later.",
+            )
 
         security = input_security.scan(request.message)
 
