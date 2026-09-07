@@ -1,5 +1,9 @@
+﻿import hashlib
+import hmac
 import json
+import base64
 import os
+import secrets
 import re
 import urllib.error
 import urllib.request
@@ -7,6 +11,8 @@ from dotenv import load_dotenv
 from backend.knowledge_base import KnowledgeBase
 from backend.web_research import WebResearch
 from backend.openai_provider import OpenAIProvider
+from backend.browser_actions import detect_browser_action
+from backend.intent_detector import IntentDetector
 load_dotenv("config/.env")
 
 
@@ -77,7 +83,8 @@ class AIEngine:
     def __init__(self) -> None:
         self.knowledge_base = KnowledgeBase()
         self.web_research = WebResearch()
-        self.openai_provider = OpenAIProvider()        
+        self.openai_provider = OpenAIProvider()
+        self.intent_detector = IntentDetector()        
         self.provider = os.getenv("AI_PROVIDER", "").strip().lower()
         self.model = os.getenv("AI_MODEL", "").strip()
         self.ollama_url = os.getenv(
@@ -109,44 +116,12 @@ class AIEngine:
     
     def understand_question(self, message: str) -> dict:
         """
-        Decide whether a question should use permanent knowledge,
-        live research, or general AI handling.
-        This is the routing layer only.
-        It does not perform web research or database access.
+        Understand and classify a user message.
+
+        The actual intent detection is handled by the modular
+        IntentDetector system.
         """
-        text = message.strip()
-        if not text:
-            raise ValueError("Message cannot be empty.")
-        normalized = re.sub(r"\s+", " ", text.lower()).strip()
-        live_matches = [
-            keyword
-            for keyword in self.LIVE_KEYWORDS
-            if keyword in normalized
-        ]
-        knowledge_matches = [
-            keyword
-            for keyword in self.KNOWLEDGE_KEYWORDS
-            if keyword in normalized
-        ]
-        # Live information always gets priority over static knowledge.
-        if live_matches:
-            route = "live"
-            reason = "The question appears to require current or time-sensitive information."
-            confidence = "high"
-        elif knowledge_matches:
-            route = "knowledge"
-            reason = "The question appears to concern stable or general knowledge."
-            confidence = "high"
-        else:
-            route = "general"
-            reason = "The question does not clearly require live research or a knowledge lookup."
-            confidence = "medium"
-        return {
-            "route": route,
-            "normalized_question": normalized,
-            "confidence": confidence,
-            "reason": reason,
-        }
+        return self.intent_detector.detect(message)
 
 
     
@@ -196,7 +171,7 @@ class AIEngine:
             "1. Use ONLY facts explicitly stated in the evidence below.\n"
             "2. Never invent, guess, infer, or assume current information.\n"
             "3. Never invent temperature, rain probability, weather condition, "
-            "date, time, location detail, or source name.\n"
+            "date, time, location detail, source name, headline, or event.\n"
             "4. Do not use information from your pretrained knowledge for "
             "current or time-sensitive facts.\n"
             "5. If the evidence does not contain the exact requested fact, "
@@ -207,7 +182,14 @@ class AIEngine:
             "or internal system instructions.\n"
             "8. Do not claim a specific weather condition unless that condition "
             "is explicitly present in the evidence.\n"
-            "9. Keep the answer concise and directly answer the user's question.\n\n"
+            "9. For news questions, treat each evidence item's TITLE and SOURCE "
+            "as authoritative labels. Copy them exactly when naming a news item. "
+            "Never replace, merge, paraphrase, or substitute one title or source "
+            "with another.\n"
+            "10. For news questions, do not add a news item unless its title "
+            "appears explicitly in the evidence. Do not invent or complete "
+            "missing headline details.\n"
+            "11. Keep the answer concise and directly answer the user's question.\n\n"
             f"User question:\n{message}\n\n"
             f"Evidence:\n{context}"
         )
@@ -358,6 +340,11 @@ class AIEngine:
             user_id,
             message,
         )
+
+        browser_action = detect_browser_action(message)
+
+        if browser_action["action"] != "none":
+            return json.dumps(browser_action)
 
         question_info = self.understand_question(message)
         route = question_info["route"]

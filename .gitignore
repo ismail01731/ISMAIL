@@ -2,3 +2,15 @@ config/.env
 __pycache__/
 *.pyc
 .venv/
+.venv312/
+.idea/
+.gradle/
+.kotlin/
+build/
+app/build/
+apk_check/
+local.properties
+*.db
+*.db-shm
+*.db-wal
+*.backup.db

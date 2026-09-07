@@ -73,7 +73,93 @@ class KnowledgeBase:
                 CREATE INDEX IF NOT EXISTS idx_memory_user_id
                 ON memory(user_id)
             ''')
+
+
             # --------------------------------------------------------
+            # Central cross-device chat history
+            # --------------------------------------------------------
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS chat_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    message TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+            ''')
+
+
+
+            # Add chat_id column for separate conversations
+            cursor.execute(
+                "PRAGMA table_info(chat_history)"
+            )
+
+            chat_history_columns = {
+                row[1]
+                for row in cursor.fetchall()
+            }
+
+            if "chat_id" not in chat_history_columns:
+
+                cursor.execute(
+                    """
+                    ALTER TABLE chat_history
+                    ADD COLUMN chat_id TEXT
+                    """
+                )
+
+                cursor.execute(
+                    """
+                    UPDATE chat_history
+                    SET chat_id = 'legacy'
+                    WHERE chat_id IS NULL
+                    """
+                )
+
+
+
+
+
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_chat_history_user_id
+                ON chat_history(user_id)
+            ''')
+
+
+
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_chat_history_user_chat_id
+                ON chat_history(user_id, chat_id)
+            ''')
+
+
+
+
+
+            # --------------------------------------------------------
+
+
+
+            # --------------------------------------------------------
+            # Central user accounts for cross-device sync
+            # --------------------------------------------------------
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL UNIQUE,
+                    username TEXT NOT NULL UNIQUE,
+                    password_hash TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+            ''')
+
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_users_user_id
+                ON users(user_id)
+            ''')
+            # --------------------------------------------------------
+
 
 
             # --------------------------------------------------------
@@ -231,6 +317,188 @@ class KnowledgeBase:
             str(memory_key): str(memory_value)
             for memory_key, memory_value in rows
         }
+
+    def save_chat_message(
+        self,
+        user_id: str,
+        chat_id: str,
+        role: str,
+        message: str,
+    ) -> bool:
+
+
+        
+        user_id = str(user_id).strip()
+        chat_id = str(chat_id).strip()
+        role = str(role).strip().lower()
+        message = str(message).strip()
+
+        if (
+            not user_id
+            or not chat_id
+            or role not in {"user", "assistant"}
+            or not message
+        ):
+            return False
+
+        created_at = datetime.now(timezone.utc).isoformat()
+
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                INSERT INTO chat_history
+                (user_id, chat_id, role, message, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                ''',
+                (
+                    user_id,
+                    chat_id,
+                    role,
+                    message,
+                    created_at,
+                ),
+            )
+            conn.commit()
+
+        return True
+
+    def get_chat_history(
+        self,
+        user_id: str,
+        chat_id: str,
+    ) -> list[Dict[str, str]]:
+
+        
+        user_id = str(user_id).strip()
+        chat_id = str(chat_id).strip()
+
+        if not user_id or not chat_id:
+            return []
+
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                SELECT role, message, created_at
+                FROM chat_history
+                WHERE user_id = ?
+                AND chat_id = ?
+                ORDER BY id ASC
+                ''',
+                (
+                    user_id,
+                    chat_id,
+                ),
+            )
+
+            rows = cursor.fetchall()
+
+        return [
+            {
+                "role": str(role),
+                "message": str(message),
+                "created_at": str(created_at),
+            }
+            for role, message, created_at in rows
+        ]
+
+    def clear_chat_history(self, user_id: str) -> bool:
+        user_id = str(user_id).strip()
+
+        if not user_id:
+            return False
+
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                DELETE FROM chat_history
+                WHERE user_id = ?
+                ''',
+                (user_id,),
+            )
+            conn.commit()
+
+        return True
+
+
+
+    # --------------------------------------------------------
+    # Central user account methods
+    # --------------------------------------------------------
+    def create_user_account(
+        self,
+        user_id: str,
+        username: str,
+        password_hash: str,
+    ) -> bool:
+        user_id = str(user_id).strip()
+        username = str(username).strip().lower()
+        password_hash = str(password_hash).strip()
+
+        if not user_id or not username or not password_hash:
+            return False
+
+        created_at = datetime.now(timezone.utc).isoformat()
+
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    '''
+                    INSERT INTO users
+                    (user_id, username, password_hash, created_at)
+                    VALUES (?, ?, ?, ?)
+                    ''',
+                    (
+                        user_id,
+                        username,
+                        password_hash,
+                        created_at,
+                    ),
+                )
+                conn.commit()
+
+            return True
+
+        except sqlite3.IntegrityError:
+            return False
+
+    def get_user_account(
+        self,
+        username: str,
+    ) -> Optional[Dict[str, str]]:
+        username = str(username).strip().lower()
+
+        if not username:
+            return None
+
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                SELECT user_id, username, password_hash, created_at
+                FROM users
+                WHERE username = ?
+                LIMIT 1
+                ''',
+                (username,),
+            )
+
+            row = cursor.fetchone()
+
+        if row is None:
+            return None
+
+        return {
+            "user_id": str(row[0]),
+            "username": str(row[1]),
+            "password_hash": str(row[2]),
+            "created_at": str(row[3]),
+        }
+
+    
 
 
 

@@ -19,6 +19,7 @@ class WebEvidence:
     reliability_score: float = 0.0
     reliability_level: str = "unknown"
     verification_status: str = "unverified"
+    source_url: str = ""
 
 
 def _get_source_reliability(url: str) -> tuple[float, str]:
@@ -52,7 +53,7 @@ def _get_source_reliability(url: str) -> tuple[float, str]:
         "edu",
     )
 
-    # Generally reliable secondary/reference sources
+    # Generally reliable secondary/reference/news sources
     medium_domains = (
         "w3schools.com",
         "geeksforgeeks.org",
@@ -66,6 +67,27 @@ def _get_source_reliability(url: str) -> tuple[float, str]:
         "weather.com",
         "wmo.int",
         "weather.gov",
+
+        # News publishers / major media
+        "abc7chicago.com",
+        "kyivpost.com",
+        "nfl.com",
+        "yahoo.com",
+        "yahoo.co.uk",
+        "stocktitan.net",
+        "greenvilleonline.com",
+        "openai.com",
+        "startlandnews.com",
+        "nbcnews.com",
+        "cnn.com",
+        "foxnews.com",
+        "cbsnews.com",
+        "nytimes.com",
+        "washingtonpost.com",
+        "theguardian.com",
+        "usatoday.com",
+        "cnbc.com",
+        "newsweek.com",
     )
 
     if hostname.endswith(".gov") or hostname.endswith(".edu"):
@@ -135,7 +157,7 @@ def _verify_evidence_agreement(
         normalized_data.append(
             {
                 "words": words,
-                "domain": get_domain(item.url),
+                "domain": get_domain(item.source_url or item.url),
                 "reliability_score": item.reliability_score,
             }
         )
@@ -143,9 +165,16 @@ def _verify_evidence_agreement(
         current = normalized_data[index]
         current_words = current["words"]
         current_domain = current["domain"]
+
+
+        if item.verification_status == "verified":
+            continue
+
         if len(current_words) < 3 or not current_domain:
             item.verification_status = "unverified"
             continue
+
+        
         corroborating_domains = set()
         for other_index, other in enumerate(evidence):
             if index == other_index:
@@ -499,6 +528,8 @@ class WebResearch:
                             content="",
                             reliability_score=reliability_score,
                             reliability_level=reliability_level,
+                            source_url=publisher_url,
+                            verification_status="verified",
                         )
                     )
                     seen_urls.add(normalized)
@@ -721,9 +752,11 @@ class WebResearch:
                     url=item.url,
                     source=item.source,
                     snippet=snippet,
-                    content=content[: self.MAX_CONTENT_LENGTH],
+                    content=content[:self.MAX_CONTENT_LENGTH],
                     reliability_score=reliability_score,
                     reliability_level=reliability_level,
+                    verification_status=item.verification_status,
+                    source_url=item.source_url,
                 )
             )
 
