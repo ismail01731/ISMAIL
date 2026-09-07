@@ -1,6 +1,8 @@
 ﻿const chatContainer = document.getElementById("chatContainer");
 const messageInput = document.getElementById("messageInput");
 const sendButton = document.getElementById("sendButton");
+const voiceButton =
+document.getElementById("voiceButton");
 const newChatButton = document.getElementById("newChatButton");
 const clearChatButton =
     document.getElementById("clearChatButton");
@@ -9,35 +11,750 @@ const welcome = document.getElementById("welcome");
 const exportChatButton =
     document.getElementById("exportChatButton");
 
-const API_URL = "https://ismail01731-ismail.onrender.com/api/chat";
+const BACKEND_BASE_URL = "http://192.168.0.101:8000";
+const API_URL = `${BACKEND_BASE_URL}/api/chat`;
+
+
+const SESSION_KEY = "ismail_ai_session";
 
 const HISTORY_KEY = "ismail_ai_chat_history";
 
-const USER_ID_KEY = "ismail_ai_user_id";
+let USER_ID = "";
 
-function getUserId() {
-    let userId = localStorage.getItem(USER_ID_KEY);
+let currentSession = null;
 
-    if (!userId) {
-        userId =
-            "user-" +
-            Date.now().toString(36) +
-            "-" +
-            Math.random().toString(36).slice(2, 10);
 
-        localStorage.setItem(USER_ID_KEY, userId);
+/* =========================================================
+   ISMAIL AI ACCOUNT AUTHENTICATION
+   ========================================================= */
+
+const authScreen =
+    document.getElementById("authScreen");
+
+const authMessage =
+    document.getElementById("authMessage");
+
+const loginForm =
+    document.getElementById("loginForm");
+
+const registerForm =
+    document.getElementById("registerForm");
+
+const authToggleButton =
+    document.getElementById("authToggleButton");
+
+const loginUsername =
+    document.getElementById("loginUsername");
+
+const loginPassword =
+    document.getElementById("loginPassword");
+
+const registerUsername =
+    document.getElementById("registerUsername");
+
+const registerPassword =
+    document.getElementById("registerPassword");
+
+
+function showAuthMessage(message = "") {
+    if (authMessage) {
+        authMessage.textContent = message;
     }
-
-    return userId;
 }
 
-const USER_ID = getUserId();
+
+function showAuthScreen() {
+    if (authScreen) {
+        authScreen.style.display = "flex";
+    }
+}
+
+
+function hideAuthScreen() {
+    if (authScreen) {
+        authScreen.style.display = "none";
+    }
+}
+
+
+function setAuthenticatedSession(session) {
+
+    if (
+        !session ||
+        !session.token ||
+        !session.user_id ||
+        !session.username
+    ) {
+        throw new Error(
+            "Invalid authentication session."
+        );
+    }
+
+    currentSession = session;
+    USER_ID = String(session.user_id);
+
+    localStorage.setItem(
+        SESSION_KEY,
+        JSON.stringify(session)
+    );
+
+    hideAuthScreen();
+    showAuthMessage("");
+}
+
+
+function clearAuthenticatedSession() {
+
+    currentSession = null;
+    USER_ID = "";
+
+    localStorage.removeItem(
+        SESSION_KEY
+    );
+
+    showAuthScreen();
+}
+
+
+function getSavedSession() {
+
+    const savedSession =
+        localStorage.getItem(SESSION_KEY);
+
+    if (!savedSession) {
+        return null;
+    }
+
+    try {
+
+        const session =
+            JSON.parse(savedSession);
+
+        if (
+            !session ||
+            !session.token ||
+            !session.user_id ||
+            !session.username
+        ) {
+            localStorage.removeItem(
+                SESSION_KEY
+            );
+
+            return null;
+        }
+
+        return session;
+
+    } catch (error) {
+
+        localStorage.removeItem(
+            SESSION_KEY
+        );
+
+        return null;
+    }
+}
+
+
+async function getSession() {
+
+    if (
+        currentSession &&
+        currentSession.token &&
+        currentSession.user_id
+    ) {
+        return currentSession;
+    }
+
+    const savedSession =
+        getSavedSession();
+
+    if (savedSession) {
+
+        currentSession =
+            savedSession;
+
+        USER_ID =
+            String(savedSession.user_id);
+
+        hideAuthScreen();
+
+        return savedSession;
+    }
+
+    showAuthScreen();
+
+    throw new Error(
+        "Please login to continue."
+    );
+}
+
+
+async function loginAccount(
+    username,
+    password
+) {
+
+    showAuthMessage(
+        "Logging in..."
+    );
+
+    const response = await fetch(
+        `${BACKEND_BASE_URL}/api/auth/login`,
+        {
+            method: "POST",
+
+            headers: {
+                "Content-Type":
+                    "application/json"
+            },
+
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+        }
+    );
+
+    let data = {};
+
+    try {
+        data = await response.json();
+    } catch (error) {
+        data = {};
+    }
+
+    if (!response.ok) {
+
+        throw new Error(
+            data.detail ||
+            `Login failed: ${response.status}`
+        );
+    }
+
+    setAuthenticatedSession(data);
+
+    return data;
+}
+
+
+async function registerAccount(
+    username,
+    password
+) {
+
+    showAuthMessage(
+        "Creating account..."
+    );
+
+    const response = await fetch(
+        `${BACKEND_BASE_URL}/api/auth/register`,
+        {
+            method: "POST",
+
+            headers: {
+                "Content-Type":
+                    "application/json"
+            },
+
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+        }
+    );
+
+    let data = {};
+
+    try {
+        data = await response.json();
+    } catch (error) {
+        data = {};
+    }
+
+    if (!response.ok) {
+
+        throw new Error(
+            data.detail ||
+            `Registration failed: ${response.status}`
+        );
+    }
+
+    setAuthenticatedSession(data);
+
+    return data;
+}
+
+
+/* Login */
+if (loginForm) {
+
+    loginForm.addEventListener(
+        "submit",
+        async function (event) {
+
+            event.preventDefault();
+
+            const username =
+                loginUsername.value.trim();
+
+            const password =
+                loginPassword.value;
+
+            if (!username || !password) {
+                showAuthMessage(
+                    "Please enter username and password."
+                );
+                return;
+            }
+
+            const button =
+                document.getElementById(
+                    "loginButton"
+                );
+
+            if (button) {
+                button.disabled = true;
+            }
+
+            try {
+
+                await loginAccount(
+                    username,
+                    password
+                );
+
+                await loadCentralChatHistory();
+
+                startCentralHistorySync();
+
+                loginPassword.value = "";
+
+            } catch (error) {
+
+                showAuthMessage(
+                    error.message ||
+                    "Login failed."
+                );
+
+            } finally {
+
+                if (button) {
+                    button.disabled = false;
+                }
+            }
+        }
+    );
+}
+
+
+/* Register */
+if (registerForm) {
+
+    registerForm.addEventListener(
+        "submit",
+        async function (event) {
+
+            event.preventDefault();
+
+            const username =
+                registerUsername.value.trim();
+
+            const password =
+                registerPassword.value;
+
+            if (!username || !password) {
+                showAuthMessage(
+                    "Please enter username and password."
+                );
+                return;
+            }
+
+            const button =
+                document.getElementById(
+                    "registerButton"
+                );
+
+            if (button) {
+                button.disabled = true;
+            }
+
+            try {
+
+                await registerAccount(
+                    username,
+                    password
+                );
+
+                await loadCentralChatHistory();
+
+                startCentralHistorySync();
+
+                registerPassword.value = "";
+
+            } catch (error) {
+
+                showAuthMessage(
+                    error.message ||
+                    "Account creation failed."
+                );
+
+            } finally {
+
+                if (button) {
+                    button.disabled = false;
+                }
+            }
+        }
+    );
+}
+
+
+/* Login <-> Register switch */
+if (authToggleButton) {
+
+    authToggleButton.addEventListener(
+        "click",
+        function () {
+
+            const registerVisible =
+                registerForm &&
+                registerForm.style.display !== "none";
+
+            showAuthMessage("");
+
+            if (registerVisible) {
+
+                registerForm.style.display =
+                    "none";
+
+                loginForm.style.display =
+                    "flex";
+
+                authToggleButton.textContent =
+                    "Create a new account";
+
+            } else {
+
+                loginForm.style.display =
+                    "none";
+
+                registerForm.style.display =
+                    "flex";
+
+                authToggleButton.textContent =
+                    "Back to login";
+            }
+        }
+    );
+}
+
+
+/* Restore existing account session */
+(function initializeAuthentication() {
+
+    const savedSession =
+        getSavedSession();
+
+    if (savedSession) {
+
+        try {
+
+            setAuthenticatedSession(
+                savedSession
+            );
+
+        } catch (error) {
+
+            clearAuthenticatedSession();
+        }
+
+    } else {
+
+        showAuthScreen();
+    }
+
+})();
+
+/* =========================================================
+   ISMAIL AI ACCOUNT AUTHENTICATION - END
+   ========================================================= */
 
 let currentChat = {
     id: Date.now(),
     title: "New chat",
     messages: []
 };
+
+
+async function loadCentralChatHistory() {
+
+    try {
+
+        const session = await getSession();
+
+        const response = await fetch(
+            `${BACKEND_BASE_URL}/api/chat/history`,
+            {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${session.token}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+            console.error(
+                "Central chat history load failed:",
+                response.status
+            );
+            return;
+        }
+
+        const data = await response.json();
+
+        const history = Array.isArray(data.history)
+            ? data.history
+            : [];
+
+        if (history.length === 0) {
+            return;
+        }
+
+        if (currentChat.messages.length > 0) {
+            return;
+        }
+
+        if (currentChat.title === "New chat") {
+            return;
+        }
+
+        currentChat.id =
+            `central-${String(session.user_id)}`;
+
+        currentChat.title = "Synced chat";
+
+        history.forEach(item => {
+
+            const role =
+                item.role === "assistant"
+                    ? "ai"
+                    : "user";
+
+            addMessage(
+                String(item.message || ""),
+                role
+            );
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "Central chat history load error:",
+            error
+        );
+    }
+}
+
+
+
+let centralHistorySyncTimer = null;
+
+
+async function checkCentralChatHistory() {
+
+    try {
+
+        const session = await getSession();
+
+        const response = await fetch(
+            `${BACKEND_BASE_URL}/api/chat/history`,
+            {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${session.token}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+            return;
+        }
+
+        const data = await response.json();
+
+        const remoteHistory =
+            Array.isArray(data.history)
+                ? data.history
+                : [];
+
+        if (remoteHistory.length === 0) {
+            return;
+        }
+
+        if (currentChat.title === "New chat") {
+            return;
+        }
+
+        const localMessages =
+            Array.isArray(currentChat.messages)
+                ? currentChat.messages
+                : [];
+
+        /*
+         * Only append messages when the existing local
+         * messages match the beginning of the central history.
+         * This prevents duplicate or unrelated chat data.
+         */
+        const commonLength =
+            Math.min(
+                localMessages.length,
+                remoteHistory.length
+            );
+
+        for (let index = 0; index < commonLength; index++) {
+
+            const localMessage =
+                localMessages[index];
+
+            const remoteMessage =
+                remoteHistory[index];
+
+            const remoteType =
+                remoteMessage.role === "assistant"
+                    ? "ai"
+                    : "user";
+
+            if (
+                localMessage.type !== remoteType ||
+                localMessage.text !==
+                    String(remoteMessage.message || "")
+            ) {
+                return;
+            }
+        }
+
+        if (
+            remoteHistory.length <=
+            localMessages.length
+        ) {
+            return;
+        }
+
+        for (
+            let index = localMessages.length;
+            index < remoteHistory.length;
+            index++
+        ) {
+
+            const remoteMessage =
+                remoteHistory[index];
+
+            const remoteType =
+                remoteMessage.role === "assistant"
+                    ? "ai"
+                    : "user";
+
+            const remoteText =
+                String(remoteMessage.message || "");
+
+            if (!remoteText) {
+                continue;
+            }
+
+            addMessage(
+                remoteText,
+                remoteType
+            );
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Central chat history polling error:",
+            error
+        );
+    }
+}
+
+
+function startCentralHistorySync() {
+
+    if (centralHistorySyncTimer) {
+        clearInterval(
+            centralHistorySyncTimer
+        );
+    }
+
+    centralHistorySyncTimer =
+        setInterval(
+            checkCentralChatHistory,
+            3000
+        );
+}
+
+
+
+(function initializeCentralChatHistory() {
+
+    const savedSession =
+        getSavedSession();
+
+    if (!savedSession) {
+        return;
+    }
+
+    setTimeout(async function () {
+
+        await loadCentralChatHistory();
+
+        startCentralHistorySync();
+
+    }, 0);
+
+})();
+
+
+
+async function syncChatMessage(role, message) {
+
+    try {
+
+        const session = await getSession();
+
+        const response = await fetch(
+            `${BACKEND_BASE_URL}/api/chat/history`,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session.token}`
+                },
+
+                body: JSON.stringify({
+                    role: role,
+                    message: message
+                })
+            }
+        );
+
+        if (!response.ok) {
+            console.error(
+                "Chat history sync failed:",
+                response.status
+            );
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Chat history sync error:",
+            error
+        );
+    }
+}
 
 
 function saveCurrentChat() {
@@ -445,7 +1162,13 @@ async function sendMessage() {
         return;
     }
 
+    if (currentChat.title === "New chat") {
+        currentChat.id = Date.now();
+    }
+
     addMessage(message, "user");
+
+    syncChatMessage("user", message);
 
     messageInput.value = "";
     messageInput.style.height = "auto";
@@ -455,11 +1178,14 @@ async function sendMessage() {
 
     try {
 
+        const session = await getSession();
+
         const response = await fetch(API_URL, {
             method: "POST",
 
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${session.token}`
             },
 
             body: JSON.stringify({
@@ -478,12 +1204,27 @@ async function sendMessage() {
 
         const data = await response.json();
 
+        if (data.action && data.action.action === "open_url" && data.action.url) {
+            window.open(data.action.url, "_blank");
+            removeLoading();
+            return;
+        }
+
         removeLoading();
 
 
+        const assistantMessage =
+            data.response ||
+            "ISMAIL AI did not return a response.";
+
         addMessage(
-            data.response || "ISMAIL AI did not return a response.",
+            assistantMessage,
             "ai"
+        );
+
+        syncChatMessage(
+            "assistant",
+            assistantMessage
         );
 
 
@@ -510,6 +1251,8 @@ async function sendMessage() {
 /* Send button */
 
 sendButton.addEventListener("click", sendMessage);
+
+
 
 
 /* Enter = Send
@@ -932,3 +1675,5 @@ clearAllHistoryMenuButton.addEventListener("click", function () {
 
     clearAllHistoryButton.click();
 });
+
+
