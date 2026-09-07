@@ -11,7 +11,7 @@ const welcome = document.getElementById("welcome");
 const exportChatButton =
     document.getElementById("exportChatButton");
 
-const BACKEND_BASE_URL = "http://192.168.0.101:8000";
+const BACKEND_BASE_URL = "https://ismail-ai-api.onrender.com";
 const API_URL = `${BACKEND_BASE_URL}/api/chat`;
 
 
@@ -1675,5 +1675,6 @@ clearAllHistoryMenuButton.addEventListener("click", function () {
 
     clearAllHistoryButton.click();
 });
+
 
 
