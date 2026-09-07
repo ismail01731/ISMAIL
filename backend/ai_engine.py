@@ -96,6 +96,7 @@ class AIEngine:
 
     def status(self) -> dict:
         connected = False
+
         if self.provider == "ollama":
             try:
                 request = urllib.request.Request(
@@ -106,6 +107,13 @@ class AIEngine:
                     connected = True
             except Exception:
                 connected = False
+
+        elif self.provider in ("openai", "groq"):
+            connected = self.openai_provider.status().get(
+                "configured",
+                False
+            )
+
         return {
             "provider": self.provider or None,
             "model": self.model or None,
