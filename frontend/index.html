@@ -418,6 +418,60 @@
                 </button>
             </div>
 
+
+            <!-- =========================================================
+                ISMAIL AI VOICE SCREEN
+                Task 1: Full-screen voice interface shell
+                ========================================================= -->
+            <div id="voiceScreen" class="voice-screen" hidden aria-hidden="true">
+                <div class="voice-topbar">
+                    <button id="voiceCloseButton" class="voice-close-button" type="button" aria-label="Close voice">
+                        ×
+                    </button>
+
+                    <div class="voice-brand" aria-label="ISMAIL AI">
+                        <div class="voice-brand-logo">✦</div>
+                        <div class="voice-brand-name">ISMAIL AI</div>
+                        <span class="voice-brand-dot"></span>
+                    </div>
+
+                    <div class="voice-topbar-spacer" aria-hidden="true"></div>
+                </div>
+
+                <main class="voice-content">
+                    <div class="voice-status" id="voiceStatus">Voice</div>
+
+                    <div class="voice-visual" id="voiceVisual" aria-hidden="true">
+                        <div class="voice-orb-ring voice-orb-ring-1"></div>
+                        <div class="voice-orb-ring voice-orb-ring-2"></div>
+                        <div class="voice-orb-ring voice-orb-ring-3"></div>
+
+                        <div class="voice-orb">
+                            <span class="voice-orb-symbol">✦</span>
+                        </div>
+                    </div>
+
+                    <h2 class="voice-title">Talk with ISMAIL</h2>
+
+                    <p class="voice-subtitle" id="voiceSubtitle">
+                        Tap the microphone to start a conversation.
+                    </p>
+
+                    <button
+                        id="voiceMicButton"
+                        class="voice-mic-button"
+                        type="button"
+                        aria-label="Start voice conversation"
+                    >
+                        <span class="voice-mic-icon">🎙️</span>
+                    </button>
+
+                    <div class="voice-hint" id="voiceHint">
+                        Ready when you are
+                    </div>
+                </main>
+            </div>
+
             <div
                 id="attachmentPreview"
                 class="attachment-preview"
@@ -453,6 +507,16 @@
                 placeholder="Message ISMAIL AI..."
                 rows="1"
             ></textarea>
+
+            <button
+                id="voiceButton"
+                class="voice-button"
+                type="button"
+                aria-label="Voice input"
+                title="Voice"
+            >
+                🎙️
+            </button>
 
             <button
                 id="sendButton"

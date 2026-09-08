@@ -1561,6 +1561,108 @@ async function regenerateAnswer(question, aiMessageElement) {
 }
 
 
+
+// =========================================================
+// VOICE SCREEN — TASK 1
+// =========================================================
+
+function openVoiceScreen() {
+    if (!voiceScreen) return;
+
+    if (attachMenuElement) {
+        attachMenuElement.setAttribute("hidden", "");
+    }
+
+    voiceScreen.removeAttribute("hidden");
+    voiceScreen.setAttribute("aria-hidden", "false");
+
+    document.body.classList.add("voice-screen-open");
+
+    if (voiceStatus) {
+        voiceStatus.textContent = "Voice";
+    }
+
+    if (voiceSubtitle) {
+        voiceSubtitle.textContent =
+            "Tap the microphone to start a conversation.";
+    }
+
+    if (voiceHint) {
+        voiceHint.textContent = "Ready when you are";
+    }
+
+    setTimeout(() => {
+        if (voiceMicButton) {
+            voiceMicButton.focus();
+        }
+    }, 50);
+}
+
+
+function closeVoiceScreen() {
+    if (!voiceScreen) return;
+
+    voiceScreen.setAttribute("hidden", "");
+    voiceScreen.setAttribute("aria-hidden", "true");
+
+    document.body.classList.remove("voice-screen-open");
+}
+
+
+if (voiceOption) {
+    voiceOption.addEventListener("click", function (event) {
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        openVoiceScreen();
+    });
+}
+
+
+if (voiceCloseButton) {
+    voiceCloseButton.addEventListener("click", function () {
+
+        closeVoiceScreen();
+
+    });
+}
+
+
+if (voiceMicButton) {
+    voiceMicButton.addEventListener("click", function () {
+
+        if (voiceStatus) {
+            voiceStatus.textContent = "Voice";
+        }
+
+        if (voiceSubtitle) {
+            voiceSubtitle.textContent =
+                "Voice conversation will start here.";
+        }
+
+        if (voiceHint) {
+            voiceHint.textContent =
+                "Voice engine coming in Task 2";
+        }
+
+    });
+}
+
+
+document.addEventListener("keydown", function (event) {
+
+    if (
+        event.key === "Escape" &&
+        voiceScreen &&
+        !voiceScreen.hasAttribute("hidden")
+    ) {
+        closeVoiceScreen();
+    }
+
+});
+
+
 // =========================================================
 // FILE UPLOAD + ATTACH MENU
 // =========================================================
@@ -1949,17 +2051,17 @@ async function sendMessage() {
             data.response ||
             "ISMAIL AI did not return a response.";
 
-
         addMessage(
             assistantMessage,
             "ai"
         );
 
-
         syncChatMessage(
             "assistant",
             assistantMessage
         );
+
+        speakAIResponse(assistantMessage);
 
 
         saveCurrentChat();
@@ -1993,6 +2095,157 @@ async function sendMessage() {
 /* Send button */
 
 sendButton.addEventListener("click", sendMessage);
+
+
+/* =========================
+   ISMAIL AI VOICE SYSTEM
+========================= */
+
+let recognition = null;
+let isListening = false;
+
+const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+if (voiceButton && SpeechRecognition) {
+
+    recognition = new SpeechRecognition();
+
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "bn-BD";
+
+    recognition.onstart = function () {
+
+        isListening = true;
+
+        voiceButton.classList.add("recording");
+        voiceButton.textContent = "🔴";
+        voiceButton.title = "Listening...";
+    };
+
+    recognition.onresult = function (event) {
+
+        const transcript =
+            event.results[0][0].transcript;
+
+        messageInput.value = transcript;
+
+        messageInput.style.height = "auto";
+
+        messageInput.style.height =
+            `${Math.min(messageInput.scrollHeight, 150)}px`;
+
+        voiceButton.classList.remove("recording");
+        voiceButton.textContent = "🎙️";
+        voiceButton.title = "Voice";
+
+        isListening = false;
+
+        /*
+         * আপনার কথা বুঝে সরাসরি ISMAIL AI-তে পাঠাবে
+         */
+        sendMessage();
+    };
+
+    recognition.onerror = function (event) {
+
+        console.error(
+            "Voice recognition error:",
+            event.error
+        );
+
+        isListening = false;
+
+        voiceButton.classList.remove("recording");
+
+        voiceButton.textContent = "🎙️";
+        voiceButton.title = "Voice";
+    };
+
+    recognition.onend = function () {
+
+        isListening = false;
+
+        voiceButton.classList.remove("recording");
+
+        voiceButton.textContent = "🎙️";
+        voiceButton.title = "Voice";
+    };
+
+    voiceButton.addEventListener(
+        "click",
+        function () {
+
+            if (isListening) {
+
+                recognition.stop();
+
+                return;
+            }
+
+            try {
+
+                recognition.start();
+
+            } catch (error) {
+
+                console.error(
+                    "Unable to start voice:",
+                    error
+                );
+            }
+        }
+    );
+
+} else {
+
+    if (voiceButton) {
+
+        voiceButton.style.display = "none";
+    }
+
+}
+
+
+/* =========================
+   ISMAIL AI SPEAK RESPONSE
+========================= */
+
+function speakAIResponse(text) {
+
+    if (!("speechSynthesis" in window)) {
+        return;
+    }
+
+    if (!text) {
+        return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const cleanText =
+        text
+            .replace(/```[\s\S]*?```/g, "")
+            .replace(/\*\*/g, "")
+            .replace(/[`#]/g, "")
+            .trim();
+
+    if (!cleanText) {
+        return;
+    }
+
+    const speech =
+        new SpeechSynthesisUtterance(cleanText);
+
+    speech.lang = "bn-BD";
+    speech.rate = 1;
+    speech.pitch = 1;
+    speech.volume = 1;
+
+    window.speechSynthesis.speak(speech);
+}
 
 
 
