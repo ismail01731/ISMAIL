@@ -25,6 +25,12 @@ const fileOption =
 let selectedFile = null;
 const voiceButton =
 document.getElementById("voiceButton");
+
+
+
+
+
+
 const newChatButton = document.getElementById("newChatButton");
 const clearChatButton =
     document.getElementById("clearChatButton");
@@ -1537,6 +1543,7 @@ async function regenerateAnswer(question, aiMessageElement) {
         if (oldContent) {
             oldContent.textContent = newAnswer;
         }
+        speak(newAnswer);
 
         if (messageIndex >= 0) {
             currentChat.messages[messageIndex].text = newAnswer;
@@ -2061,6 +2068,9 @@ async function sendMessage() {
             assistantMessage
         );
 
+        // এই লাইনটি নতুন যোগ করুন
+        speak(assistantMessage);
+
         speakAIResponse(assistantMessage);
 
 
@@ -2109,6 +2119,16 @@ const SpeechRecognition =
     window.webkitSpeechRecognition;
 
 if (voiceButton && SpeechRecognition) {
+
+    console.log("SpeechRecognition:", window.SpeechRecognition);
+    console.log("webkitSpeechRecognition:", window.webkitSpeechRecognition);
+
+    alert(
+        "SpeechRecognition = " +
+        (window.SpeechRecognition ? "YES" : "NO") +
+        "\nwebkitSpeechRecognition = " +
+        (window.webkitSpeechRecognition ? "YES" : "NO")
+    );
 
     recognition = new SpeechRecognition();
 
@@ -3087,6 +3107,23 @@ clearAllHistoryMenuButton.addEventListener("click", function () {
 
     clearAllHistoryButton.click();
 });
+
+
+function speak(text) {
+
+    speechSynthesis.cancel();
+
+    const utter = new SpeechSynthesisUtterance(text);
+
+    utter.lang = "bn-BD";
+
+    utter.rate = 1;
+
+    utter.pitch = 1;
+
+    speechSynthesis.speak(utter);
+
+}
 
 
 
