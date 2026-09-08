@@ -25,6 +25,7 @@ from backend.web_research import WebResearch
 from backend.knowledge_base import KnowledgeBase
 import time
 import secrets
+import re
 
 
 app = FastAPI(
@@ -54,11 +55,26 @@ ai_engine = AIEngine()
 web_research = WebResearch()
 knowledge_base = KnowledgeBase()
 input_security = InputSecurity()
+
+
 AUTH_SECRET = os.getenv("AUTH_SECRET", "").strip()
+ADMIN_KNOWLEDGE_KEY = os.getenv(
+    "ADMIN_KNOWLEDGE_KEY",
+    "",
+).strip()
+
 IDENTITY_TOKEN_MAX_AGE_SECONDS = 30 * 24 * 60 * 60
 IDENTITY_TOKEN_CLOCK_SKEW_SECONDS = 60
+
 if not AUTH_SECRET:
-    raise RuntimeError("AUTH_SECRET is required for authentication.")
+    raise RuntimeError(
+        "AUTH_SECRET is required for authentication."
+    )
+
+if not ADMIN_KNOWLEDGE_KEY:
+    raise RuntimeError(
+        "ADMIN_KNOWLEDGE_KEY is required for knowledge administration."
+    )
 
 
 
@@ -183,12 +199,15 @@ def _verify_identity(token: str) -> str:
     return user_id
 
 class ChatRateLimiter:
-    """Simple in-memory per-IP rate limiter for the chat endpoint."""
+    """Simple in-memory per-IP rate limiter."""
 
-    MAX_REQUESTS = 10
-    WINDOW_SECONDS = 60
-
-    def __init__(self):
+    def __init__(
+        self,
+        max_requests: int,
+        window_seconds: int,
+    ):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
         self._requests = {}
 
     def check(self, client_ip: str) -> bool:
@@ -198,10 +217,10 @@ class ChatRateLimiter:
         timestamps = [
             timestamp
             for timestamp in timestamps
-            if now - timestamp < self.WINDOW_SECONDS
+            if now - timestamp < self.window_seconds
         ]
 
-        if len(timestamps) >= self.MAX_REQUESTS:
+        if len(timestamps) >= self.max_requests:
             self._requests[client_ip] = timestamps
             return False
 
@@ -210,7 +229,55 @@ class ChatRateLimiter:
         return True
 
 
-chat_rate_limiter = ChatRateLimiter()
+chat_rate_limiter = ChatRateLimiter(
+    max_requests=10,
+    window_seconds=60,
+)
+
+research_rate_limiter = ChatRateLimiter(
+    max_requests=3,
+    window_seconds=60,
+)
+
+
+auth_register_rate_limiter = ChatRateLimiter(
+    max_requests=5,
+    window_seconds=60,
+)
+
+auth_login_rate_limiter = ChatRateLimiter(
+    max_requests=5,
+    window_seconds=60,
+)
+
+session_rate_limiter = ChatRateLimiter(
+    max_requests=5,
+    window_seconds=60,
+)
+
+
+def validate_registration_password(password: str):
+    if len(password) < 8:
+        return "Password must contain at least 8 characters."
+
+    if len(password) > 128:
+        return "Password must not exceed 128 characters."
+
+    if not re.search(r"[a-z]", password):
+        return "Password must contain at least one lowercase letter."
+
+    if not re.search(r"[A-Z]", password):
+        return "Password must contain at least one uppercase letter."
+
+    if not re.search(r"[0-9]", password):
+        return "Password must contain at least one number."
+
+    if not re.search(r"[^A-Za-z0-9]", password):
+        return "Password must contain at least one special character."
+
+    return None
+
+
 
 
 
@@ -245,9 +312,36 @@ class LoginRequest(BaseModel):
 
 
 @app.post("/api/auth/register")
-def register_account(request: RegisterRequest):
+def register_account(
+    request: RegisterRequest,
+    http_request: Request,
+):
     try:
+        client_ip = (
+            http_request.client.host
+            if http_request.client
+            else "unknown"
+        )
+
+        if not auth_register_rate_limiter.check(client_ip):
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    "Too many registration requests. "
+                    "Please try again later."
+                ),
+            )
         username = request.username.strip().lower()
+        
+        password_error = validate_registration_password(
+            request.password
+        )
+
+        if password_error:
+            raise HTTPException(
+                status_code=400,
+                detail=password_error,
+            )
 
         if len(username) < 3:
             raise HTTPException(
@@ -295,8 +389,25 @@ def register_account(request: RegisterRequest):
 
 
 @app.post("/api/auth/login")
-def login_account(request: LoginRequest):
+def login_account(
+    request: LoginRequest,
+    http_request: Request,
+):
     try:
+        client_ip = (
+            http_request.client.host
+            if http_request.client
+            else "unknown"
+        )
+
+        if not auth_login_rate_limiter.check(client_ip):
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    "Too many login requests. "
+                    "Please try again later."
+                ),
+            )
         username = request.username.strip().lower()
 
         account = knowledge_base.get_user_account(
@@ -344,7 +455,22 @@ def login_account(request: LoginRequest):
 
 
 @app.post("/api/session")
-def create_session():
+def create_session(http_request: Request):
+    client_ip = (
+        http_request.client.host
+        if http_request.client
+        else "unknown"
+    )
+
+    if not session_rate_limiter.check(client_ip):
+        raise HTTPException(
+            status_code=429,
+            detail=(
+                "Too many session requests. "
+                "Please try again later."
+            ),
+        )
+
     user_id = _generate_identity()
     issued_at = int(time.time())
     token = _sign_identity(user_id, issued_at)
@@ -410,9 +536,9 @@ def ai_status():
         "name": "ISMAIL AI",
         "engine": ai_engine.status()
     }
+
+
 @app.post("/api/question/understand")
-
-
 def understand_question(request: ChatRequest):
     try:
         return {
@@ -426,11 +552,58 @@ def understand_question(request: ChatRequest):
             status_code=400,
             detail=str(exc)
         )
+
+    
 @app.post("/api/research")
-
-
-def research(request: ResearchRequest):
+def research(
+    request: ResearchRequest,
+    http_request: Request,
+):
     try:
+        authorization = (
+            http_request.headers
+            .get("Authorization", "")
+            .strip()
+        )
+
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required.",
+            )
+
+        identity_token = authorization[7:].strip()
+
+        if not identity_token:
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required.",
+            )
+
+        try:
+            _verify_identity(identity_token)
+        except ValueError:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid or expired identity token.",
+            )
+
+        client_ip = (
+            http_request.client.host
+            if http_request.client
+            else "unknown"
+        )
+
+        if not research_rate_limiter.check(client_ip):
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    "Too many research requests. "
+                    "Please try again later."
+                ),
+            )
+
+
         if request.max_sources < 2:
             raise ValueError(
                 "max_sources must be at least 2."
@@ -462,9 +635,56 @@ def research(request: ResearchRequest):
             detail=str(exc)
         )
 @app.post("/api/knowledge/save")
+def save_knowledge(
+    request: KnowledgeSaveRequest,
+    http_request: Request,
+):
+    authorization = (
+        http_request.headers
+        .get("Authorization", "")
+        .strip()
+    )
 
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required.",
+        )
 
-def save_knowledge(request: KnowledgeSaveRequest):
+    identity_token = authorization[7:].strip()
+
+    if not identity_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required.",
+        )
+
+    try:
+        _verify_identity(identity_token)
+    except ValueError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired identity token.",
+        )
+
+    admin_key = (
+        http_request.headers
+        .get("X-Admin-Key", "")
+        .strip()
+    )
+
+    if (
+        not admin_key
+        or not hmac.compare_digest(
+            admin_key,
+            ADMIN_KNOWLEDGE_KEY,
+        )
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Knowledge administration access denied.",
+        )
+
     try:
         knowledge_id = knowledge_base.save(
             question=request.question,
@@ -477,34 +697,75 @@ def save_knowledge(request: KnowledgeSaveRequest):
             expires_at=request.expires_at,
             knowledge_type=request.knowledge_type,
         )
+
         return {
             "name": "ISMAIL AI",
             "saved": True,
             "id": knowledge_id,
         }
+
     except ValueError as exc:
         raise HTTPException(
             status_code=400,
-            detail=str(exc)
+            detail=str(exc),
         )
+
+
+    
 @app.post("/api/knowledge/lookup")
 
 
-def lookup_knowledge(request: KnowledgeLookupRequest):
+def lookup_knowledge(
+    request: KnowledgeLookupRequest,
+    http_request: Request,
+):
     try:
+        authorization = (
+            http_request.headers
+            .get("Authorization", "")
+            .strip()
+        )
+
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required.",
+            )
+
+        identity_token = authorization[7:].strip()
+
+        if not identity_token:
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required.",
+            )
+
+        try:
+            _verify_identity(identity_token)
+        except ValueError:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid or expired identity token.",
+            )
+
         result = knowledge_base.get(
             question=request.question,
             knowledge_type=request.knowledge_type,
         )
+
         return {
             "name": "ISMAIL AI",
             "found": result is not None,
             "knowledge": result,
         }
+
+    except HTTPException:
+        raise
+
     except ValueError as exc:
         raise HTTPException(
             status_code=400,
-            detail=str(exc)
+            detail=str(exc),
         )
 
 

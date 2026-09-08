@@ -1595,3 +1595,127 @@ button {
 /* =========================================================
    ISMAIL AI ACCOUNT AUTH - END
    ========================================================= */
+
+
+/* =========================================
+   Enhanced Authentication UI
+   ========================================= */
+
+.auth-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.auth-help-text {
+    font-size: 12px;
+    color: #888888;
+    line-height: 1.4;
+}
+
+.auth-suggestions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.suggestion-title {
+    font-size: 12px;
+    color: #999999;
+    margin-bottom: 2px;
+}
+
+.username-suggestion {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    background: #181818;
+    color: #ffffff;
+    text-align: left;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.username-suggestion:hover {
+    border-color: #555555;
+    background: #222222;
+}
+
+
+/* Password strength */
+
+.password-strength {
+    font-size: 13px;
+    font-weight: 600;
+    color: #888888;
+}
+
+.password-strength.weak {
+    color: #ff5c5c;
+}
+
+.password-strength.medium {
+    color: #ffb84d;
+}
+
+.password-strength.strong {
+    color: #4ade80;
+}
+
+
+/* Password requirements */
+
+.password-requirements {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 0;
+}
+
+.password-req {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #777777;
+    transition: 0.2s ease;
+}
+
+.password-req .req-icon {
+    width: 16px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.password-req.valid {
+    color: #4ade80;
+}
+
+.password-req.valid .req-icon {
+    color: #4ade80;
+}
+
+
+/* Password match */
+
+.password-match {
+    min-height: 16px;
+    font-size: 12px;
+}
+
+.password-match.valid {
+    color: #4ade80;
+}
+
+.password-match.invalid {
+    color: #ff5c5c;
+}
+
+
+/* Disabled create-account button */
+
+.auth-submit-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}

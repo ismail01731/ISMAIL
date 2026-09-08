@@ -69,30 +69,124 @@
                 style="display: none;"
             >
 
-                <input
-                    id="registerUsername"
-                    type="text"
-                    placeholder="Username"
-                    minlength="3"
-                    maxlength="50"
-                    autocomplete="username"
-                    required
-                >
+                <div class="auth-field-group">
 
-                <input
-                    id="registerPassword"
-                    type="password"
-                    placeholder="Password"
-                    minlength="8"
-                    maxlength="128"
-                    autocomplete="new-password"
-                    required
-                >
+                    <input
+                        id="registerUsername"
+                        type="text"
+                        placeholder="Username"
+                        minlength="3"
+                        maxlength="50"
+                        autocomplete="username"
+                        required
+                    >
+
+                    <div
+                        id="usernameSuggestions"
+                        class="auth-suggestions"
+                    ></div>
+
+                    <div class="auth-help-text">
+                        3–50 characters: letters, numbers, . _ -
+                    </div>
+
+                </div>
+
+
+                <div class="auth-field-group">
+
+                    <input
+                        id="registerPassword"
+                        type="password"
+                        placeholder="Password"
+                        minlength="8"
+                        maxlength="128"
+                        autocomplete="new-password"
+                        required
+                    >
+
+                    <div
+                        id="passwordStrength"
+                        class="password-strength"
+                    >
+                        Password strength: —
+                    </div>
+
+                    <div
+                        id="passwordRequirements"
+                        class="password-requirements"
+                    >
+
+                        <div
+                            id="passwordReqLength"
+                            class="password-req"
+                        >
+                            <span class="req-icon">○</span>
+                            <span>At least 8 characters</span>
+                        </div>
+
+                        <div
+                            id="passwordReqLower"
+                            class="password-req"
+                        >
+                            <span class="req-icon">○</span>
+                            <span>One lowercase letter (a-z)</span>
+                        </div>
+
+                        <div
+                            id="passwordReqUpper"
+                            class="password-req"
+                        >
+                            <span class="req-icon">○</span>
+                            <span>One uppercase letter (A-Z)</span>
+                        </div>
+
+                        <div
+                            id="passwordReqNumber"
+                            class="password-req"
+                        >
+                            <span class="req-icon">○</span>
+                            <span>One number (0-9)</span>
+                        </div>
+
+                        <div
+                            id="passwordReqSpecial"
+                            class="password-req"
+                        >
+                            <span class="req-icon">○</span>
+                            <span>One special character (# @ ! $ %)</span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="auth-field-group">
+
+                    <input
+                        id="registerPasswordConfirm"
+                        type="password"
+                        placeholder="Confirm Password"
+                        minlength="8"
+                        maxlength="128"
+                        autocomplete="new-password"
+                        required
+                    >
+
+                    <div
+                        id="passwordMatch"
+                        class="password-match"
+                    ></div>
+
+                </div>
+
 
                 <button
                     id="registerButton"
                     type="submit"
                     class="auth-submit-button"
+                    disabled
                 >
                     Create Account
                 </button>

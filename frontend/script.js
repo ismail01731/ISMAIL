@@ -56,6 +56,38 @@ const registerPassword =
     document.getElementById("registerPassword");
 
 
+
+const registerPasswordConfirm =
+    document.getElementById("registerPasswordConfirm");
+
+const usernameSuggestions =
+    document.getElementById("usernameSuggestions");
+
+const passwordStrength =
+    document.getElementById("passwordStrength");
+
+const passwordMatch =
+    document.getElementById("passwordMatch");
+
+const passwordReqLength =
+    document.getElementById("passwordReqLength");
+
+const passwordReqLower =
+    document.getElementById("passwordReqLower");
+
+const passwordReqUpper =
+    document.getElementById("passwordReqUpper");
+
+const passwordReqNumber =
+    document.getElementById("passwordReqNumber");
+
+const passwordReqSpecial =
+    document.getElementById("passwordReqSpecial");
+
+
+
+
+
 function showAuthMessage(message = "") {
     if (authMessage) {
         authMessage.textContent = message;
@@ -188,6 +220,354 @@ async function getSession() {
         "Please login to continue."
     );
 }
+
+
+
+function updatePasswordRequirement(
+    element,
+    valid
+) {
+    if (!element) {
+        return;
+    }
+
+    const icon =
+        element.querySelector(".req-icon");
+
+    if (valid) {
+        element.classList.add(
+            "valid"
+        );
+
+        if (icon) {
+            icon.textContent = "✓";
+        }
+    } else {
+        element.classList.remove(
+            "valid"
+        );
+
+        if (icon) {
+            icon.textContent = "○";
+        }
+    }
+}
+
+
+function updatePasswordValidation() {
+
+    if (!registerPassword) {
+        return false;
+    }
+
+    const password =
+        registerPassword.value;
+
+    const hasLength =
+        password.length >= 8 &&
+        password.length <= 128;
+
+    const hasLower =
+        /[a-z]/.test(password);
+
+    const hasUpper =
+        /[A-Z]/.test(password);
+
+    const hasNumber =
+        /[0-9]/.test(password);
+
+    const hasSpecial =
+        /[^A-Za-z0-9]/.test(password);
+
+
+    updatePasswordRequirement(
+        passwordReqLength,
+        hasLength
+    );
+
+    updatePasswordRequirement(
+        passwordReqLower,
+        hasLower
+    );
+
+    updatePasswordRequirement(
+        passwordReqUpper,
+        hasUpper
+    );
+
+    updatePasswordRequirement(
+        passwordReqNumber,
+        hasNumber
+    );
+
+    updatePasswordRequirement(
+        passwordReqSpecial,
+        hasSpecial
+    );
+
+
+    const score =
+        [
+            hasLength,
+            hasLower,
+            hasUpper,
+            hasNumber,
+            hasSpecial
+        ].filter(Boolean).length;
+
+
+    if (passwordStrength) {
+
+        if (!password) {
+            passwordStrength.textContent =
+                "Password strength: —";
+
+            passwordStrength.className =
+                "password-strength";
+
+        } else if (score <= 2) {
+            passwordStrength.textContent =
+                "Password strength: Weak";
+
+            passwordStrength.className =
+                "password-strength weak";
+
+        } else if (score <= 4) {
+            passwordStrength.textContent =
+                "Password strength: Medium";
+
+            passwordStrength.className =
+                "password-strength medium";
+
+        } else {
+            passwordStrength.textContent =
+                "Password strength: Strong";
+
+            passwordStrength.className =
+                "password-strength strong";
+        }
+    }
+
+
+    updatePasswordMatch();
+
+
+    return (
+        hasLength &&
+        hasLower &&
+        hasUpper &&
+        hasNumber &&
+        hasSpecial
+    );
+}
+
+
+function updatePasswordMatch() {
+
+    if (
+        !registerPassword ||
+        !registerPasswordConfirm ||
+        !passwordMatch
+    ) {
+        return false;
+    }
+
+    const password =
+        registerPassword.value;
+
+    const confirmPassword =
+        registerPasswordConfirm.value;
+
+
+    if (!confirmPassword) {
+
+        passwordMatch.textContent = "";
+
+        passwordMatch.className =
+            "password-match";
+
+        return false;
+    }
+
+
+    if (
+        password === confirmPassword
+    ) {
+
+        passwordMatch.textContent =
+            "✓ Passwords match";
+
+        passwordMatch.className =
+            "password-match valid";
+
+        return true;
+
+    }
+
+
+    passwordMatch.textContent =
+        "✕ Passwords do not match";
+
+    passwordMatch.className =
+        "password-match invalid";
+
+    return false;
+}
+
+
+function updateRegisterButton() {
+
+    const passwordValid =
+        updatePasswordValidation();
+
+    const passwordsMatch =
+        updatePasswordMatch();
+
+    const username =
+        registerUsername
+            ? registerUsername.value.trim()
+            : "";
+
+    const usernameValid =
+        /^[A-Za-z0-9._-]{3,50}$/
+            .test(username);
+
+
+    if (registerButton) {
+
+        registerButton.disabled = !(
+            usernameValid &&
+            passwordValid &&
+            passwordsMatch
+        );
+    }
+}
+
+
+if (registerPassword) {
+
+    registerPassword.addEventListener(
+        "input",
+        updateRegisterButton
+    );
+}
+
+
+if (registerPasswordConfirm) {
+
+    registerPasswordConfirm
+        .addEventListener(
+            "input",
+            updateRegisterButton
+        );
+}
+
+
+if (registerUsername) {
+
+    registerUsername.addEventListener(
+        "input",
+        updateRegisterButton
+    );
+}
+
+
+
+
+function updateUsernameSuggestions() {
+
+    if (
+        !registerUsername ||
+        !usernameSuggestions
+    ) {
+        return;
+    }
+
+    const username =
+        registerUsername.value
+            .trim()
+            .toLowerCase();
+
+    if (!username) {
+        usernameSuggestions.innerHTML = "";
+        return;
+    }
+
+    const base =
+        username
+            .replace(
+                /[^a-z0-9]/g,
+                ""
+            )
+            .slice(0, 42);
+
+    if (!base) {
+        usernameSuggestions.innerHTML = "";
+        return;
+    }
+
+    const suggestions = [
+        `${base}01`,
+        `${base}123`,
+        `${base}ai`
+    ];
+
+    usernameSuggestions.innerHTML = `
+        <div class="suggestion-title">
+            Username suggestions
+        </div>
+
+        ${suggestions
+            .map(
+                suggestion => `
+                    <button
+                        type="button"
+                        class="username-suggestion"
+                        data-username="${suggestion}"
+                    >
+                        ${suggestion}
+                    </button>
+                `
+            )
+            .join("")}
+    `;
+
+    usernameSuggestions
+        .querySelectorAll(
+            ".username-suggestion"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                function () {
+
+                    registerUsername.value =
+                        this.dataset.username;
+
+                    updateUsernameSuggestions();
+                    updateRegisterButton();
+
+                    registerPassword.focus();
+                }
+            );
+
+        });
+}
+
+
+if (registerUsername) {
+
+    registerUsername.addEventListener(
+        "input",
+        updateUsernameSuggestions
+    );
+
+}
+
+
+
+
 
 
 async function loginAccount(
