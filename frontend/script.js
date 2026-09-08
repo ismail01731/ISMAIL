@@ -949,7 +949,7 @@ async function checkCentralChatHistory() {
         const session = await getSession();
 
         const response = await fetch(
-            `${BACKEND_BASE_URL}/api/chat/history`,
+            `${BACKEND_BASE_URL}/api/chat/history?chat_id=${encodeURIComponent(String(currentChat.id))}`,
             {
                 method: "GET",
                 headers: {
@@ -1114,6 +1114,7 @@ async function syncChatMessage(role, message) {
                 },
 
                 body: JSON.stringify({
+                    chat_id: String(currentChat.id),
                     role: role,
                     message: message
                 })
@@ -1686,6 +1687,409 @@ newChatButton.addEventListener("click", function () {
 
 
 
+
+/* =========================================
+   TOP RIGHT CHAT SEARCH
+========================================= */
+
+const topSearchButton =
+    document.getElementById("topSearchButton");
+
+const topSearchPopup =
+    document.getElementById("topSearchPopup");
+
+const topSearchInput =
+    document.getElementById("topSearchInput");
+
+const topSearchClose =
+    document.getElementById("topSearchClose");
+
+const topSearchResults =
+    document.getElementById("topSearchResults");
+
+
+/* -----------------------------------------
+   GET SAVED CHAT HISTORY
+----------------------------------------- */
+
+function getTopSearchHistory() {
+    try {
+
+        const history =
+            JSON.parse(
+                localStorage.getItem(HISTORY_KEY) || "[]"
+            );
+
+        return Array.isArray(history)
+            ? history
+            : [];
+
+    } catch (error) {
+
+        console.error(
+            "Search history error:",
+            error
+        );
+
+        return [];
+    }
+}
+
+
+/* -----------------------------------------
+   OPEN SEARCH
+----------------------------------------- */
+
+function openTopSearch() {
+
+    topSearchPopup.classList.add("open");
+
+    setTimeout(() => {
+
+        topSearchInput.focus();
+
+    }, 50);
+}
+
+
+/* -----------------------------------------
+   CLOSE SEARCH
+----------------------------------------- */
+
+function closeTopSearch() {
+
+    topSearchPopup.classList.remove("open");
+
+    topSearchInput.value = "";
+
+    topSearchResults.innerHTML = "";
+}
+
+
+/* -----------------------------------------
+   OPEN SELECTED CHAT
+----------------------------------------- */
+
+function openChatFromSearch(chat) {
+
+    if (!chat) {
+        return;
+    }
+
+    currentChat = chat;
+
+    chatContainer.innerHTML = "";
+
+    if (welcome) {
+        welcome.style.display = "none";
+    }
+
+
+    if (
+        Array.isArray(currentChat.messages)
+    ) {
+
+        currentChat.messages.forEach(
+            message => {
+
+                const messageElement =
+                    document.createElement("div");
+
+                messageElement.className =
+                    `message ${message.type}-message`;
+
+
+                const content =
+                    document.createElement("div");
+
+                content.className =
+                    "message-content";
+
+                content.textContent =
+                    message.text || "";
+
+
+                messageElement.appendChild(
+                    content
+                );
+
+                chatContainer.appendChild(
+                    messageElement
+                );
+
+            }
+        );
+
+    }
+
+
+    closeTopSearch();
+
+    messageInput.focus();
+}
+
+
+/* -----------------------------------------
+   SEARCH CHATS
+----------------------------------------- */
+
+function renderTopSearchResults() {
+
+    const searchText =
+        topSearchInput.value
+            .trim()
+            .toLowerCase();
+
+
+    topSearchResults.innerHTML = "";
+
+
+    if (!searchText) {
+        return;
+    }
+
+
+    const history =
+        getTopSearchHistory();
+
+
+    const filteredHistory =
+        history.filter(chat => {
+
+            const title =
+                String(
+                    chat.title || "New chat"
+                );
+
+
+            const messages =
+                Array.isArray(chat.messages)
+                    ? chat.messages
+                        .map(
+                            message =>
+                                String(
+                                    message.text || ""
+                                )
+                        )
+                        .join(" ")
+                    : "";
+
+
+            return (
+                title
+                    .toLowerCase()
+                    .includes(searchText)
+
+                ||
+
+                messages
+                    .toLowerCase()
+                    .includes(searchText)
+            );
+
+        });
+
+
+    if (filteredHistory.length === 0) {
+
+        const noResult =
+            document.createElement("div");
+
+        noResult.className =
+            "top-search-no-result";
+
+        noResult.textContent =
+            "No matching chats found.";
+
+        topSearchResults.appendChild(
+            noResult
+        );
+
+        return;
+    }
+
+
+    filteredHistory
+        .slice(0, 15)
+        .forEach(chat => {
+
+            const result =
+                document.createElement("button");
+
+            result.type = "button";
+
+            result.className =
+                "top-search-result";
+
+
+            const title =
+                document.createElement("div");
+
+            title.className =
+                "top-search-result-title";
+
+            title.textContent =
+                chat.title || "New chat";
+
+
+            result.appendChild(title);
+
+
+            /* Find matching message */
+
+            let matchingMessage = null;
+
+
+            if (
+                Array.isArray(chat.messages)
+            ) {
+
+                matchingMessage =
+                    chat.messages.find(
+                        message =>
+                            String(
+                                message.text || ""
+                            )
+                            .toLowerCase()
+                            .includes(searchText)
+                    );
+
+            }
+
+
+            if (matchingMessage) {
+
+                const message =
+                    document.createElement("div");
+
+                message.className =
+                    "top-search-result-message";
+
+                message.textContent =
+                    String(
+                        matchingMessage.text || ""
+                    )
+                    .replace(/\s+/g, " ")
+                    .trim();
+
+
+                result.appendChild(message);
+
+            }
+
+
+            result.addEventListener(
+                "click",
+                () => {
+
+                    openChatFromSearch(chat);
+
+                }
+            );
+
+
+            topSearchResults.appendChild(
+                result
+            );
+
+        });
+
+}
+
+
+/* -----------------------------------------
+   EVENTS
+----------------------------------------- */
+
+topSearchButton.addEventListener(
+    "click",
+    event => {
+
+        event.stopPropagation();
+
+        if (
+            topSearchPopup.classList.contains(
+                "open"
+            )
+        ) {
+
+            closeTopSearch();
+
+        } else {
+
+            openTopSearch();
+
+        }
+
+    }
+);
+
+
+topSearchClose.addEventListener(
+    "click",
+    event => {
+
+        event.stopPropagation();
+
+        closeTopSearch();
+
+    }
+);
+
+
+topSearchInput.addEventListener(
+    "input",
+    renderTopSearchResults
+);
+
+
+topSearchInput.addEventListener(
+    "keydown",
+    event => {
+
+        if (event.key === "Escape") {
+
+            closeTopSearch();
+
+        }
+
+    }
+);
+
+
+/* -----------------------------------------
+   CLICK OUTSIDE
+----------------------------------------- */
+
+document.addEventListener(
+    "click",
+    event => {
+
+        if (
+            topSearchPopup.classList.contains(
+                "open"
+            )
+            &&
+            !topSearchPopup.contains(
+                event.target
+            )
+            &&
+            !topSearchButton.contains(
+                event.target
+            )
+        ) {
+
+            closeTopSearch();
+
+        }
+
+    }
+);
+
+
+
+
+
 /* =========================
    CHAT HISTORY
 ========================= */
@@ -1717,11 +2121,21 @@ function renderHistory() {
     const searchText =
         historySearchInput.value.trim().toLowerCase();
 
-    const filteredHistory = history.filter(chat =>
-        (chat.title || "New chat")
-            .toLowerCase()
-            .includes(searchText)
-    );
+    const filteredHistory = history.filter(chat => {
+        const title = (chat.title || "New chat").toLowerCase();
+
+        const messageText = Array.isArray(chat.messages)
+            ? chat.messages
+                .map(message => message.text || "")
+                .join(" ")
+                .toLowerCase()
+            : "";
+
+        return (
+            title.includes(searchText) ||
+            messageText.includes(searchText)
+        );
+    });
 
     
     if (history.length === 0) {
@@ -1872,6 +2286,10 @@ function renderHistory() {
         historyList.appendChild(item);
     });
 }
+
+
+
+historySearchInput.addEventListener("input", renderHistory);
 
 
 
