@@ -24,3 +24,6 @@ config/.env.backup
 config/.env
 .env
 *.env
+
+config/.env.backup
+config/.envn.envn*.env
