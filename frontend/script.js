@@ -2068,9 +2068,6 @@ async function sendMessage() {
             assistantMessage
         );
 
-        // এই লাইনটি নতুন যোগ করুন
-        speak(assistantMessage);
-
         speakAIResponse(assistantMessage);
 
 
