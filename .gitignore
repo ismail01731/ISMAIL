@@ -27,3 +27,22 @@ config/.env
 
 config/.env.backup
 config/.envn.envn*.env
+
+
+# Temporary files
+*.zip
+*.txt
+
+# Secrets
+.env
+.env.*
+
+# Android
+local.properties
+*.jks
+*.keystore
+
+# Python
+__pycache__/
+*.pyc
+*.log
