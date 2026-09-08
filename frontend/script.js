@@ -2171,6 +2171,8 @@ if (voiceButton && SpeechRecognition) {
 
     recognition.onerror = function (event) {
 
+        if (window.AndroidVoice) return;
+
         console.error(
             "Voice recognition error:",
             event.error
@@ -2194,30 +2196,32 @@ if (voiceButton && SpeechRecognition) {
         voiceButton.title = "Voice";
     };
 
-    voiceButton.addEventListener(
-        "click",
-        function () {
+voiceButton.addEventListener(
+    "click",
+    function () {
 
-            if (isListening) {
+        if (
+            window.AndroidVoice &&
+            window.AndroidVoice.startVoiceRecognition
+        ) {
 
-                recognition.stop();
+            window.AndroidVoice.startVoiceRecognition();
+            return;
 
-                return;
-            }
-
-            try {
-
-                recognition.start();
-
-            } catch (error) {
-
-                console.error(
-                    "Unable to start voice:",
-                    error
-                );
-            }
         }
-    );
+
+        try {
+
+            recognition.start();
+
+        } catch (error) {
+
+            console.error(error);
+
+        }
+
+    }
+);
 
 } else {
 
@@ -3111,19 +3115,36 @@ clearAllHistoryMenuButton.addEventListener("click", function () {
 
 function speak(text) {
 
-    speechSynthesis.cancel();
+    if (!("speechSynthesis" in window)) {
+        return;
+    }
+
+    window.speechSynthesis.cancel();
 
     const utter = new SpeechSynthesisUtterance(text);
 
     utter.lang = "bn-BD";
-
     utter.rate = 1;
-
     utter.pitch = 1;
 
-    speechSynthesis.speak(utter);
+    window.speechSynthesis.speak(utter);
 
 }
+
+
+window.receiveNativeVoice = function (text) {
+
+    if (!text) return;
+
+    messageInput.value = text;
+
+    messageInput.style.height = "auto";
+    messageInput.style.height =
+        `${Math.min(messageInput.scrollHeight,150)}px`;
+
+    sendMessage();
+
+};
 
 
 
