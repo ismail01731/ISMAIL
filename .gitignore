@@ -14,3 +14,13 @@ local.properties
 *.db-shm
 *.db-wal
 *.backup.db
+
+config/.env.backup
+config/.env
+.env
+*.env
+
+config/.env.backup
+config/.env
+.env
+*.env

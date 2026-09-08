@@ -47,11 +47,22 @@ class KnowledgeBase:
             # Migration check: Ensure UNIQUE index exists for ON CONFLICT
             cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_normalized_question ON knowledge(normalized_question);")
 
-            # Migration check: Ensure knowledge_type column exists
+            # Migration check: Read existing knowledge table columns
             cursor.execute("PRAGMA table_info(knowledge)")
-            columns = [info[1] for info in cursor.fetchall()]
-            if 'knowledge_type' not in columns:
-                cursor.execute("ALTER TABLE knowledge ADD COLUMN knowledge_type TEXT DEFAULT 'permanent'")
+            knowledge_columns = {
+                info[1]: {
+                    "notnull": info[3],
+                    "default": info[4],
+                }
+                for info in cursor.fetchall()
+            }
+
+            # Ensure knowledge_type column exists
+            if "knowledge_type" not in knowledge_columns:
+                cursor.execute(
+                    "ALTER TABLE knowledge "
+                    "ADD COLUMN knowledge_type TEXT DEFAULT 'permanent'"
+                )
 
 
             # --------------------------------------------------------
@@ -182,8 +193,21 @@ class KnowledgeBase:
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO knowledge 
-                (question, normalized_question, answer, topic, source, source_url, verified, confidence, created_at, expires_at, type, knowledge_type)
+                INSERT INTO knowledge
+                (
+                    question,
+                    normalized_question,
+                    answer,
+                    topic,
+                    source,
+                    source_url,
+                    verified,
+                    confidence,
+                    created_at,
+                    expires_at,
+                    type,
+                    knowledge_type
+                )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(normalized_question) DO UPDATE SET
                     question=excluded.question,
@@ -197,7 +221,20 @@ class KnowledgeBase:
                     expires_at=excluded.expires_at,
                     type=excluded.type,
                     knowledge_type=excluded.knowledge_type
-            ''', (question, norm_q, answer, topic, source, source_url, 1 if verified else 0, confidence, now_str, expires_at, knowledge_type, knowledge_type))
+            ''', (
+                question,
+                norm_q,
+                answer,
+                topic,
+                source,
+                source_url,
+                1 if verified else 0,
+                confidence,
+                now_str,
+                expires_at,
+                knowledge_type,
+                knowledge_type,
+            ))
             conn.commit()
             return int(cursor.lastrowid)
 

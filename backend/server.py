@@ -3,6 +3,28 @@ import hashlib
 import hmac
 import json
 import os
+import io
+import csv
+import re
+import time
+import secrets
+
+from dotenv import load_dotenv
+
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
+
+
+
+
+from pypdf import PdfReader
+from docx import Document
+from openpyxl import load_workbook
+
+import base64
+import hashlib
+import hmac
+import json
+import os
 from dotenv import load_dotenv
 
 load_dotenv(
@@ -15,7 +37,7 @@ load_dotenv(
     override=False
 )
 
-from fastapi import FastAPI, HTTPException, Request
+
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -23,9 +45,12 @@ from backend.ai_engine import AIEngine
 from backend.input_security import InputSecurity
 from backend.web_research import WebResearch
 from backend.knowledge_base import KnowledgeBase
-import time
-import secrets
-import re
+
+
+
+
+
+
 
 
 app = FastAPI(
@@ -483,10 +508,223 @@ def create_session(http_request: Request):
 
 
 
+# =========================================================
+# FILE UPLOAD AND TEXT EXTRACTION
+# =========================================================
+
+MAX_UPLOAD_SIZE = 10 * 1024 * 1024
+MAX_EXTRACTED_TEXT = 50000
+
+
+def extract_text_from_file(filename: str, file_bytes: bytes) -> str:
+    name = filename.lower()
+
+    if name.endswith(".txt") or name.endswith(".md") or name.endswith(".log"):
+        return file_bytes.decode("utf-8", errors="replace")
+
+    if name.endswith(".csv"):
+        text = file_bytes.decode("utf-8", errors="replace")
+        rows = csv.reader(io.StringIO(text))
+
+        lines = []
+
+        for row in rows:
+            lines.append(" | ".join(str(cell) for cell in row))
+
+        return "\n".join(lines)
+
+    if name.endswith(".json"):
+        text = file_bytes.decode("utf-8", errors="replace")
+
+        try:
+            data = json.loads(text)
+            return json.dumps(
+                data,
+                ensure_ascii=False,
+                indent=2
+            )
+        except json.JSONDecodeError:
+            return text
+
+    if name.endswith(".pdf"):
+        pdf_file = io.BytesIO(file_bytes)
+        reader = PdfReader(pdf_file)
+
+        pages = []
+
+        for page in reader.pages:
+            page_text = page.extract_text() or ""
+            pages.append(page_text)
+
+        return "\n\n".join(pages)
+
+    if name.endswith(".docx"):
+        document = Document(io.BytesIO(file_bytes))
+
+        paragraphs = [
+            paragraph.text
+            for paragraph in document.paragraphs
+            if paragraph.text.strip()
+        ]
+
+        return "\n".join(paragraphs)
+
+    if name.endswith(".xlsx") or name.endswith(".xlsm"):
+        workbook = load_workbook(
+            io.BytesIO(file_bytes),
+            read_only=True,
+            data_only=True
+        )
+
+        lines = []
+
+        for worksheet in workbook.worksheets:
+
+            lines.append(
+                f"[Sheet: {worksheet.title}]"
+            )
+
+            for row in worksheet.iter_rows(
+                values_only=True
+            ):
+                values = []
+
+                for value in row:
+                    if value is None:
+                        values.append("")
+                    else:
+                        values.append(str(value))
+
+                lines.append(
+                    " | ".join(values)
+                )
+
+        return "\n".join(lines)
+
+    raise ValueError(
+        "Unsupported file type. "
+        "Supported: PDF, DOCX, XLSX, XLSM, TXT, MD, CSV, JSON, LOG."
+    )
+
+
+@app.post("/api/file/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    http_request: Request = None,
+):
+    authorization = (
+        http_request.headers
+        .get("Authorization", "")
+        .strip()
+        if http_request
+        else ""
+    )
+
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required."
+        )
+
+    identity_token = authorization[7:].strip()
+
+    if not identity_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required."
+        )
+
+    try:
+        authenticated_user_id = _verify_identity(
+            identity_token
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired identity token."
+        )
+
+    if not file.filename:
+        raise HTTPException(
+            status_code=400,
+            detail="No file selected."
+        )
+
+    allowed_extensions = {
+        ".pdf",
+        ".docx",
+        ".xlsx",
+        ".xlsm",
+        ".txt",
+        ".md",
+        ".csv",
+        ".json",
+        ".log",
+    }
+
+    extension = os.path.splitext(
+        file.filename
+    )[1].lower()
+
+    if extension not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Unsupported file type. "
+                "Supported: PDF, DOCX, XLSX, XLSM, "
+                "TXT, MD, CSV, JSON, LOG."
+            )
+        )
+
+    file_bytes = await file.read()
+
+    if len(file_bytes) > MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail="File is too large. Maximum size is 10 MB."
+        )
+
+    try:
+        extracted_text = extract_text_from_file(
+            file.filename,
+            file_bytes
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unable to read file: {type(exc).__name__}"
+        )
+
+    extracted_text = extracted_text.strip()
+
+    if not extracted_text:
+        raise HTTPException(
+            status_code=400,
+            detail="No readable text was found in this file."
+        )
+
+    if len(extracted_text) > MAX_EXTRACTED_TEXT:
+        extracted_text = extracted_text[
+            :MAX_EXTRACTED_TEXT
+        ]
+
+    return {
+        "name": "ISMAIL AI",
+        "filename": file.filename,
+        "content_type": file.content_type,
+        "size": len(file_bytes),
+        "text": extracted_text,
+        "user_id": authenticated_user_id,
+    }
+
+
+
+
 
 class ChatRequest(BaseModel):
     message: str = Field(..., max_length=12000)
     user_id: str = Field("", max_length=200, pattern=r"^[A-Za-z0-9._:-]*$")
+    file_context: str = Field("", max_length=65000)
 
 
 class ChatHistoryMessage(BaseModel):
@@ -991,7 +1229,8 @@ def chat(request: ChatRequest, http_request: Request):
 
         response = ai_engine.generate(
             request.message,
-            authenticated_user_id
+            authenticated_user_id,
+            request.file_context,
         )
 
         action = None

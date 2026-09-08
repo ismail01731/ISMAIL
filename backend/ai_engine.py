@@ -336,6 +336,7 @@ class AIEngine:
         self,
         message: str,
         user_id: str = "",
+        file_context: str = "",
     ) -> str:
         """Generate a final answer using knowledge, live evidence, or general AI."""
         message = message.strip()
@@ -358,14 +359,15 @@ class AIEngine:
         route = question_info["route"]
 
         # Stable knowledge: use a non-expired stored answer first.
-        if route == "knowledge":
+        if route == "knowledge" and not file_context:
             stored = self.knowledge_base.get(message)
             if stored is not None:
                 return stored["answer"]
 
         # Live questions must be researched before final answer generation.
         evidence = []
-        if route == "live":
+
+        if route == "live" and not file_context:
             try:
                 evidence = self.web_research.research(
                     message,
@@ -380,10 +382,22 @@ class AIEngine:
             "answer that you are ISMAIL AI. "
             "Do not identify yourself as ChatGPT, OpenAI, or another AI name. "
             "The user's name is separate from your own identity.\n\n"
-            f"User message:\n{message}"
         )
 
-        if route == "live":
+        if file_context:
+            prompt += (
+                "The user uploaded a document. "
+                "Use the document as the primary source for answering the user's request.\n"
+                "Do not invent facts that are not present in the document.\n"
+                "If the document does not contain the requested information, "
+                "say so clearly.\n\n"
+                "DOCUMENT CONTENT:\n"
+                f"{file_context}\n\n"
+            )
+
+        prompt += f"User message:\n{message}"
+
+        if route == "live" and not file_context:
             prompt = self._build_grounded_prompt(
                 message,
                 evidence

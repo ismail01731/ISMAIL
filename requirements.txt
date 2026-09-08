@@ -2,3 +2,8 @@ fastapi
 uvicorn[standard]
 openai
 gunicorn
+pypdf
+python-docx
+openpyxl
+python-multipart
+python-dotenv

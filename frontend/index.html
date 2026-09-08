@@ -352,19 +352,107 @@
         <div class="input-wrapper">
 
             <button
+                id="attachButton"
                 class="attach-button"
                 type="button"
-                aria-label="Attach"
+                aria-label="More options"
             >
                 +
             </button>
+
+            <input
+                id="fileInput"
+                type="file"
+                accept=".pdf,.docx,.xlsx,.xlsm,.txt,.md,.csv,.json,.log"
+                hidden
+            >
+
+            <div
+                id="attachMenu"
+                class="attach-menu"
+                hidden
+            >
+                <button
+                    id="fileOption"
+                    class="attach-menu-item"
+                    type="button"
+                >
+                    📎
+                    <span>File / PDF</span>
+                </button>
+
+                <button
+                    id="imageOption"
+                    class="attach-menu-item"
+                    type="button"
+                >
+                    🖼️
+                    <span>Image</span>
+                </button>
+
+                <button
+                    id="cameraOption"
+                    class="attach-menu-item"
+                    type="button"
+                >
+                    📷
+                    <span>Camera</span>
+                </button>
+
+                <button
+                    id="voiceOption"
+                    class="attach-menu-item"
+                    type="button"
+                >
+                    🎙️
+                    <span>Voice</span>
+                </button>
+
+                <button
+                    id="webOption"
+                    class="attach-menu-item"
+                    type="button"
+                >
+                    🌐
+                    <span>Web Search</span>
+                </button>
+            </div>
+
+            <div
+                id="attachmentPreview"
+                class="attachment-preview"
+                hidden
+            >
+                <div class="attachment-icon">
+                    📄
+                </div>
+
+                <div class="attachment-info">
+                    <div
+                        id="attachmentName"
+                        class="attachment-name"
+                    ></div>
+
+                    <div class="attachment-type">
+                        PDF / Document
+                    </div>
+                </div>
+
+                <button
+                    id="removeAttachment"
+                    class="remove-attachment"
+                    type="button"
+                    aria-label="Remove attachment"
+                >
+                    ×
+                </button>
+            </div>
 
             <textarea
                 id="messageInput"
                 placeholder="Message ISMAIL AI..."
                 rows="1"
             ></textarea>
-
 
             <button
                 id="sendButton"
