@@ -1,4 +1,4 @@
-const CACHE_NAME = "ismail-ai-v2";
+const CACHE_NAME = "ismail-ai-v3";
 const APP_FILES = [
     "./",
     "./index.html",
