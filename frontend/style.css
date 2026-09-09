@@ -2309,3 +2309,329 @@ body.dark .voice-button:hover {
 }
 
 
+.google-login-button {
+    width: 100%;
+    height: 48px;
+    margin-top: 12px;
+    border: 1px solid #d9d9d9;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #202124;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: 0.2s ease;
+}
+
+.google-login-button:hover {
+    background: #f7f7f7;
+}
+
+.google-login-icon {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: #4285f4;
+}
+
+
+
+
+/* =========================================================
+   ISMAIL AI - PREMIUM BLACK AUTH UI
+   ========================================================= */
+
+.auth-screen {
+    background: #000000 !important;
+    padding: 20px !important;
+}
+
+.auth-card {
+    max-width: 430px !important;
+    padding: 34px 30px 28px !important;
+    background: #0b0b0b !important;
+    border: 1px solid #252525 !important;
+    border-radius: 24px !important;
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.65),
+        0 0 0 1px rgba(255, 255, 255, 0.02) !important;
+}
+
+.auth-brand {
+    margin-bottom: 26px !important;
+}
+
+.auth-brand h1 {
+    font-size: 30px !important;
+    font-weight: 800 !important;
+    letter-spacing: 1.5px !important;
+    margin-bottom: 9px !important;
+}
+
+.auth-brand span {
+    color: #8f8f8f !important;
+    font-size: 13px !important;
+}
+
+.auth-message {
+    min-height: 18px !important;
+    margin-bottom: 14px !important;
+    font-size: 13px !important;
+}
+
+.auth-form {
+    gap: 12px !important;
+}
+
+.auth-form input {
+    height: 50px !important;
+    padding: 0 16px !important;
+    border: 1px solid #292929 !important;
+    border-radius: 12px !important;
+    background: #000000 !important;
+    color: #ffffff !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.auth-form input:focus {
+    border-color: #777777 !important;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05) !important;
+}
+
+.auth-submit-button {
+    height: 50px !important;
+    padding: 0 16px !important;
+    margin-top: 2px !important;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
+    transition: transform 0.2s ease, opacity 0.2s ease !important;
+}
+
+.auth-submit-button:hover {
+    opacity: 0.92 !important;
+}
+
+.auth-submit-button:active {
+    transform: scale(0.98) !important;
+}
+
+/* Google Login */
+.google-login-button {
+    width: 100% !important;
+    height: 50px !important;
+    margin-top: 14px !important;
+    border: 1px solid #303030 !important;
+    border-radius: 12px !important;
+    background: #151515 !important;
+    color: #ffffff !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    overflow: hidden !important;
+    transition: background 0.2s ease, border-color 0.2s ease !important;
+}
+
+.google-login-button:hover {
+    background: #1d1d1d !important;
+    border-color: #444444 !important;
+}
+
+.google-login-icon {
+    width: 22px !important;
+    height: 22px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 17px !important;
+    font-weight: 800 !important;
+    color: #4285f4 !important;
+}
+
+.auth-toggle-button {
+    height: 46px !important;
+    margin-top: 16px !important;
+    padding: 0 16px !important;
+    border: 1px solid #292929 !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+    color: #bdbdbd !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+}
+
+.auth-toggle-button:hover {
+    background: #111111 !important;
+    border-color: #444444 !important;
+    color: #ffffff !important;
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .auth-screen {
+        padding: 14px !important;
+    }
+
+    .auth-card {
+        padding: 28px 20px 22px !important;
+        border-radius: 20px !important;
+    }
+
+    .auth-brand h1 {
+        font-size: 26px !important;
+    }
+}
+
+
+
+/* =========================================================
+   ISMAIL AI - PREMIUM BLACK AUTH UI
+   ========================================================= */
+
+.auth-screen {
+    background: #000000 !important;
+    padding: 20px !important;
+}
+
+.auth-card {
+    max-width: 430px !important;
+    padding: 34px 30px 28px !important;
+    background: #0b0b0b !important;
+    border: 1px solid #252525 !important;
+    border-radius: 24px !important;
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.65),
+        0 0 0 1px rgba(255, 255, 255, 0.02) !important;
+}
+
+.auth-brand {
+    margin-bottom: 26px !important;
+}
+
+.auth-brand h1 {
+    font-size: 30px !important;
+    font-weight: 800 !important;
+    letter-spacing: 1.5px !important;
+    margin-bottom: 9px !important;
+}
+
+.auth-brand span {
+    color: #8f8f8f !important;
+    font-size: 13px !important;
+}
+
+.auth-message {
+    min-height: 18px !important;
+    margin-bottom: 14px !important;
+    font-size: 13px !important;
+}
+
+.auth-form {
+    gap: 12px !important;
+}
+
+.auth-form input {
+    height: 50px !important;
+    padding: 0 16px !important;
+    border: 1px solid #292929 !important;
+    border-radius: 12px !important;
+    background: #000000 !important;
+    color: #ffffff !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.auth-form input:focus {
+    border-color: #777777 !important;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05) !important;
+}
+
+.auth-submit-button {
+    height: 50px !important;
+    padding: 0 16px !important;
+    margin-top: 2px !important;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
+}
+
+.google-login-button {
+    width: 100% !important;
+    height: 50px !important;
+    margin-top: 14px !important;
+    border: 1px solid #303030 !important;
+    border-radius: 12px !important;
+    background: #151515 !important;
+    color: #ffffff !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+}
+
+.google-login-button:hover {
+    background: #1d1d1d !important;
+    border-color: #444444 !important;
+}
+
+.google-login-icon {
+    width: 22px !important;
+    height: 22px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 17px !important;
+    font-weight: 800 !important;
+    color: #4285f4 !important;
+}
+
+.auth-toggle-button {
+    height: 46px !important;
+    margin-top: 16px !important;
+    padding: 0 16px !important;
+    border: 1px solid #292929 !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+    color: #bdbdbd !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+}
+
+.auth-toggle-button:hover {
+    background: #111111 !important;
+    border-color: #444444 !important;
+    color: #ffffff !important;
+}
+
+@media (max-width: 480px) {
+    .auth-screen {
+        padding: 14px !important;
+    }
+
+    .auth-card {
+        padding: 28px 20px 22px !important;
+        border-radius: 20px !important;
+    }
+
+    .auth-brand h1 {
+        font-size: 26px !important;
+    }
+}
+
+
