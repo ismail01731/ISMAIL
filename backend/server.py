@@ -1,4 +1,5 @@
-﻿import base64
+﻿from typing import Optional
+import base64
 import hashlib
 import hmac
 import json
@@ -1070,8 +1071,8 @@ def lookup_knowledge(
 
 @app.get("/api/chat/history")
 def get_chat_history(
-    chat_id: str,
-    http_request: Request
+    http_request: Request,
+    chat_id: Optional[str] = None,
 ):
     try:
         authorization = http_request.headers.get("Authorization", "").strip()
@@ -1097,6 +1098,13 @@ def get_chat_history(
                 status_code=401,
                 detail="Invalid or expired identity token.",
             )
+
+        if not chat_id:
+            return {
+                "name": "ISMAIL AI",
+                "user_id": authenticated_user_id,
+                "history": [],
+            }
 
         return {
             "name": "ISMAIL AI",
@@ -1340,6 +1348,7 @@ if __name__ == "__main__":
         port=8000,
         reload=True
     )
+
 
 
 
