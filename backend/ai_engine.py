@@ -594,7 +594,7 @@ class AIEngine:
             f"{message}"
         )
 
-        if (route == "live" or obvious_live) and not file_context:
+        if route == "live" and not file_context:
             prompt = self._build_grounded_prompt(
                 message,
                 evidence
