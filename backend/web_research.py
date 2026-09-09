@@ -499,6 +499,140 @@ class WebResearch:
 
 
 
+    def _collect_bangladesh_rss_news(self, max_sources: int = 5):
+        """Collect recent Bangladesh news directly from first-party publisher RSS feeds."""
+        feeds = [
+            (
+                "bdnews24 Bangla",
+                "https://bangla.bdnews24.com/bangladesh/?getXmlFeed=true&widgetId=1211&widgetName=rssfeed",
+            ),
+            (
+                "The Daily Star",
+                "https://www.thedailystar.net/frontpage/rss.xml",
+            ),
+            (
+                "Prothom Alo",
+                "https://www.prothomalo.com/feed/",
+            ),
+        ]
+
+        results = []
+        now_utc = datetime.now(timezone.utc)
+
+        for source_name, feed_url in feeds:
+            if len(results) >= max_sources:
+                break
+
+            try:
+                xml = self._http_get(
+                    feed_url,
+                    headers={
+                        "User-Agent": self.USER_AGENT,
+                        "Accept": "application/rss+xml, application/xml, text/xml",
+                    },
+                )
+
+                if not xml:
+                    continue
+
+                item_pattern = re.compile(
+                    r"<item\b.*?</item>|<entry\b.*?</entry>",
+                    re.IGNORECASE | re.DOTALL,
+                )
+
+                for item_xml in item_pattern.findall(xml):
+                    if len(results) >= max_sources:
+                        break
+
+                    title_match = re.search(
+                        r"<title[^>]*>(.*?)</title>",
+                        item_xml,
+                        re.IGNORECASE | re.DOTALL,
+                    )
+                    link_match = re.search(
+                        r"<link[^>]*>(.*?)</link>",
+                        item_xml,
+                        re.IGNORECASE | re.DOTALL,
+                    )
+                    if not link_match:
+                        link_match = re.search(
+                            r"<link[^>]+href=[\"'](.*?)[\"']",
+                            item_xml,
+                            re.IGNORECASE | re.DOTALL,
+                        )
+
+                    date_match = re.search(
+                        r"<(?:pubDate|published|updated|dc:date)[^>]*>(.*?)</(?:pubDate|published|updated|dc:date)>",
+                        item_xml,
+                        re.IGNORECASE | re.DOTALL,
+                    )
+
+                    description_match = re.search(
+                        r"<(?:description|summary|content:encoded)[^>]*>(.*?)</(?:description|summary|content:encoded)>",
+                        item_xml,
+                        re.IGNORECASE | re.DOTALL,
+                    )
+
+                    title = (
+                        html.unescape(title_match.group(1)).strip()
+                        if title_match
+                        else ""
+                    )
+
+                    url = (
+                        html.unescape(link_match.group(1)).strip()
+                        if link_match
+                        else ""
+                    )
+
+                    description = (
+                        html.unescape(description_match.group(1)).strip()
+                        if description_match
+                        else ""
+                    )
+
+                    if not title or not url:
+                        continue
+
+                    normalized = self._normalize_url(url)
+                    if not normalized:
+                        continue
+
+                    published_at = (
+                        self._extract_google_news_date(item_xml)
+                        if date_match
+                        else None
+                    )
+
+                    if published_at is not None:
+                        age = now_utc - published_at
+                        if age > timedelta(hours=72):
+                            continue
+                        if age < timedelta(days=-1):
+                            continue
+
+                    results.append(
+                        WebEvidence(
+                            title=title,
+                            url=normalized,
+                            source=source_name,
+                            snippet=description or title,
+                            content=description or title,
+                            reliability_score=0.90,
+                            reliability_level="high",
+                            verification_status="verified",
+                            source_url=normalized,
+                        )
+                    )
+
+            except Exception:
+                continue
+
+        return results
+
+
+
+
     def search(self, question: str, max_sources: int = 5):
         """Search the web using multiple providers with fallbacks."""
         question = (question or "").strip()
@@ -628,6 +762,24 @@ class WebResearch:
             except Exception:
                 pass
 
+
+        # If Google News is unavailable, use first-party Bangladesh publisher RSS feeds.
+        if bangladesh_news and not results:
+            results.extend(self._collect_bangladesh_rss_news(max_sources=max_sources))
+            if len(results) >= max_sources:
+                return results[:max_sources]
+
+
+        # If Google News is unavailable, use first-party Bangladesh publisher RSS feeds.
+        if bangladesh_news and not results:
+            results.extend(
+                self._collect_bangladesh_rss_news(
+                    max_sources=max_sources
+                )
+            )
+
+            if len(results) >= max_sources:
+                return results[:max_sources]
 
         # ------------------------------------------------------------
         # Provider 1: DuckDuckGo HTML
