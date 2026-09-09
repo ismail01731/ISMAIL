@@ -415,7 +415,7 @@ class AIEngine:
 
         for item in recent:
             role = str(item.get("role", "")).strip().lower()
-            content = str(item.get("content", "")).strip()
+            content = str(item.get("message", "")).strip()
 
             if not content:
                 continue
@@ -449,6 +449,8 @@ class AIEngine:
             raise ValueError("Message cannot be empty.")
 
         user_id = str(user_id).strip()
+
+        
 
         chat_id = str(chat_id).strip()
 
@@ -495,7 +497,7 @@ class AIEngine:
             "answer that you are ISMAIL AI. "
             "Do not identify yourself as ChatGPT, OpenAI, or another AI name. "
             "The user's name is separate from your own identity.\n\n"
-            
+
             "You are a conversational AI. "
             "Understand the current user message together with the recent conversation. "
             "If the user says 'এটা', 'এটার', 'ওটা', 'সেটা', 'আগেরটা', "
