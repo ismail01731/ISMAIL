@@ -479,6 +479,65 @@ def login_account(
         )
 
 
+class GoogleLoginRequest(BaseModel):
+    credential: str = Field(..., min_length=10)
+
+
+@app.post("/api/auth/google")
+def google_login(
+    request: GoogleLoginRequest,
+    http_request: Request,
+):
+    try:
+        from google.oauth2 import id_token
+        from google.auth.transport import requests as google_requests
+
+        google_user = id_token.verify_oauth2_token(
+            request.credential,
+            google_requests.Request(),
+            os.getenv("GOOGLE_CLIENT_ID", "").strip(),
+        )
+
+        google_email = google_user.get("email", "").strip().lower()
+
+        if not google_email:
+            raise HTTPException(
+                status_code=401,
+                detail="Google account email পাওয়া যায়নি.",
+            )
+
+        user_id = "google-" + hashlib.sha256(
+            google_email.encode("utf-8")
+        ).hexdigest()[:24]
+
+        username = google_email.split("@")[0]
+
+        issued_at = int(time.time())
+
+        token = _sign_identity(
+            user_id,
+            issued_at,
+        )
+
+        return {
+            "name": "ISMAIL AI",
+            "user_id": user_id,
+            "username": username,
+            "token": token,
+            "expires_in": IDENTITY_TOKEN_MAX_AGE_SECONDS,
+            "email": google_email,
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=401,
+            detail=f"Google Login failed: {type(exc).__name__}: {exc}",
+        )
+
+
 @app.post("/api/session")
 def create_session(http_request: Request):
     client_ip = (
@@ -1266,6 +1325,9 @@ def chat(request: ChatRequest, http_request: Request):
             status_code=500,
             detail=f"AI generation error: {type(exc).__name__}: {exc}"
         )
+
+
+
 
 if __name__ == "__main__":
     import uvicorn

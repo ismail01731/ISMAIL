@@ -7,3 +7,4 @@ python-docx
 openpyxl
 python-multipart
 python-dotenv
+google-auth
