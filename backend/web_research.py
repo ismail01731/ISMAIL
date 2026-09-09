@@ -972,64 +972,223 @@ class WebResearch:
 
 
 
-    
     def collect_evidence(
         self,
         question: str,
         max_sources: int = 5,
     ) -> List[WebEvidence]:
         question = (question or "").strip()
+
         if not question:
             return []
-        structured_bitcoin = self._structured_bitcoin(question)
-        if structured_bitcoin is not None:
-            return [structured_bitcoin]
 
-        structured_weather = self._structured_weather(question)
-        if structured_weather is not None:
-            return [structured_weather]
+        # ---------------------------------------------------------
+        # Split mixed live requests into separate sub-questions.
+        #
+        # Example:
+        #   Bangladesh-এর আজকের weather কেমন?
+        #   Bitcoin-এর বর্তমান price কত?
+        #   আগামীকাল Bangladesh-এর weather কেমন?
+        #   আজ Bangladesh-এর latest news কী?
+        # ---------------------------------------------------------
+        parts = [
+            part.strip()
+            for part in re.split(r"[?\u0964\u0965!]+", question)
+            if part.strip()
+        ]
 
-        results = self.search(
-            question,
-            max_sources=max_sources,
-        )
+        if len(parts) <= 1:
+            parts = [question]
+
+        parts = parts[:6]
+
         collected: List[WebEvidence] = []
-        for item in results:
-            content = ""
-            try:
-                content = self._fetch_page(item.url)
-            except Exception:
-                content = ""
-            if content:
-                content = self._clean_content_for_question(
-                    content,
-                    question,
-                )
-            if not content:
-                content = item.snippet
-            snippet = self._build_snippet(
-                content or item.snippet,
-                question,
-            )
-            reliability_score = item.reliability_score
-            reliability_level = item.reliability_level
-            
 
-            collected.append(
-                WebEvidence(
-                    title=item.title,
-                    url=item.url,
-                    source=item.source,
-                    snippet=snippet,
-                    content=content[:self.MAX_CONTENT_LENGTH],
-                    reliability_score=reliability_score,
-                    reliability_level=reliability_level,
-                    verification_status=item.verification_status,
-                    source_url=item.source_url,
-                )
+        # Prevent duplicate URLs/evidence.
+        seen_urls = set()
+
+        # ---------------------------------------------------------
+        # Helper: add evidence safely.
+        # ---------------------------------------------------------
+        def add_evidence(item: Optional[WebEvidence]):
+            if item is None:
+                return
+
+            url = self._normalize_url(
+                getattr(item, "url", "") or ""
             )
 
+            if url and url in seen_urls:
+                return
+
+            if url:
+                seen_urls.add(url)
+
+            collected.append(item)
+
+        # ---------------------------------------------------------
+        # Process every sub-question independently.
+        # ---------------------------------------------------------
+        for part in parts:
+
+            part_lower = part.lower()
+
+            # -----------------------------------------------------
+            # 1. Bitcoin structured live data
+            # -----------------------------------------------------
+            bitcoin_evidence = self._structured_bitcoin(part)
+
+            if bitcoin_evidence is not None:
+                add_evidence(bitcoin_evidence)
+
+            # -----------------------------------------------------
+            # 2. Weather structured live data
+            # -----------------------------------------------------
+            weather_evidence = self._structured_weather(part)
+
+            if weather_evidence is not None:
+                add_evidence(weather_evidence)
+
+            # -----------------------------------------------------
+            # 3. Detect whether this individual part needs
+            #    normal web/news search.
+            # -----------------------------------------------------
+            needs_search = bool(
+                re.search(
+                    r"\b("
+                    r"news|latest|breaking|headline|headlines|"
+                    r"current events|today|recent|recently|"
+                    r"status|release|version|availability|"
+                    r"score|scores"
+                    r")\b"
+                    r"|খবর|সর্বশেষ|আজকের|আজ|ব্রেকিং|সংবাদ|"
+                    r"সাম্প্রতিকতম|সাম্প্রতিক|স্ট্যাটাস|"
+                    r"রিলিজ|সংস্করণ|উপলব্ধ|স্কোর|ম্যাচ",
+                    part,
+                    re.IGNORECASE,
+                )
+            )
+
+            # -----------------------------------------------------
+            # News must always go through search.
+            # -----------------------------------------------------
+            is_news_part = bool(
+                re.search(
+                    r"\b("
+                    r"news|latest|breaking|headline|headlines|"
+                    r"current events|today|recent|recently"
+                    r")\b"
+                    r"|খবর|সর্বশেষ|আজকের|আজ|ব্রেকিং|সংবাদ|"
+                    r"সাম্প্রতিকতম|সাম্প্রতিক",
+                    part,
+                    re.IGNORECASE,
+                )
+            )
+
+            # -----------------------------------------------------
+            # Search only when needed.
+            #
+            # Weather and Bitcoin already have structured sources,
+            # so we do not need noisy generic search for them.
+            #
+            # News is searched separately even if the whole message
+            # also contains weather or Bitcoin.
+            # -----------------------------------------------------
+            if needs_search and (
+                is_news_part
+                or (
+                    bitcoin_evidence is None
+                    and weather_evidence is None
+                )
+            ):
+                try:
+                    results = self.search(
+                        part,
+                        max_sources=max_sources,
+                    )
+                except Exception:
+                    results = []
+
+                # -------------------------------------------------
+                # Fetch and clean normal search results.
+                # -------------------------------------------------
+                for item in results:
+                    normalized_url = self._normalize_url(
+                        getattr(item, "url", "") or ""
+                    )
+
+                    if (
+                        normalized_url
+                        and normalized_url in seen_urls
+                    ):
+                        continue
+
+                    content = ""
+
+                    try:
+                        content = self._fetch_page(item.url)
+                    except Exception:
+                        content = ""
+
+                    if content:
+                        try:
+                            content = (
+                                self._clean_content_for_question(
+                                    content,
+                                    part,
+                                )
+                            )
+                        except Exception:
+                            pass
+
+                    if not content:
+                        content = item.snippet
+
+                    try:
+                        snippet = self._build_snippet(
+                            content or item.snippet,
+                            part,
+                        )
+                    except Exception:
+                        snippet = (
+                            content
+                            or item.snippet
+                            or item.title
+                        )
+
+                    add_evidence(
+                        WebEvidence(
+                            title=item.title,
+                            url=normalized_url or item.url,
+                            source=item.source,
+                            snippet=snippet,
+                            content=(
+                                content[
+                                    :self.MAX_CONTENT_LENGTH
+                                ]
+                            ),
+                            reliability_score=(
+                                item.reliability_score
+                            ),
+                            reliability_level=(
+                                item.reliability_level
+                            ),
+                            verification_status=(
+                                item.verification_status
+                            ),
+                            source_url=item.source_url,
+                        )
+                    )
+
+                    # Keep the total evidence bounded.
+                    if len(collected) >= max_sources * 3:
+                        break
+
+        # ---------------------------------------------------------
+        # Final verification.
+        # ---------------------------------------------------------
         return _verify_evidence_agreement(collected)
+    
 
     
     def research(
@@ -1411,38 +1570,84 @@ class WebResearch:
 
         location = ""
 
+                
+
+        # ---------------------------------------------------------
+        # Robust location extraction for English + Bangla mixed queries
+        # Examples:
+        #   Bangladesh-এর আজকের weather
+        #   আজ Bangladesh-এর weather
+        #   আগামীকাল Bangladesh-এর weather
+        #   weather in Bangladesh
+        #   temperature in Dhaka
+        #   Dhaka-এর weather
+        # ---------------------------------------------------------
+
+        # 1. Explicit English location phrases:
+        #    weather in Bangladesh
+        #    temperature at Dhaka
+        #    forecast for Chattogram
         match = re.search(
             r"\b(?:in|at|for)\s+"
             r"([A-Za-z][A-Za-z .,'-]{1,80}?)"
-            r"(?:\s+(?:now|today|tonight|currently|current|tomorrow)\b|\?|$)",
+            r"(?=\s+(?:now|today|tonight|currently|current|tomorrow)\b|\s*[?.!,]|$)",
             question,
             re.IGNORECASE,
         )
         if match:
-            location = match.group(1).strip(" .,")
+            location = match.group(1).strip(" .,!?")
 
+        # 2. English location followed by Bangla possessive:
+        #    Bangladesh-এর weather
+        #    Dhaka-এর temperature
+        #    Chittagong-এর forecast
         if not location:
             match = re.search(
                 r"\b([A-Za-z][A-Za-z .,'-]{1,80}?)"
-                r"(?:-এর|-র|-এ)\s*"
-                r"(?:আজকের|আজ|এখন|বর্তমানে|আগামীকাল|কাল|weather|temperature|forecast|আবহাওয়া|আবহাওয়া|তাপমাত্রা|পূর্বাভাস)",
+                r"(?:[-–—]?এর|[-–—]?র|[-–—]?এ)\s*"
+                r"(?:আজকের|আজ|এখন|বর্তমানে|আগামীকাল|কাল|"
+                r"weather|temperature|forecast|rain|"
+                r"আবহাওয়া|আবহাওয়া|তাপমাত্রা|পূর্বাভাস|বৃষ্টি)\b",
                 question,
                 re.IGNORECASE,
             )
             if match:
-                location = match.group(1).strip(" .,")
+                location = match.group(1).strip(" .,!?-–—")
 
+        # 3. Bangla time expression before English location:
+        #    আজ Bangladesh-এর weather
+        #    আগামীকাল Bangladesh-এর weather
         if not location:
             match = re.search(
                 r"(?:আগামীকাল|কাল|আজকের|আজ|এখন|বর্তমানে)\s+"
                 r"([A-Za-z][A-Za-z .,'-]{1,80}?)"
-                r"(?:-এর|-র|-এ)\s*"
-                r"(?:weather|temperature|forecast|আবহাওয়া|আবহাওয়া|তাপমাত্রা|পূর্বাভাস)",
+                r"(?:[-–—]?এর|[-–—]?র|[-–—]?এ)\s*"
+                r"(?:weather|temperature|forecast|rain|"
+                r"আবহাওয়া|আবহাওয়া|তাপমাত্রা|পূর্বাভাস|বৃষ্টি)\b",
                 question,
                 re.IGNORECASE,
             )
             if match:
-                location = match.group(1).strip(" .,")
+                location = match.group(1).strip(" .,!?-–—")
+
+        # 4. Common locations can be detected directly anywhere in the query.
+        #    This is intentionally conservative: only known aliases are used.
+        if not location:
+            known_location_candidates = (
+                "Bangladesh",
+                "Dhaka",
+                "Chattogram",
+                "Chittagong",
+            )
+
+            for candidate in known_location_candidates:
+                if re.search(
+                    rf"\b{re.escape(candidate)}\b",
+                    question,
+                    re.IGNORECASE,
+                ):
+                    location = candidate
+                    break
 
         # Reliable country/major-city aliases avoid geocoder ambiguity.
         location_key = re.sub(r"[^a-z0-9]+", " ", location.lower()).strip()
@@ -1510,22 +1715,49 @@ class WebResearch:
                 dates = daily.get("time") or []
                 if len(dates) < 2:
                     return None
+
+                
                 i = 1
-                minimum = (daily.get("temperature_2m_min") or [None, None])[i]
-                maximum = (daily.get("temperature_2m_max") or [None, None])[i]
-                rain_probability = (daily.get("precipitation_probability_max") or [None, None])[i]
-                weather_code = (daily.get("weather_code") or [None, None])[i]
+
+                minimum = (
+                    daily.get("temperature_2m_min") or [None, None]
+                )[i]
+
+                maximum = (
+                    daily.get("temperature_2m_max") or [None, None]
+                )[i]
+
+                rain_probability = (
+                    daily.get("precipitation_probability_max")
+                    or [None, None]
+                )[i]
+
+                weather_code = (
+                    daily.get("weather_code") or [None, None]
+                )[i]
+
 
                 details = [
                     f"Location: {place_name}" + (f", {country}" if country else ""),
                     f"Forecast date: {dates[i]}",
                 ]
+
                 if minimum is not None:
-                    details.append(f"Minimum temperature: {minimum} °C")
+                    details.append(
+                        f"Minimum: {float(minimum):.1f} °C"
+                    )
+
                 if maximum is not None:
-                    details.append(f"Maximum temperature: {maximum} °C")
+                    details.append(
+                        f"Maximum: {float(maximum):.1f} °C"
+                    )
+
                 if rain_probability is not None:
-                    details.append(f"Precipitation probability: {rain_probability}%")
+                    details.append(
+                        f"Precipitation probability: {rain_probability}%"
+                    )
+
+
                 if weather_code is not None:
                     condition = self._weather_code_description(weather_code)
                     if condition:
