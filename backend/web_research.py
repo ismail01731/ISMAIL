@@ -536,7 +536,7 @@ class WebResearch:
         if bangladesh_news:
             today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
             search_question = (
-                f"Bangladesh latest news today {today}"
+                f"Bangladesh latest news today {today} when:2d"
             )
 
         if news_query:
@@ -578,13 +578,6 @@ class WebResearch:
 
                     published_at = self._extract_google_news_date(item_xml)
 
-                    # For "latest/current/today" Bangladesh news,
-                    # reject articles older than 48 hours.
-                    if bangladesh_news and published_at is not None:
-                        now_utc = datetime.now(timezone.utc)
-
-                        if now_utc - published_at > timedelta(hours=48):
-                            continue
 
 
                     title_match = title_pattern.search(item_xml)
@@ -615,7 +608,10 @@ class WebResearch:
                             url=normalized,
                             snippet=publisher_name or title,
                             source=publisher_name or "Google News",
-                            content=title,
+                            content=(
+                                f"{title}\n"
+                                f"Published: {published_at.isoformat() if published_at else 'unknown'}"
+                            ),
                             reliability_score=reliability_score,
                             reliability_level=reliability_level,
                             source_url=publisher_url,
