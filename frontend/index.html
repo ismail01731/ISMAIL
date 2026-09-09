@@ -12,6 +12,12 @@
     <link rel="manifest" href="manifest.json">
 
     <link rel="stylesheet" href="style.css?v=20260908">
+    <script
+        src="https://accounts.google.com/gsi/client"
+        async
+        defer
+        onload="initializeGoogleLogin()"
+    ></script>
 </head>
 
 <body>
@@ -200,6 +206,15 @@
                 class="auth-toggle-button"
             >
                 Create a new account
+            </button>
+
+            <button
+                id="googleLoginButton"
+                type="button"
+                class="google-login-button"
+            >
+                <span class="google-login-icon">G</span>
+                Continue with Google
             </button>
 
         </div>
