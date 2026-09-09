@@ -576,7 +576,7 @@ class WebResearch:
                 for item_xml in item_pattern.findall(google_news_xml):
 
 
-                    published_at = _extract_google_news_date(item_xml)
+                    published_at = self._extract_google_news_date(item_xml)
 
                     # For "latest/current/today" Bangladesh news,
                     # reject articles older than 48 hours.
