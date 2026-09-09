@@ -615,7 +615,7 @@ class WebResearch:
                             url=normalized,
                             snippet=publisher_name or title,
                             source=publisher_name or "Google News",
-                            content="",
+                            content=title,
                             reliability_score=reliability_score,
                             reliability_level=reliability_level,
                             source_url=publisher_url,
