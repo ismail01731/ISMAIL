@@ -784,9 +784,9 @@ window.initializeGoogleLogin = function () {
         !window.google.accounts ||
         !window.google.accounts.id
     ) {
-        showAuthMessage(
-            "Google Login প্রস্তুত হচ্ছে..."
-        );
+        setTimeout(function () {
+            window.initializeGoogleLogin();
+        }, 1000);
         return;
     }
 
@@ -795,15 +795,20 @@ window.initializeGoogleLogin = function () {
         callback: handleGoogleCredentialResponse
     });
 
-    googleLoginButton.addEventListener(
-        "click",
-        function () {
+    googleLoginButton.innerHTML = "";
 
-            window.google.accounts.id.prompt();
-
+    window.google.accounts.id.renderButton(
+        googleLoginButton,
+        {
+            type: "standard",
+            theme: "outline",
+            size: "large",
+            text: "continue_with",
+            shape: "rectangular",
+            width: 400
         }
     );
-}
+};
 
 
 setTimeout(function () {
