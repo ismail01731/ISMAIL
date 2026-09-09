@@ -598,11 +598,30 @@ class WebResearch:
                     if not normalized:
                         continue
 
-                    published_at = (
-                        self._extract_google_news_date(item_xml)
-                        if date_match
-                        else None
-                    )
+                    published_at = None
+
+                    if date_match:
+                        try:
+                            from email.utils import parsedate_to_datetime
+
+                            raw_date = html.unescape(
+                                date_match.group(1)
+                            ).strip()
+
+                            published_at = parsedate_to_datetime(raw_date)
+
+                            if published_at is not None:
+                                if published_at.tzinfo is None:
+                                    published_at = published_at.replace(
+                                        tzinfo=timezone.utc
+                                    )
+                                else:
+                                    published_at = published_at.astimezone(
+                                        timezone.utc
+                                    )
+
+                        except Exception:
+                            published_at = None
 
                     if published_at is not None:
                         age = now_utc - published_at

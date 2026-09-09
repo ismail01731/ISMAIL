@@ -511,9 +511,11 @@ class AIEngine:
                     message,
                     max_sources=5,
                 )
-            except Exception:
-                # Research must never prevent the AI from returning a safe
-                # fallback response when an external provider is unavailable.
+            except Exception as exc:
+                print(
+                    f"[LIVE RESEARCH ERROR] {type(exc).__name__}: {exc}",
+                    flush=True,
+                )
                 evidence = []
 
         prompt = (
