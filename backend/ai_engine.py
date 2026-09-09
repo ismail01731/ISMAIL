@@ -520,6 +520,15 @@ class AIEngine:
             "an estimate rather than a fact.\n"
             "9. Prefer a short accurate answer over a long answer containing "
             "unsupported claims.\n\n"
+            "10. Do not claim that ISMAIL AI, the backend, server, hardware, "
+            "or infrastructure can handle a specific number of requests, users, "
+            "speed, latency, or workload unless that exact capability has been "
+            "measured or is explicitly provided as reliable evidence.\n"
+
+            "11. When recommending books, libraries, frameworks, products, "
+            "services, or other resources, do not invent or guess names. "
+            "If you are unsure whether a resource exists, say that you are unsure "
+            "instead of presenting it as a recommendation.\n"
 
             "CONVERSATION RULES:\n"
             "Understand the current user message together with the recent "
