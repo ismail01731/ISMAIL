@@ -995,88 +995,97 @@ class WebResearch:
         self,
         question: str,
     ) -> Optional[WebEvidence]:
-        """Fetch current Bitcoin price from CoinGecko."""
+        """Fetch current Bitcoin price with multiple public API fallbacks."""
         question = (question or "").strip().lower()
 
-        bitcoin_words = (
-            "bitcoin",
-            "btc",
-            "বিটকয়েন",
-            "বিটকয়েন",
-        )
-
+        bitcoin_words = ("bitcoin", "btc", "বিটকয়েন", "বিটকয়েন")
         price_words = (
-            "price",
-            "দাম",
-            "মূল্য",
-            "বর্তমান দাম",
-            "বর্তমান মূল্য",
+            "price", "দাম", "মূল্য", "বর্তমান দাম", "বর্তমান মূল্য",
+            "কত", "কত টাকা",
         )
 
         if not any(word in question for word in bitcoin_words):
             return None
-
         if not any(word in question for word in price_words):
             return None
 
-        try:
-            api_url = (
+        # Provider 1: CoinGecko
+        providers = [
+            (
+                "CoinGecko",
                 "https://api.coingecko.com/api/v3/simple/price?"
                 + urllib.parse.urlencode({
                     "ids": "bitcoin",
                     "vs_currencies": "usd",
                     "include_24hr_change": "true",
-                })
-            )
+                }),
+            ),
+            # Provider 2: Binance public ticker
+            (
+                "Binance",
+                "https://api.binance.com/api/v3/ticker/24hr?"
+                + urllib.parse.urlencode({"symbol": "BTCUSDT"}),
+            ),
+            # Provider 3: CoinCap
+            (
+                "CoinCap",
+                "https://api.coincap.io/v2/assets/bitcoin",
+            ),
+        ]
 
-            request = urllib.request.Request(
-                api_url,
-                headers={
-                    "User-Agent": self.USER_AGENT,
-                    "Accept": "application/json",
-                },
-                method="GET",
-            )
-
-            with urllib.request.urlopen(
-                request,
-                timeout=15,
-            ) as response:
-                data = json.loads(
-                    response.read().decode("utf-8")
+        for source_name, api_url in providers:
+            try:
+                request = urllib.request.Request(
+                    api_url,
+                    headers={
+                        "User-Agent": self.USER_AGENT,
+                        "Accept": "application/json",
+                    },
+                    method="GET",
                 )
+                with urllib.request.urlopen(request, timeout=12) as response:
+                    data = json.loads(response.read().decode("utf-8"))
 
-            bitcoin = data.get("bitcoin") or {}
-            price = bitcoin.get("usd")
-            change = bitcoin.get("usd_24h_change")
+                price = None
+                change = None
 
-            if price is None:
-                return None
+                if source_name == "CoinGecko":
+                    bitcoin = data.get("bitcoin") or {}
+                    price = bitcoin.get("usd")
+                    change = bitcoin.get("usd_24h_change")
+                elif source_name == "Binance":
+                    price = data.get("lastPrice")
+                    change = data.get("priceChangePercent")
+                else:
+                    asset = data.get("data") or {}
+                    price = asset.get("priceUsd")
+                    change = asset.get("changePercent24Hr")
 
-            content = (
-                f"Asset: Bitcoin (BTC)\n"
-                f"Current price: ${float(price):,.2f} USD"
-            )
+                if price is None:
+                    continue
 
-            if change is not None:
-                content += (
-                    f"\n24-hour change: {float(change):.2f}%"
+                content = (
+                    "Asset: Bitcoin (BTC)\n"
+                    f"Current price: ${float(price):,.2f} USD"
                 )
+                if change is not None:
+                    content += f"\n24-hour change: {float(change):.2f}%"
 
-            return WebEvidence(
-                title="Bitcoin Current Price",
-                url=api_url,
-                source="CoinGecko",
-                snippet=content,
-                content=content,
-                reliability_score=0.90,
-                reliability_level="high",
-                verification_status="verified",
-                source_url=api_url,
-            )
+                return WebEvidence(
+                    title="Bitcoin Current Price",
+                    url=api_url,
+                    source=source_name,
+                    snippet=content,
+                    content=content,
+                    reliability_score=0.90,
+                    reliability_level="high",
+                    verification_status="verified",
+                    source_url=api_url,
+                )
+            except Exception:
+                continue
 
-        except Exception:
-            return None
+        return None
 
     def _structured_weather(
         self,
@@ -1134,6 +1143,17 @@ class WebResearch:
             if match:
                 location = match.group(1).strip(" .,")
 
+        # Reliable country/major-city aliases avoid geocoder ambiguity.
+        location_key = re.sub(r"[^a-z0-9]+", " ", location.lower()).strip()
+        location_aliases = {
+            "bangladesh": ("Bangladesh", 23.6850, 90.3563, "Bangladesh"),
+            "dhaka": ("Dhaka", 23.8103, 90.4125, "Bangladesh"),
+            "chattogram": ("Chattogram", 22.3569, 91.7832, "Bangladesh"),
+            "chittagong": ("Chattogram", 22.3569, 91.7832, "Bangladesh"),
+        }
+
+        known_location = location_aliases.get(location_key)
+
         if not location:
             return None
 
@@ -1144,23 +1164,29 @@ class WebResearch:
                     "name": location, "count": 1, "language": "en", "format": "json",
                 })
             )
-            request = urllib.request.Request(
-                geocode_url, headers={"User-Agent": self.USER_AGENT}, method="GET"
-            )
-            with urllib.request.urlopen(request, timeout=15) as response:
-                geo_data = json.loads(response.read().decode("utf-8"))
 
-            places = geo_data.get("results") or []
-            if not places:
-                return None
-            place = places[0]
-            latitude = place.get("latitude")
-            longitude = place.get("longitude")
-            if latitude is None or longitude is None:
-                return None
+            if known_location:
+                place_name, latitude, longitude, country = known_location
+            else:
+                request = urllib.request.Request(
+                    geocode_url,
+                    headers={"User-Agent": self.USER_AGENT},
+                    method="GET",
+                )
+                with urllib.request.urlopen(request, timeout=15) as response:
+                    geo_data = json.loads(response.read().decode("utf-8"))
 
-            place_name = str(place.get("name") or location).strip()
-            country = str(place.get("country") or "").strip()
+                places = geo_data.get("results") or []
+                if not places:
+                    return None
+                place = places[0]
+                latitude = place.get("latitude")
+                longitude = place.get("longitude")
+                if latitude is None or longitude is None:
+                    return None
+
+                place_name = str(place.get("name") or location).strip()
+                country = str(place.get("country") or "").strip()
 
             if is_tomorrow:
                 forecast_url = (

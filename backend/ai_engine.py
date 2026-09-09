@@ -491,13 +491,29 @@ class AIEngine:
         # Live questions must be researched before final answer generation.
         evidence = []
 
-        if route == "live" and not file_context:
+        # Safety net: even if intent detection misses a Bengali/mixed-language
+        # live query, obvious current-data requests must still reach research.
+        live_markers = (
+            "today", "tonight", "now", "currently", "current", "latest",
+            "recent", "breaking", "weather", "temperature", "forecast",
+            "price", "prices", "bitcoin", "btc", "news", "score", "status",
+            "আজ", "এখন", "বর্তমানে", "সর্বশেষ", "সাম্প্রতিকতম",
+            "খবর", "সংবাদ", "আবহাওয়া", "আবহাওয়া", "তাপমাত্রা",
+            "পূর্বাভাস", "দাম", "মূল্য", "বিটকয়েন", "বিটকয়েন",
+            "আগামীকাল", "কাল",
+        )
+        message_lower = message.lower()
+        obvious_live = any(marker in message_lower for marker in live_markers)
+
+        if (route == "live" or obvious_live) and not file_context:
             try:
                 evidence = self.web_research.research(
                     message,
                     max_sources=5,
                 )
-            except (ValueError, RuntimeError):
+            except Exception:
+                # Research must never prevent the AI from returning a safe
+                # fallback response when an external provider is unavailable.
                 evidence = []
 
         prompt = (
