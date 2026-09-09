@@ -75,6 +75,9 @@ const registerForm =
 const authToggleButton =
     document.getElementById("authToggleButton");
 
+const googleLoginButton =
+    document.getElementById("googleLoginButton");
+
 const loginUsername =
     document.getElementById("loginUsername");
 
@@ -696,6 +699,116 @@ async function registerAccount(
 
     return data;
 }
+
+
+
+/* Google Login */
+const GOOGLE_CLIENT_ID =
+    "272446356006-nic51t1lo64sdf9v8m58rmhn6ha64kub.apps.googleusercontent.com";
+
+
+async function loginWithGoogleCredential(credential) {
+
+    showAuthMessage("Google Login হচ্ছে...");
+
+    const response = await fetch(
+        `${BACKEND_BASE_URL}/api/auth/google`,
+        {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                credential: credential
+            })
+        }
+    );
+
+    let data = {};
+
+    try {
+        data = await response.json();
+    } catch (error) {
+        data = {};
+    }
+
+    if (!response.ok) {
+        throw new Error(
+            data.detail ||
+            `Google Login failed: ${response.status}`
+        );
+    }
+
+    setAuthenticatedSession(data);
+
+    await loadCentralChatHistory();
+
+    startCentralHistorySync();
+
+    return data;
+}
+
+
+function handleGoogleCredentialResponse(response) {
+
+    if (!response || !response.credential) {
+        showAuthMessage(
+            "Google Login credential পাওয়া যায়নি।"
+        );
+        return;
+    }
+
+    loginWithGoogleCredential(
+        response.credential
+    ).catch(function (error) {
+
+        showAuthMessage(
+            error.message ||
+            "Google Login failed."
+        );
+
+    });
+}
+
+
+window.initializeGoogleLogin = function () {
+
+    if (!googleLoginButton) {
+        return;
+    }
+
+    if (
+        !window.google ||
+        !window.google.accounts ||
+        !window.google.accounts.id
+    ) {
+        showAuthMessage(
+            "Google Login প্রস্তুত হচ্ছে..."
+        );
+        return;
+    }
+
+    window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredentialResponse
+    });
+
+    googleLoginButton.addEventListener(
+        "click",
+        function () {
+
+            window.google.accounts.id.prompt();
+
+        }
+    );
+}
+
+
+setTimeout(function () {
+    window.initializeGoogleLogin();
+}, 1500);
 
 
 /* Login */
