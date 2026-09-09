@@ -744,6 +744,10 @@ class WebResearch:
         if structured_bitcoin is not None:
             return [structured_bitcoin]
 
+        structured_bitcoin = self._structured_bitcoin(question)
+        if structured_bitcoin is not None:
+            return [structured_bitcoin]
+
         structured_weather = self._structured_weather(question)
         if structured_weather is not None:
             return [structured_weather]
@@ -1094,12 +1098,104 @@ class WebResearch:
             return None
 
 
+
+
+    def _structured_bitcoin(
+        self,
+        question: str,
+    ) -> Optional[WebEvidence]:
+        """Fetch current Bitcoin price from CoinGecko."""
+        question = (question or "").strip().lower()
+
+        bitcoin_words = (
+            "bitcoin",
+            "btc",
+            "বিটকয়েন",
+            "বিটকয়েন",
+        )
+
+        price_words = (
+            "price",
+            "দাম",
+            "মূল্য",
+            "বর্তমান দাম",
+            "বর্তমান মূল্য",
+        )
+
+        if not any(word in question for word in bitcoin_words):
+            return None
+
+        if not any(word in question for word in price_words):
+            return None
+
+        try:
+            api_url = (
+                "https://api.coingecko.com/api/v3/simple/price?"
+                + urllib.parse.urlencode({
+                    "ids": "bitcoin",
+                    "vs_currencies": "usd",
+                    "include_24hr_change": "true",
+                })
+            )
+
+            request = urllib.request.Request(
+                api_url,
+                headers={
+                    "User-Agent": self.USER_AGENT,
+                    "Accept": "application/json",
+                },
+            )
+
+            with urllib.request.urlopen(
+                request,
+                timeout=15,
+            ) as response:
+                data = json.loads(
+                    response.read().decode("utf-8")
+                )
+
+            bitcoin = data.get("bitcoin") or {}
+            price = bitcoin.get("usd")
+            change = bitcoin.get("usd_24h_change")
+
+            if price is None:
+                return None
+
+            content = (
+                f"Asset: Bitcoin (BTC)\n"
+                f"Current price: ${float(price):,.2f} USD"
+            )
+
+            if change is not None:
+                content += (
+                    f"\n24-hour change: {float(change):.2f}%"
+                )
+
+            return WebEvidence(
+                title="Bitcoin Current Price",
+                url=api_url,
+                source="CoinGecko",
+                snippet=content,
+                content=content,
+                reliability_score=0.90,
+                reliability_level="high",
+                verification_status="verified",
+                source_url=api_url,
+            )
+
+        except Exception:
+            return None
+
+
+        
+
+
     
     def _structured_weather(
         self,
         question: str,
     ) -> Optional[WebEvidence]:
-        """Fetch structured current/tomorrow weather using Open-Meteo."""
+        """Fetch current or tomorrow weather using Open-Meteo."""
         question = (question or "").strip()
 
         if not question:
@@ -1135,10 +1231,10 @@ class WebResearch:
 
         location = ""
 
-        # Example:
+        # English:
         # weather in Bangladesh
         # weather for Dhaka
-        location_match = re.search(
+        match = re.search(
             r"\b(?:in|at|for)\s+"
             r"([A-Za-z][A-Za-z .,'-]{1,80}?)"
             r"(?:\s+(?:now|today|tonight|currently|current|tomorrow)\b|\?|$)",
@@ -1146,15 +1242,14 @@ class WebResearch:
             re.IGNORECASE,
         )
 
-        if location_match:
-            location = location_match.group(1).strip(" .,")
+        if match:
+            location = match.group(1).strip(" .,")
 
-        # Example:
+        # Bengali:
         # Bangladesh-এর আজকের weather
         # Bangladesh-এর আবহাওয়া
-        # Dhaka-র weather
         if not location:
-            bengali_match = re.search(
+            match = re.search(
                 r"\b([A-Za-z][A-Za-z .,'-]{1,80}?)"
                 r"(?:-এর|-র|-এ)\s*"
                 r"(?:আজকের|আজ|এখন|বর্তমানে|আগামীকাল|কাল|"
@@ -1164,13 +1259,13 @@ class WebResearch:
                 re.IGNORECASE,
             )
 
-            if bengali_match:
-                location = bengali_match.group(1).strip(" .,")
+            if match:
+                location = match.group(1).strip(" .,")
 
-        # Example:
+        # Bengali reverse:
         # আগামীকাল Bangladesh-এর weather
         if not location:
-            reverse_match = re.search(
+            match = re.search(
                 r"(?:আগামীকাল|কাল|আজকের|আজ|এখন|বর্তমানে)"
                 r"\s+([A-Za-z][A-Za-z .,'-]{1,80}?)"
                 r"(?:-এর|-র|-এ)\s*"
@@ -1180,33 +1275,26 @@ class WebResearch:
                 re.IGNORECASE,
             )
 
-            if reverse_match:
-                location = reverse_match.group(1).strip(" .,")
+            if match:
+                location = match.group(1).strip(" .,")
 
         if not location:
             return None
 
         try:
-            # -------------------------------------------------
-            # Geocoding
-            # -------------------------------------------------
             geocode_url = (
                 "https://geocoding-api.open-meteo.com/v1/search?"
-                + urllib.parse.urlencode(
-                    {
-                        "name": location,
-                        "count": 1,
-                        "language": "en",
-                        "format": "json",
-                    }
-                )
+                + urllib.parse.urlencode({
+                    "name": location,
+                    "count": 1,
+                    "language": "en",
+                    "format": "json",
+                })
             )
 
             request = urllib.request.Request(
                 geocode_url,
-                headers={
-                    "User-Agent": self.USER_AGENT,
-                },
+                headers={"User-Agent": self.USER_AGENT},
             )
 
             with urllib.request.urlopen(
@@ -1238,33 +1326,26 @@ class WebResearch:
                 place.get("country") or ""
             ).strip()
 
-            # -------------------------------------------------
-            # Tomorrow forecast
-            # -------------------------------------------------
             if is_tomorrow:
                 forecast_url = (
                     "https://api.open-meteo.com/v1/forecast?"
-                    + urllib.parse.urlencode(
-                        {
-                            "latitude": latitude,
-                            "longitude": longitude,
-                            "daily": (
-                                "temperature_2m_max,"
-                                "temperature_2m_min,"
-                                "precipitation_probability_max,"
-                                "weather_code"
-                            ),
-                            "forecast_days": 2,
-                            "timezone": "auto",
-                        }
-                    )
+                    + urllib.parse.urlencode({
+                        "latitude": latitude,
+                        "longitude": longitude,
+                        "daily": (
+                            "temperature_2m_max,"
+                            "temperature_2m_min,"
+                            "precipitation_probability_max,"
+                            "weather_code"
+                        ),
+                        "forecast_days": 2,
+                        "timezone": "auto",
+                    })
                 )
 
                 request = urllib.request.Request(
                     forecast_url,
-                    headers={
-                        "User-Agent": self.USER_AGENT,
-                    },
+                    headers={"User-Agent": self.USER_AGENT},
                 )
 
                 with urllib.request.urlopen(
@@ -1281,41 +1362,35 @@ class WebResearch:
                 if len(dates) < 2:
                     return None
 
-                index = 1
+                i = 1
 
-                date_value = dates[index]
+                details = [
+                    f"Location: {place_name}"
+                    + (f", {country}" if country else ""),
+                    f"Forecast date: {dates[i]}",
+                ]
 
                 minimum = (
                     daily.get("temperature_2m_min")
                     or [None]
-                )[index]
+                )[i]
 
                 maximum = (
                     daily.get("temperature_2m_max")
                     or [None]
-                )[index]
+                )[i]
 
                 rain_probability = (
                     daily.get(
                         "precipitation_probability_max"
                     )
                     or [None]
-                )[index]
+                )[i]
 
                 weather_code = (
                     daily.get("weather_code")
                     or [None]
-                )[index]
-
-                details = [
-                    f"Location: {place_name}"
-                    + (
-                        f", {country}"
-                        if country
-                        else ""
-                    ),
-                    f"Forecast date: {date_value}",
-                ]
+                )[i]
 
                 if minimum is not None:
                     details.append(
@@ -1348,15 +1423,10 @@ class WebResearch:
                 content = "\n".join(details)
 
                 return WebEvidence(
-                    title=(
-                        f"Tomorrow Weather - "
-                        f"{place_name}"
-                    ),
+                    title=f"Tomorrow Weather - {place_name}",
                     url=forecast_url,
                     source="Open-Meteo",
-                    snippet=content[
-                        :self.MAX_SNIPPET_LENGTH
-                    ],
+                    snippet=content[:self.MAX_SNIPPET_LENGTH],
                     content=content,
                     reliability_score=0.90,
                     reliability_level="high",
@@ -1364,36 +1434,29 @@ class WebResearch:
                     source_url=forecast_url,
                 )
 
-            # -------------------------------------------------
-            # Current weather
-            # -------------------------------------------------
             forecast_url = (
                 "https://api.open-meteo.com/v1/forecast?"
-                + urllib.parse.urlencode(
-                    {
-                        "latitude": latitude,
-                        "longitude": longitude,
-                        "current": (
-                            "temperature_2m,"
-                            "relative_humidity_2m,"
-                            "apparent_temperature,"
-                            "precipitation,"
-                            "rain,"
-                            "showers,"
-                            "snowfall,"
-                            "weather_code,"
-                            "wind_speed_10m"
-                        ),
-                        "timezone": "auto",
-                    }
-                )
+                + urllib.parse.urlencode({
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "current": (
+                        "temperature_2m,"
+                        "relative_humidity_2m,"
+                        "apparent_temperature,"
+                        "precipitation,"
+                        "rain,"
+                        "showers,"
+                        "snowfall,"
+                        "weather_code,"
+                        "wind_speed_10m"
+                    ),
+                    "timezone": "auto",
+                })
             )
 
             request = urllib.request.Request(
                 forecast_url,
-                headers={
-                    "User-Agent": self.USER_AGENT,
-                },
+                headers={"User-Agent": self.USER_AGENT},
             )
 
             with urllib.request.urlopen(
@@ -1409,41 +1472,21 @@ class WebResearch:
             if not current:
                 return None
 
-            units = (
-                weather_data.get("current_units")
-                or {}
-            )
-
-            temperature = current.get(
-                "temperature_2m"
-            )
-            apparent = current.get(
-                "apparent_temperature"
-            )
-            humidity = current.get(
-                "relative_humidity_2m"
-            )
-            precipitation = current.get(
-                "precipitation"
-            )
-            rain = current.get("rain")
-            showers = current.get("showers")
-            snowfall = current.get("snowfall")
-            wind = current.get("wind_speed_10m")
-            weather_code = current.get(
-                "weather_code"
-            )
-            observed_time = current.get("time")
+            units = weather_data.get("current_units") or {}
 
             details = [
                 f"Location: {place_name}"
-                + (
-                    f", {country}"
-                    if country
-                    else ""
-                ),
-                f"Observation time: {observed_time}",
+                + (f", {country}" if country else ""),
+                f"Observation time: {current.get('time')}",
             ]
+
+            temperature = current.get("temperature_2m")
+            apparent = current.get("apparent_temperature")
+            humidity = current.get("relative_humidity_2m")
+            precipitation = current.get("precipitation")
+            rain = current.get("rain")
+            wind = current.get("wind_speed_10m")
+            weather_code = current.get("weather_code")
 
             if temperature is not None:
                 details.append(
@@ -1459,38 +1502,22 @@ class WebResearch:
 
             if humidity is not None:
                 details.append(
-                    f"Relative humidity: {humidity} "
-                    f"{units.get('relative_humidity_2m', '%')}"
+                    f"Relative humidity: {humidity}%"
                 )
 
             if precipitation is not None:
                 details.append(
-                    f"Precipitation: {precipitation} "
-                    f"{units.get('precipitation', 'mm')}"
+                    f"Precipitation: {precipitation} mm"
                 )
 
             if rain is not None:
                 details.append(
-                    f"Rain: {rain} "
-                    f"{units.get('rain', 'mm')}"
-                )
-
-            if showers is not None:
-                details.append(
-                    f"Showers: {showers} "
-                    f"{units.get('showers', 'mm')}"
-                )
-
-            if snowfall is not None:
-                details.append(
-                    f"Snowfall: {snowfall} "
-                    f"{units.get('snowfall', 'cm')}"
+                    f"Rain: {rain} mm"
                 )
 
             if wind is not None:
                 details.append(
-                    f"Wind speed: {wind} "
-                    f"{units.get('wind_speed_10m', 'km/h')}"
+                    f"Wind speed: {wind} km/h"
                 )
 
             if weather_code is not None:
@@ -1508,15 +1535,10 @@ class WebResearch:
             content = "\n".join(details)
 
             return WebEvidence(
-                title=(
-                    f"Current Weather - "
-                    f"{place_name}"
-                ),
+                title=f"Current Weather - {place_name}",
                 url=forecast_url,
                 source="Open-Meteo",
-                snippet=content[
-                    :self.MAX_SNIPPET_LENGTH
-                ],
+                snippet=content[:self.MAX_SNIPPET_LENGTH],
                 content=content,
                 reliability_score=0.90,
                 reliability_level="high",
@@ -1524,16 +1546,7 @@ class WebResearch:
                 source_url=forecast_url,
             )
 
-        except (
-            urllib.error.URLError,
-            urllib.error.HTTPError,
-            json.JSONDecodeError,
-            TimeoutError,
-            ValueError,
-            TypeError,
-            KeyError,
-            IndexError,
-        ):
+        except Exception:
             return None
 
 
