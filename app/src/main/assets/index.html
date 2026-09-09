@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" href="data:,">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>ISMAIL AI</title>
@@ -10,7 +11,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="manifest.json">
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20260908">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
 <body>
@@ -69,30 +71,124 @@
                 style="display: none;"
             >
 
-                <input
-                    id="registerUsername"
-                    type="text"
-                    placeholder="Username"
-                    minlength="3"
-                    maxlength="50"
-                    autocomplete="username"
-                    required
-                >
+                <div class="auth-field-group">
 
-                <input
-                    id="registerPassword"
-                    type="password"
-                    placeholder="Password"
-                    minlength="8"
-                    maxlength="128"
-                    autocomplete="new-password"
-                    required
-                >
+                    <input
+                        id="registerUsername"
+                        type="text"
+                        placeholder="Username"
+                        minlength="3"
+                        maxlength="50"
+                        autocomplete="username"
+                        required
+                    >
+
+                    <div
+                        id="usernameSuggestions"
+                        class="auth-suggestions"
+                    ></div>
+
+                    <div class="auth-help-text">
+                        3–50 characters: letters, numbers, . _ -
+                    </div>
+
+                </div>
+
+
+                <div class="auth-field-group">
+
+                    <input
+                        id="registerPassword"
+                        type="password"
+                        placeholder="Password"
+                        minlength="8"
+                        maxlength="128"
+                        autocomplete="new-password"
+                        required
+                    >
+
+                    <div
+                        id="passwordStrength"
+                        class="password-strength"
+                    >
+                        Password strength: —
+                    </div>
+
+                    <div
+                        id="passwordRequirements"
+                        class="password-requirements"
+                    >
+
+                        <div
+                            id="passwordReqLength"
+                            class="password-req"
+                        >
+                            <span class="req-icon">○</span>
+                            <span>At least 8 characters</span>
+                        </div>
+
+                        <div
+                            id="passwordReqLower"
+                            class="password-req"
+                        >
+                            <span class="req-icon">○</span>
+                            <span>One lowercase letter (a-z)</span>
+                        </div>
+
+                        <div
+                            id="passwordReqUpper"
+                            class="password-req"
+                        >
+                            <span class="req-icon">○</span>
+                            <span>One uppercase letter (A-Z)</span>
+                        </div>
+
+                        <div
+                            id="passwordReqNumber"
+                            class="password-req"
+                        >
+                            <span class="req-icon">○</span>
+                            <span>One number (0-9)</span>
+                        </div>
+
+                        <div
+                            id="passwordReqSpecial"
+                            class="password-req"
+                        >
+                            <span class="req-icon">○</span>
+                            <span>One special character (# @ ! $ %)</span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="auth-field-group">
+
+                    <input
+                        id="registerPasswordConfirm"
+                        type="password"
+                        placeholder="Confirm Password"
+                        minlength="8"
+                        maxlength="128"
+                        autocomplete="new-password"
+                        required
+                    >
+
+                    <div
+                        id="passwordMatch"
+                        class="password-match"
+                    ></div>
+
+                </div>
+
 
                 <button
                     id="registerButton"
                     type="submit"
                     class="auth-submit-button"
+                    disabled
                 >
                     Create Account
                 </button>
@@ -105,6 +201,15 @@
                 class="auth-toggle-button"
             >
                 Create a new account
+            </button>
+
+            <button
+                id="googleLoginButton"
+                type="button"
+                class="google-login-button"
+            >
+                <span class="google-login-icon">G</span>
+                Continue with Google
             </button>
 
         </div>
@@ -158,6 +263,53 @@
 
         </div>
 
+
+        <!-- Search Button -->
+        <button
+            id="topSearchButton"
+            class="top-search-button"
+            type="button"
+            aria-label="Search chats"
+            title="Search chats"
+        >
+            🔍
+        </button>
+
+
+        <!-- Search Popup -->
+        <div id="topSearchPopup" class="top-search-popup">
+
+            <div class="top-search-box">
+
+                <span class="top-search-icon">🔍</span>
+
+                <input
+                    type="search"
+                    id="topSearchInput"
+                    placeholder="Search your chats..."
+                    autocomplete="off"
+                >
+
+                <button
+                    id="topSearchClose"
+                    class="top-search-close"
+                    type="button"
+                    aria-label="Close search"
+                >
+                    ×
+                </button>
+
+            </div>
+
+            <div
+                id="topSearchResults"
+                class="top-search-results"
+            ></div>
+
+        </div>
+
+
+
         <div id="historyPanel" class="history-panel">
             <div class="history-header">
                 <h3>Chat History</h3>
@@ -210,12 +362,155 @@
         <div class="input-wrapper">
 
             <button
+                id="attachButton"
                 class="attach-button"
                 type="button"
-                aria-label="Attach"
+                aria-label="More options"
             >
                 +
             </button>
+
+            <input
+                id="fileInput"
+                type="file"
+                accept=".pdf,.docx,.xlsx,.xlsm,.txt,.md,.csv,.json,.log"
+                hidden
+            >
+
+            <div
+                id="attachMenu"
+                class="attach-menu"
+                hidden
+            >
+                <button
+                    id="fileOption"
+                    class="attach-menu-item"
+                    type="button"
+                >
+                    📎
+                    <span>File / PDF</span>
+                </button>
+
+                <button
+                    id="imageOption"
+                    class="attach-menu-item"
+                    type="button"
+                >
+                    🖼️
+                    <span>Image</span>
+                </button>
+
+                <button
+                    id="cameraOption"
+                    class="attach-menu-item"
+                    type="button"
+                >
+                    📷
+                    <span>Camera</span>
+                </button>
+
+                <button
+                    id="voiceOption"
+                    class="attach-menu-item"
+                    type="button"
+                >
+                    🎙️
+                    <span>Voice</span>
+                </button>
+
+                <button
+                    id="webOption"
+                    class="attach-menu-item"
+                    type="button"
+                >
+                    🌐
+                    <span>Web Search</span>
+                </button>
+            </div>
+
+
+            <!-- =========================================================
+                ISMAIL AI VOICE SCREEN
+                Task 1: Full-screen voice interface shell
+                ========================================================= -->
+            <div id="voiceScreen" class="voice-screen" hidden aria-hidden="true">
+                <div class="voice-topbar">
+                    <button id="voiceCloseButton" class="voice-close-button" type="button" aria-label="Close voice">
+                        ×
+                    </button>
+
+                    <div class="voice-brand" aria-label="ISMAIL AI">
+                        <div class="voice-brand-logo">✦</div>
+                        <div class="voice-brand-name">ISMAIL AI</div>
+                        <span class="voice-brand-dot"></span>
+                    </div>
+
+                    <div class="voice-topbar-spacer" aria-hidden="true"></div>
+                </div>
+
+                <main class="voice-content">
+                    <div class="voice-status" id="voiceStatus">Voice</div>
+
+                    <div class="voice-visual" id="voiceVisual" aria-hidden="true">
+                        <div class="voice-orb-ring voice-orb-ring-1"></div>
+                        <div class="voice-orb-ring voice-orb-ring-2"></div>
+                        <div class="voice-orb-ring voice-orb-ring-3"></div>
+
+                        <div class="voice-orb">
+                            <span class="voice-orb-symbol">✦</span>
+                        </div>
+                    </div>
+
+                    <h2 class="voice-title">Talk with ISMAIL</h2>
+
+                    <p class="voice-subtitle" id="voiceSubtitle">
+                        Tap the microphone to start a conversation.
+                    </p>
+
+                    <button
+                        id="voiceMicButton"
+                        class="voice-mic-button"
+                        type="button"
+                        aria-label="Start voice conversation"
+                    >
+                        <span class="voice-mic-icon">🎙️</span>
+                    </button>
+
+                    <div class="voice-hint" id="voiceHint">
+                        Ready when you are
+                    </div>
+                </main>
+            </div>
+
+            <div
+                id="attachmentPreview"
+                class="attachment-preview"
+                hidden
+            >
+                <div class="attachment-icon">
+                    📄
+                </div>
+
+                <div class="attachment-info">
+                    <div
+                        id="attachmentName"
+                        class="attachment-name"
+                    ></div>
+
+                    <div class="attachment-type">
+                        PDF / Document
+                    </div>
+                </div>
+
+                <button
+                    id="removeAttachment"
+                    class="remove-attachment"
+                    type="button"
+                    aria-label="Remove attachment"
+                >
+                    ×
+                </button>
+            </div>
 
             <textarea
                 id="messageInput"
@@ -223,6 +518,15 @@
                 rows="1"
             ></textarea>
 
+            <button
+                id="voiceButton"
+                class="voice-button"
+                type="button"
+                aria-label="Voice input"
+                title="Voice"
+            >
+                🎙️
+            </button>
 
             <button
                 id="sendButton"
@@ -243,13 +547,30 @@
 
 </div>
 
-<script src="script.js"></script>
+<script src="script.js?v=20260908"></script>
 
 <script>
     if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("sw.js");
+        window.addEventListener("load", async () => {
+            try {
+                const registration =
+                    await navigator.serviceWorker.register("sw.js?v=20260908");
+
+                registration.update();
+
+                setInterval(() => {
+                    registration.update();
+                }, 60 * 60 * 1000);
+
+            } catch (error) {
+                console.error("Service Worker registration failed:", error);
+            }
+        });
     }
 </script>
+
+
+
 
 </body>
 </html>

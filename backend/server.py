@@ -783,6 +783,7 @@ async def upload_file(
 class ChatRequest(BaseModel):
     message: str = Field(..., max_length=12000)
     user_id: str = Field("", max_length=200, pattern=r"^[A-Za-z0-9._:-]*$")
+    chat_id: str = Field("", max_length=200)
     file_context: str = Field("", max_length=65000)
 
 
@@ -1290,6 +1291,7 @@ def chat(request: ChatRequest, http_request: Request):
             request.message,
             authenticated_user_id,
             request.file_context,
+            request.chat_id,
         )
 
         action = None

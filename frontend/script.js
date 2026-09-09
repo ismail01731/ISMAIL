@@ -1636,7 +1636,8 @@ async function regenerateAnswer(question, aiMessageElement) {
 
             body: JSON.stringify({
                 message: question,
-                user_id: USER_ID
+                user_id: USER_ID,
+                chat_id: String(currentChat.id)
             })
 
         });
@@ -2115,6 +2116,9 @@ async function sendMessage() {
 
                         user_id:
                             USER_ID,
+
+                        chat_id:
+                            String(currentChat.id),
 
                         // Extracted document content.
                         file_context:

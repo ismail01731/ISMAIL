@@ -311,6 +311,63 @@ class AIEngine:
                 )
 
 
+    def _build_conversation_context(
+        self,
+        user_id: str,
+        chat_id: str,
+        max_messages: int = 20,
+    ) -> str:
+        """
+        Build recent conversation context for the AI.
+
+        Only messages belonging to the authenticated
+        user and selected chat are included.
+        """
+
+        if not user_id or not chat_id:
+            return ""
+
+        history = self.knowledge_base.get_chat_history(
+            user_id,
+            chat_id,
+        )
+
+        if not history:
+            return ""
+
+        recent_history = history[-max_messages:]
+
+        lines = []
+
+        for item in recent_history:
+            role = str(
+                item.get("role", "")
+            ).strip().lower()
+
+            message = str(
+                item.get("message", "")
+            ).strip()
+
+            if not message:
+                continue
+
+            if role == "user":
+                speaker = "User"
+            elif role == "assistant":
+                speaker = "ISMAIL AI"
+            else:
+                continue
+
+            lines.append(
+                f"{speaker}: {message}"
+            )
+
+        return "\n".join(lines)
+
+
+    
+
+
     def _add_memory_to_prompt(
         self,
         prompt: str,
@@ -337,7 +394,10 @@ class AIEngine:
         message: str,
         user_id: str = "",
         file_context: str = "",
+        chat_id: str = "",
     ) -> str:
+
+        
         """Generate a final answer using knowledge, live evidence, or general AI."""
         message = message.strip()
         if not message:
@@ -348,6 +408,13 @@ class AIEngine:
         self._save_explicit_memory(
             user_id,
             message,
+        )
+
+        chat_id = str(chat_id).strip()
+
+        conversation_context = self._build_conversation_context(
+            user_id,
+            chat_id,
         )
 
         browser_action = detect_browser_action(message)
@@ -395,13 +462,37 @@ class AIEngine:
                 f"{file_context}\n\n"
             )
 
-        prompt += f"User message:\n{message}"
+        if conversation_context:
+            prompt += (
+                "\n\nRECENT CONVERSATION:\n"
+                f"{conversation_context}\n\n"
+                "Use the recent conversation to understand "
+                "what the user means. Resolve references such as "
+                "'it', 'that', 'this', 'he', 'she', 'they', "
+                "'আগেরটা', 'ওটা', 'এটা', 'সে', and similar "
+                "follow-up references from the conversation.\n"
+            )
+
+        prompt += (
+            "\nCURRENT USER MESSAGE:\n"
+            f"{message}"
+        )
 
         if route == "live" and not file_context:
             prompt = self._build_grounded_prompt(
                 message,
                 evidence
             )
+
+            if conversation_context:
+                prompt += (
+                    "\n\nRECENT CONVERSATION:\n"
+                    f"{conversation_context}\n\n"
+                    "Use this conversation only to understand "
+                    "the user's current question and references. "
+                    "Current factual claims must still come from "
+                    "the supplied evidence.\n"
+                )
 
         # Add saved user memory after the final base prompt is built.
         prompt = self._add_memory_to_prompt(

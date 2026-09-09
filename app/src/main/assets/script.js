@@ -1,8 +1,36 @@
 ﻿const chatContainer = document.getElementById("chatContainer");
 const messageInput = document.getElementById("messageInput");
 const sendButton = document.getElementById("sendButton");
+const attachButton =
+    document.getElementById("attachButton");
+
+const fileInput =
+    document.getElementById("fileInput");
+
+const attachmentPreview =
+    document.getElementById("attachmentPreview");
+
+const attachmentName =
+    document.getElementById("attachmentName");
+
+const removeAttachment =
+    document.getElementById("removeAttachment");
+
+const attachMenu =
+    document.getElementById("attachMenu");
+
+const fileOption =
+    document.getElementById("fileOption");
+
+let selectedFile = null;
 const voiceButton =
 document.getElementById("voiceButton");
+
+
+
+
+
+
 const newChatButton = document.getElementById("newChatButton");
 const clearChatButton =
     document.getElementById("clearChatButton");
@@ -11,7 +39,11 @@ const welcome = document.getElementById("welcome");
 const exportChatButton =
     document.getElementById("exportChatButton");
 
-const BACKEND_BASE_URL = "http://192.168.0.101:8000";
+const BACKEND_BASE_URL =
+    window.location.hostname === "127.0.0.1" ||
+    window.location.hostname === "localhost"
+        ? "http://127.0.0.1:8000"
+        : "https://ismail-ai-api.onrender.com";
 const API_URL = `${BACKEND_BASE_URL}/api/chat`;
 
 
@@ -43,6 +75,9 @@ const registerForm =
 const authToggleButton =
     document.getElementById("authToggleButton");
 
+const googleLoginButton =
+    document.getElementById("googleLoginButton");
+
 const loginUsername =
     document.getElementById("loginUsername");
 
@@ -54,6 +89,38 @@ const registerUsername =
 
 const registerPassword =
     document.getElementById("registerPassword");
+
+
+
+const registerPasswordConfirm =
+    document.getElementById("registerPasswordConfirm");
+
+const usernameSuggestions =
+    document.getElementById("usernameSuggestions");
+
+const passwordStrength =
+    document.getElementById("passwordStrength");
+
+const passwordMatch =
+    document.getElementById("passwordMatch");
+
+const passwordReqLength =
+    document.getElementById("passwordReqLength");
+
+const passwordReqLower =
+    document.getElementById("passwordReqLower");
+
+const passwordReqUpper =
+    document.getElementById("passwordReqUpper");
+
+const passwordReqNumber =
+    document.getElementById("passwordReqNumber");
+
+const passwordReqSpecial =
+    document.getElementById("passwordReqSpecial");
+
+
+
 
 
 function showAuthMessage(message = "") {
@@ -190,6 +257,354 @@ async function getSession() {
 }
 
 
+
+function updatePasswordRequirement(
+    element,
+    valid
+) {
+    if (!element) {
+        return;
+    }
+
+    const icon =
+        element.querySelector(".req-icon");
+
+    if (valid) {
+        element.classList.add(
+            "valid"
+        );
+
+        if (icon) {
+            icon.textContent = "✓";
+        }
+    } else {
+        element.classList.remove(
+            "valid"
+        );
+
+        if (icon) {
+            icon.textContent = "○";
+        }
+    }
+}
+
+
+function updatePasswordValidation() {
+
+    if (!registerPassword) {
+        return false;
+    }
+
+    const password =
+        registerPassword.value;
+
+    const hasLength =
+        password.length >= 8 &&
+        password.length <= 128;
+
+    const hasLower =
+        /[a-z]/.test(password);
+
+    const hasUpper =
+        /[A-Z]/.test(password);
+
+    const hasNumber =
+        /[0-9]/.test(password);
+
+    const hasSpecial =
+        /[^A-Za-z0-9]/.test(password);
+
+
+    updatePasswordRequirement(
+        passwordReqLength,
+        hasLength
+    );
+
+    updatePasswordRequirement(
+        passwordReqLower,
+        hasLower
+    );
+
+    updatePasswordRequirement(
+        passwordReqUpper,
+        hasUpper
+    );
+
+    updatePasswordRequirement(
+        passwordReqNumber,
+        hasNumber
+    );
+
+    updatePasswordRequirement(
+        passwordReqSpecial,
+        hasSpecial
+    );
+
+
+    const score =
+        [
+            hasLength,
+            hasLower,
+            hasUpper,
+            hasNumber,
+            hasSpecial
+        ].filter(Boolean).length;
+
+
+    if (passwordStrength) {
+
+        if (!password) {
+            passwordStrength.textContent =
+                "Password strength: —";
+
+            passwordStrength.className =
+                "password-strength";
+
+        } else if (score <= 2) {
+            passwordStrength.textContent =
+                "Password strength: Weak";
+
+            passwordStrength.className =
+                "password-strength weak";
+
+        } else if (score <= 4) {
+            passwordStrength.textContent =
+                "Password strength: Medium";
+
+            passwordStrength.className =
+                "password-strength medium";
+
+        } else {
+            passwordStrength.textContent =
+                "Password strength: Strong";
+
+            passwordStrength.className =
+                "password-strength strong";
+        }
+    }
+
+
+    updatePasswordMatch();
+
+
+    return (
+        hasLength &&
+        hasLower &&
+        hasUpper &&
+        hasNumber &&
+        hasSpecial
+    );
+}
+
+
+function updatePasswordMatch() {
+
+    if (
+        !registerPassword ||
+        !registerPasswordConfirm ||
+        !passwordMatch
+    ) {
+        return false;
+    }
+
+    const password =
+        registerPassword.value;
+
+    const confirmPassword =
+        registerPasswordConfirm.value;
+
+
+    if (!confirmPassword) {
+
+        passwordMatch.textContent = "";
+
+        passwordMatch.className =
+            "password-match";
+
+        return false;
+    }
+
+
+    if (
+        password === confirmPassword
+    ) {
+
+        passwordMatch.textContent =
+            "✓ Passwords match";
+
+        passwordMatch.className =
+            "password-match valid";
+
+        return true;
+
+    }
+
+
+    passwordMatch.textContent =
+        "✕ Passwords do not match";
+
+    passwordMatch.className =
+        "password-match invalid";
+
+    return false;
+}
+
+
+function updateRegisterButton() {
+
+    const passwordValid =
+        updatePasswordValidation();
+
+    const passwordsMatch =
+        updatePasswordMatch();
+
+    const username =
+        registerUsername
+            ? registerUsername.value.trim()
+            : "";
+
+    const usernameValid =
+        /^[A-Za-z0-9._-]{3,50}$/
+            .test(username);
+
+
+    if (registerButton) {
+
+        registerButton.disabled = !(
+            usernameValid &&
+            passwordValid &&
+            passwordsMatch
+        );
+    }
+}
+
+
+if (registerPassword) {
+
+    registerPassword.addEventListener(
+        "input",
+        updateRegisterButton
+    );
+}
+
+
+if (registerPasswordConfirm) {
+
+    registerPasswordConfirm
+        .addEventListener(
+            "input",
+            updateRegisterButton
+        );
+}
+
+
+if (registerUsername) {
+
+    registerUsername.addEventListener(
+        "input",
+        updateRegisterButton
+    );
+}
+
+
+
+
+function updateUsernameSuggestions() {
+
+    if (
+        !registerUsername ||
+        !usernameSuggestions
+    ) {
+        return;
+    }
+
+    const username =
+        registerUsername.value
+            .trim()
+            .toLowerCase();
+
+    if (!username) {
+        usernameSuggestions.innerHTML = "";
+        return;
+    }
+
+    const base =
+        username
+            .replace(
+                /[^a-z0-9]/g,
+                ""
+            )
+            .slice(0, 42);
+
+    if (!base) {
+        usernameSuggestions.innerHTML = "";
+        return;
+    }
+
+    const suggestions = [
+        `${base}01`,
+        `${base}123`,
+        `${base}ai`
+    ];
+
+    usernameSuggestions.innerHTML = `
+        <div class="suggestion-title">
+            Username suggestions
+        </div>
+
+        ${suggestions
+            .map(
+                suggestion => `
+                    <button
+                        type="button"
+                        class="username-suggestion"
+                        data-username="${suggestion}"
+                    >
+                        ${suggestion}
+                    </button>
+                `
+            )
+            .join("")}
+    `;
+
+    usernameSuggestions
+        .querySelectorAll(
+            ".username-suggestion"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                function () {
+
+                    registerUsername.value =
+                        this.dataset.username;
+
+                    updateUsernameSuggestions();
+                    updateRegisterButton();
+
+                    registerPassword.focus();
+                }
+            );
+
+        });
+}
+
+
+if (registerUsername) {
+
+    registerUsername.addEventListener(
+        "input",
+        updateUsernameSuggestions
+    );
+
+}
+
+
+
+
+
+
 async function loginAccount(
     username,
     password
@@ -284,6 +699,121 @@ async function registerAccount(
 
     return data;
 }
+
+
+
+/* Google Login */
+const GOOGLE_CLIENT_ID =
+    "272446356006-nic51t1lo64sdf9v8m58rmhn6ha64kub.apps.googleusercontent.com";
+
+
+async function loginWithGoogleCredential(credential) {
+
+    showAuthMessage("Google Login হচ্ছে...");
+
+    const response = await fetch(
+        `${BACKEND_BASE_URL}/api/auth/google`,
+        {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                credential: credential
+            })
+        }
+    );
+
+    let data = {};
+
+    try {
+        data = await response.json();
+    } catch (error) {
+        data = {};
+    }
+
+    if (!response.ok) {
+        throw new Error(
+            data.detail ||
+            `Google Login failed: ${response.status}`
+        );
+    }
+
+    setAuthenticatedSession(data);
+
+    await loadCentralChatHistory();
+
+    startCentralHistorySync();
+
+    return data;
+}
+
+
+function handleGoogleCredentialResponse(response) {
+
+    if (!response || !response.credential) {
+        showAuthMessage(
+            "Google Login credential পাওয়া যায়নি।"
+        );
+        return;
+    }
+
+    loginWithGoogleCredential(
+        response.credential
+    ).catch(function (error) {
+
+        showAuthMessage(
+            error.message ||
+            "Google Login failed."
+        );
+
+    });
+}
+
+
+window.initializeGoogleLogin = function () {
+
+    if (!googleLoginButton) {
+        return;
+    }
+
+    if (
+        !window.google ||
+        !window.google.accounts ||
+        !window.google.accounts.id
+    ) {
+        setTimeout(function () {
+            window.initializeGoogleLogin();
+        }, 1000);
+        return;
+    }
+
+    window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredentialResponse
+    });
+
+    googleLoginButton.innerHTML = "";
+
+    window.google.accounts.id.renderButton(
+        googleLoginButton,
+        {
+            type: "standard",
+            theme: "outline",
+            size: "large",
+            text: "continue_with",
+            shape: "rectangular",
+            width: 400
+        }
+    );
+};
+
+
+setTimeout(function () {
+    window.initializeGoogleLogin();
+}, 1500);
 
 
 /* Login */
@@ -569,7 +1099,7 @@ async function checkCentralChatHistory() {
         const session = await getSession();
 
         const response = await fetch(
-            `${BACKEND_BASE_URL}/api/chat/history`,
+            `${BACKEND_BASE_URL}/api/chat/history?chat_id=${encodeURIComponent(String(currentChat.id))}`,
             {
                 method: "GET",
                 headers: {
@@ -734,6 +1264,7 @@ async function syncChatMessage(role, message) {
                 },
 
                 body: JSON.stringify({
+                    chat_id: String(currentChat.id),
                     role: role,
                     message: message
                 })
@@ -1130,6 +1661,7 @@ async function regenerateAnswer(question, aiMessageElement) {
         if (oldContent) {
             oldContent.textContent = newAnswer;
         }
+        speak(newAnswer);
 
         if (messageIndex >= 0) {
             currentChat.messages[messageIndex].text = newAnswer;
@@ -1154,11 +1686,279 @@ async function regenerateAnswer(question, aiMessageElement) {
 }
 
 
+
+// =========================================================
+// VOICE SCREEN — TASK 1
+// =========================================================
+
+function openVoiceScreen() {
+    if (!voiceScreen) return;
+
+    if (attachMenuElement) {
+        attachMenuElement.setAttribute("hidden", "");
+    }
+
+    voiceScreen.removeAttribute("hidden");
+    voiceScreen.setAttribute("aria-hidden", "false");
+
+    document.body.classList.add("voice-screen-open");
+
+    if (voiceStatus) {
+        voiceStatus.textContent = "Voice";
+    }
+
+    if (voiceSubtitle) {
+        voiceSubtitle.textContent =
+            "Tap the microphone to start a conversation.";
+    }
+
+    if (voiceHint) {
+        voiceHint.textContent = "Ready when you are";
+    }
+
+    setTimeout(() => {
+        if (voiceMicButton) {
+            voiceMicButton.focus();
+        }
+    }, 50);
+}
+
+
+function closeVoiceScreen() {
+    if (!voiceScreen) return;
+
+    voiceScreen.setAttribute("hidden", "");
+    voiceScreen.setAttribute("aria-hidden", "true");
+
+    document.body.classList.remove("voice-screen-open");
+}
+
+
+if (voiceOption) {
+    voiceOption.addEventListener("click", function (event) {
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        openVoiceScreen();
+    });
+}
+
+
+if (voiceCloseButton) {
+    voiceCloseButton.addEventListener("click", function () {
+
+        closeVoiceScreen();
+
+    });
+}
+
+
+if (voiceMicButton) {
+    voiceMicButton.addEventListener("click", function () {
+
+        if (voiceStatus) {
+            voiceStatus.textContent = "Voice";
+        }
+
+        if (voiceSubtitle) {
+            voiceSubtitle.textContent =
+                "Voice conversation will start here.";
+        }
+
+        if (voiceHint) {
+            voiceHint.textContent =
+                "Voice engine coming in Task 2";
+        }
+
+    });
+}
+
+
+document.addEventListener("keydown", function (event) {
+
+    if (
+        event.key === "Escape" &&
+        voiceScreen &&
+        !voiceScreen.hasAttribute("hidden")
+    ) {
+        closeVoiceScreen();
+    }
+
+});
+
+
+// =========================================================
+// FILE UPLOAD + ATTACH MENU
+// =========================================================
+
+const attachMenuElement =
+    document.getElementById("attachMenu");
+
+const fileOptionElement =
+    document.getElementById("fileOption");
+
+
+if (attachButton && attachMenuElement) {
+
+    // + button
+    attachButton.addEventListener("click", function (event) {
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const isHidden =
+            attachMenuElement.hasAttribute("hidden");
+
+        if (isHidden) {
+            attachMenuElement.removeAttribute("hidden");
+        } else {
+            attachMenuElement.setAttribute("hidden", "");
+        }
+    });
+
+
+    // 📎 File / PDF
+    if (fileOptionElement && fileInput) {
+
+        fileOptionElement.addEventListener(
+            "click",
+            function (event) {
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                attachMenuElement.setAttribute(
+                    "hidden",
+                    ""
+                );
+
+                fileInput.click();
+            }
+        );
+
+
+        // File selected
+        fileInput.addEventListener(
+            "change",
+            function () {
+
+                const file =
+                    fileInput.files &&
+                    fileInput.files[0];
+
+                if (!file) {
+                    return;
+                }
+
+
+                const maxSize =
+                    10 * 1024 * 1024;
+
+
+                if (file.size > maxSize) {
+
+                    alert(
+                        "File is too large. Maximum size is 10 MB."
+                    );
+
+                    fileInput.value = "";
+
+                    return;
+                }
+
+
+                // Keep file separately.
+                // Never put PDF text into message box.
+                selectedFile = file;
+
+
+                // Show attachment preview
+                if (attachmentPreview) {
+                    attachmentPreview.hidden = false;
+                }
+
+                if (attachmentName) {
+                    attachmentName.textContent =
+                        file.name;
+                }
+
+
+                messageInput.style.height =
+                    "auto";
+
+                messageInput.focus();
+            }
+        );
+    }
+
+
+    // Outside click
+    document.addEventListener(
+        "click",
+        function (event) {
+
+            if (
+                !attachMenuElement.contains(
+                    event.target
+                ) &&
+                event.target !== attachButton
+            ) {
+
+                attachMenuElement.setAttribute(
+                    "hidden",
+                    ""
+                );
+            }
+        }
+    );
+}
+
+
+
+
+// =========================================================
+// REMOVE ATTACHMENT
+// =========================================================
+
+if (removeAttachment) {
+
+    removeAttachment.addEventListener(
+        "click",
+        function (event) {
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            selectedFile = null;
+
+            if (fileInput) {
+                fileInput.value = "";
+            }
+
+            if (attachmentPreview) {
+                attachmentPreview.hidden = true;
+            }
+
+            if (attachmentName) {
+                attachmentName.textContent = "";
+            }
+        }
+    );
+}
+
+
+
+
 async function sendMessage() {
 
-    const message = messageInput.value.trim();
+    const message =
+        messageInput.value.trim();
 
-    if (!message || sendButton.disabled) {
+    if (
+        (!message && !selectedFile) ||
+        sendButton.disabled
+    ) {
         return;
     }
 
@@ -1166,49 +1966,208 @@ async function sendMessage() {
         currentChat.id = Date.now();
     }
 
-    addMessage(message, "user");
-
-    syncChatMessage("user", message);
-
-    messageInput.value = "";
-    messageInput.style.height = "auto";
-
     setLoading(true);
     showLoading();
 
     try {
 
-        const session = await getSession();
+        const session =
+            await getSession();
 
-        const response = await fetch(API_URL, {
-            method: "POST",
+        let fileContext = "";
+        let displayMessage = message;
 
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${session.token}`
-            },
 
-            body: JSON.stringify({
-                message: message,
-                user_id: USER_ID
-            })
+        // =================================================
+        // FILE MODE
+        // =================================================
 
-        });
+        if (selectedFile) {
 
+            const formData =
+                new FormData();
+
+            formData.append(
+                "file",
+                selectedFile
+            );
+
+
+            const uploadResponse =
+                await fetch(
+                    `${BACKEND_BASE_URL}/api/file/upload`,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Authorization":
+                                `Bearer ${session.token}`
+                        },
+
+                        body: formData
+                    }
+                );
+
+
+            if (!uploadResponse.ok) {
+
+                let errorMessage =
+                    "File upload failed.";
+
+                try {
+
+                    const errorData =
+                        await uploadResponse.json();
+
+                    errorMessage =
+                        errorData.detail ||
+                        errorMessage;
+
+                } catch (error) {
+                    // Ignore JSON parsing error.
+                }
+
+                throw new Error(
+                    errorMessage
+                );
+            }
+
+
+            const fileData =
+                await uploadResponse.json();
+
+
+            fileContext =
+                String(fileData.text || "");
+
+
+            displayMessage =
+                `📎 ${fileData.filename}\n${message || "Analyze this file."}`;
+
+
+            addMessage(
+                displayMessage,
+                "user"
+            );
+
+
+            syncChatMessage(
+                "user",
+                displayMessage
+            );
+
+
+            selectedFile = null;
+
+            if (fileInput) {
+                fileInput.value = "";
+            }
+
+
+            if (attachmentPreview) {
+                attachmentPreview.hidden = true;
+            }
+
+        } else {
+
+            addMessage(
+                message,
+                "user"
+            );
+
+            syncChatMessage(
+                "user",
+                message
+            );
+        }
+
+
+        messageInput.value = "";
+
+        messageInput.style.height =
+            "auto";
+
+
+        // =================================================
+        // SEND TO ISMAIL AI
+        // =================================================
+
+        const response =
+            await fetch(
+                API_URL,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+
+                        "Authorization":
+                            `Bearer ${session.token}`
+                    },
+
+                    body: JSON.stringify({
+
+                        // User's actual question.
+                        message:
+                            message ||
+                            "Analyze this file.",
+
+                        user_id:
+                            USER_ID,
+
+                        // Extracted document content.
+                        file_context:
+                            fileContext
+                    })
+                }
+            );
 
 
         if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
+
+            let errorMessage =
+                `Server error: ${response.status}`;
+
+            try {
+
+                const errorData =
+                    await response.json();
+
+                errorMessage =
+                    errorData.detail ||
+                    errorMessage;
+
+            } catch (error) {
+                // Ignore JSON parsing error.
+            }
+
+            throw new Error(
+                errorMessage
+            );
         }
 
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
-        if (data.action && data.action.action === "open_url" && data.action.url) {
-            window.open(data.action.url, "_blank");
+
+        if (
+            data.action &&
+            data.action.action === "open_url" &&
+            data.action.url
+        ) {
+
+            window.open(
+                data.action.url,
+                "_blank"
+            );
+
             removeLoading();
+
             return;
         }
+
 
         removeLoading();
 
@@ -1227,15 +2186,24 @@ async function sendMessage() {
             assistantMessage
         );
 
+        speakAIResponse(assistantMessage);
+
+
+        saveCurrentChat();
+
 
     } catch (error) {
 
-        console.error("ISMAIL AI Error:", error);
+        console.error(
+            "File/Chat Error:",
+            error
+        );
 
         removeLoading();
 
+
         addMessage(
-            "Unable to connect to ISMAIL AI. Please make sure the Python server is running.",
+            `❌ ${error.message}`,
             "ai"
         );
 
@@ -1248,9 +2216,175 @@ async function sendMessage() {
 }
 
 
+
 /* Send button */
 
 sendButton.addEventListener("click", sendMessage);
+
+
+/* =========================
+   ISMAIL AI VOICE SYSTEM
+========================= */
+
+let recognition = null;
+let isListening = false;
+
+const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+if (voiceButton && SpeechRecognition) {
+
+    console.log("SpeechRecognition:", window.SpeechRecognition);
+    console.log("webkitSpeechRecognition:", window.webkitSpeechRecognition);
+
+    alert(
+        "SpeechRecognition = " +
+        (window.SpeechRecognition ? "YES" : "NO") +
+        "\nwebkitSpeechRecognition = " +
+        (window.webkitSpeechRecognition ? "YES" : "NO")
+    );
+
+    recognition = new SpeechRecognition();
+
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "bn-BD";
+
+    recognition.onstart = function () {
+
+        isListening = true;
+
+        voiceButton.classList.add("recording");
+        voiceButton.textContent = "🔴";
+        voiceButton.title = "Listening...";
+    };
+
+    recognition.onresult = function (event) {
+
+        const transcript =
+            event.results[0][0].transcript;
+
+        messageInput.value = transcript;
+
+        messageInput.style.height = "auto";
+
+        messageInput.style.height =
+            `${Math.min(messageInput.scrollHeight, 150)}px`;
+
+        voiceButton.classList.remove("recording");
+        voiceButton.textContent = "🎙️";
+        voiceButton.title = "Voice";
+
+        isListening = false;
+
+        /*
+         * আপনার কথা বুঝে সরাসরি ISMAIL AI-তে পাঠাবে
+         */
+        sendMessage();
+    };
+
+    recognition.onerror = function (event) {
+
+        if (window.AndroidVoice) return;
+
+        console.error(
+            "Voice recognition error:",
+            event.error
+        );
+
+        isListening = false;
+
+        voiceButton.classList.remove("recording");
+
+        voiceButton.textContent = "🎙️";
+        voiceButton.title = "Voice";
+    };
+
+    recognition.onend = function () {
+
+        isListening = false;
+
+        voiceButton.classList.remove("recording");
+
+        voiceButton.textContent = "🎙️";
+        voiceButton.title = "Voice";
+    };
+
+voiceButton.addEventListener(
+    "click",
+    function () {
+
+        if (
+            window.AndroidVoice &&
+            window.AndroidVoice.startVoiceRecognition
+        ) {
+
+            window.AndroidVoice.startVoiceRecognition();
+            return;
+
+        }
+
+        try {
+
+            recognition.start();
+
+        } catch (error) {
+
+            console.error(error);
+
+        }
+
+    }
+);
+
+} else {
+
+    if (voiceButton) {
+
+        voiceButton.style.display = "none";
+    }
+
+}
+
+
+/* =========================
+   ISMAIL AI SPEAK RESPONSE
+========================= */
+
+function speakAIResponse(text) {
+
+    if (!("speechSynthesis" in window)) {
+        return;
+    }
+
+    if (!text) {
+        return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const cleanText =
+        text
+            .replace(/```[\s\S]*?```/g, "")
+            .replace(/\*\*/g, "")
+            .replace(/[`#]/g, "")
+            .trim();
+
+    if (!cleanText) {
+        return;
+    }
+
+    const speech =
+        new SpeechSynthesisUtterance(cleanText);
+
+    speech.lang = "bn-BD";
+    speech.rate = 1;
+    speech.pitch = 1;
+    speech.volume = 1;
+
+    window.speechSynthesis.speak(speech);
+}
 
 
 
@@ -1306,6 +2440,409 @@ newChatButton.addEventListener("click", function () {
 
 
 
+
+/* =========================================
+   TOP RIGHT CHAT SEARCH
+========================================= */
+
+const topSearchButton =
+    document.getElementById("topSearchButton");
+
+const topSearchPopup =
+    document.getElementById("topSearchPopup");
+
+const topSearchInput =
+    document.getElementById("topSearchInput");
+
+const topSearchClose =
+    document.getElementById("topSearchClose");
+
+const topSearchResults =
+    document.getElementById("topSearchResults");
+
+
+/* -----------------------------------------
+   GET SAVED CHAT HISTORY
+----------------------------------------- */
+
+function getTopSearchHistory() {
+    try {
+
+        const history =
+            JSON.parse(
+                localStorage.getItem(HISTORY_KEY) || "[]"
+            );
+
+        return Array.isArray(history)
+            ? history
+            : [];
+
+    } catch (error) {
+
+        console.error(
+            "Search history error:",
+            error
+        );
+
+        return [];
+    }
+}
+
+
+/* -----------------------------------------
+   OPEN SEARCH
+----------------------------------------- */
+
+function openTopSearch() {
+
+    topSearchPopup.classList.add("open");
+
+    setTimeout(() => {
+
+        topSearchInput.focus();
+
+    }, 50);
+}
+
+
+/* -----------------------------------------
+   CLOSE SEARCH
+----------------------------------------- */
+
+function closeTopSearch() {
+
+    topSearchPopup.classList.remove("open");
+
+    topSearchInput.value = "";
+
+    topSearchResults.innerHTML = "";
+}
+
+
+/* -----------------------------------------
+   OPEN SELECTED CHAT
+----------------------------------------- */
+
+function openChatFromSearch(chat) {
+
+    if (!chat) {
+        return;
+    }
+
+    currentChat = chat;
+
+    chatContainer.innerHTML = "";
+
+    if (welcome) {
+        welcome.style.display = "none";
+    }
+
+
+    if (
+        Array.isArray(currentChat.messages)
+    ) {
+
+        currentChat.messages.forEach(
+            message => {
+
+                const messageElement =
+                    document.createElement("div");
+
+                messageElement.className =
+                    `message ${message.type}-message`;
+
+
+                const content =
+                    document.createElement("div");
+
+                content.className =
+                    "message-content";
+
+                content.textContent =
+                    message.text || "";
+
+
+                messageElement.appendChild(
+                    content
+                );
+
+                chatContainer.appendChild(
+                    messageElement
+                );
+
+            }
+        );
+
+    }
+
+
+    closeTopSearch();
+
+    messageInput.focus();
+}
+
+
+/* -----------------------------------------
+   SEARCH CHATS
+----------------------------------------- */
+
+function renderTopSearchResults() {
+
+    const searchText =
+        topSearchInput.value
+            .trim()
+            .toLowerCase();
+
+
+    topSearchResults.innerHTML = "";
+
+
+    if (!searchText) {
+        return;
+    }
+
+
+    const history =
+        getTopSearchHistory();
+
+
+    const filteredHistory =
+        history.filter(chat => {
+
+            const title =
+                String(
+                    chat.title || "New chat"
+                );
+
+
+            const messages =
+                Array.isArray(chat.messages)
+                    ? chat.messages
+                        .map(
+                            message =>
+                                String(
+                                    message.text || ""
+                                )
+                        )
+                        .join(" ")
+                    : "";
+
+
+            return (
+                title
+                    .toLowerCase()
+                    .includes(searchText)
+
+                ||
+
+                messages
+                    .toLowerCase()
+                    .includes(searchText)
+            );
+
+        });
+
+
+    if (filteredHistory.length === 0) {
+
+        const noResult =
+            document.createElement("div");
+
+        noResult.className =
+            "top-search-no-result";
+
+        noResult.textContent =
+            "No matching chats found.";
+
+        topSearchResults.appendChild(
+            noResult
+        );
+
+        return;
+    }
+
+
+    filteredHistory
+        .slice(0, 15)
+        .forEach(chat => {
+
+            const result =
+                document.createElement("button");
+
+            result.type = "button";
+
+            result.className =
+                "top-search-result";
+
+
+            const title =
+                document.createElement("div");
+
+            title.className =
+                "top-search-result-title";
+
+            title.textContent =
+                chat.title || "New chat";
+
+
+            result.appendChild(title);
+
+
+            /* Find matching message */
+
+            let matchingMessage = null;
+
+
+            if (
+                Array.isArray(chat.messages)
+            ) {
+
+                matchingMessage =
+                    chat.messages.find(
+                        message =>
+                            String(
+                                message.text || ""
+                            )
+                            .toLowerCase()
+                            .includes(searchText)
+                    );
+
+            }
+
+
+            if (matchingMessage) {
+
+                const message =
+                    document.createElement("div");
+
+                message.className =
+                    "top-search-result-message";
+
+                message.textContent =
+                    String(
+                        matchingMessage.text || ""
+                    )
+                    .replace(/\s+/g, " ")
+                    .trim();
+
+
+                result.appendChild(message);
+
+            }
+
+
+            result.addEventListener(
+                "click",
+                () => {
+
+                    openChatFromSearch(chat);
+
+                }
+            );
+
+
+            topSearchResults.appendChild(
+                result
+            );
+
+        });
+
+}
+
+
+/* -----------------------------------------
+   EVENTS
+----------------------------------------- */
+
+topSearchButton.addEventListener(
+    "click",
+    event => {
+
+        event.stopPropagation();
+
+        if (
+            topSearchPopup.classList.contains(
+                "open"
+            )
+        ) {
+
+            closeTopSearch();
+
+        } else {
+
+            openTopSearch();
+
+        }
+
+    }
+);
+
+
+topSearchClose.addEventListener(
+    "click",
+    event => {
+
+        event.stopPropagation();
+
+        closeTopSearch();
+
+    }
+);
+
+
+topSearchInput.addEventListener(
+    "input",
+    renderTopSearchResults
+);
+
+
+topSearchInput.addEventListener(
+    "keydown",
+    event => {
+
+        if (event.key === "Escape") {
+
+            closeTopSearch();
+
+        }
+
+    }
+);
+
+
+/* -----------------------------------------
+   CLICK OUTSIDE
+----------------------------------------- */
+
+document.addEventListener(
+    "click",
+    event => {
+
+        if (
+            topSearchPopup.classList.contains(
+                "open"
+            )
+            &&
+            !topSearchPopup.contains(
+                event.target
+            )
+            &&
+            !topSearchButton.contains(
+                event.target
+            )
+        ) {
+
+            closeTopSearch();
+
+        }
+
+    }
+);
+
+
+
+
+
 /* =========================
    CHAT HISTORY
 ========================= */
@@ -1337,11 +2874,21 @@ function renderHistory() {
     const searchText =
         historySearchInput.value.trim().toLowerCase();
 
-    const filteredHistory = history.filter(chat =>
-        (chat.title || "New chat")
-            .toLowerCase()
-            .includes(searchText)
-    );
+    const filteredHistory = history.filter(chat => {
+        const title = (chat.title || "New chat").toLowerCase();
+
+        const messageText = Array.isArray(chat.messages)
+            ? chat.messages
+                .map(message => message.text || "")
+                .join(" ")
+                .toLowerCase()
+            : "";
+
+        return (
+            title.includes(searchText) ||
+            messageText.includes(searchText)
+        );
+    });
 
     
     if (history.length === 0) {
@@ -1492,6 +3039,10 @@ function renderHistory() {
         historyList.appendChild(item);
     });
 }
+
+
+
+historySearchInput.addEventListener("input", renderHistory);
 
 
 
@@ -1675,5 +3226,40 @@ clearAllHistoryMenuButton.addEventListener("click", function () {
 
     clearAllHistoryButton.click();
 });
+
+
+function speak(text) {
+
+    if (!("speechSynthesis" in window)) {
+        return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const utter = new SpeechSynthesisUtterance(text);
+
+    utter.lang = "bn-BD";
+    utter.rate = 1;
+    utter.pitch = 1;
+
+    window.speechSynthesis.speak(utter);
+
+}
+
+
+window.receiveNativeVoice = function (text) {
+
+    if (!text) return;
+
+    messageInput.value = text;
+
+    messageInput.style.height = "auto";
+    messageInput.style.height =
+        `${Math.min(messageInput.scrollHeight,150)}px`;
+
+    sendMessage();
+
+};
+
 
 
