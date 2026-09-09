@@ -170,6 +170,16 @@ def _verify_evidence_agreement(
         if item.verification_status == "verified":
             continue
 
+        # High-quality sources with successfully fetched content
+        # can be used directly as evidence.
+        if (
+            item.content
+            and len(item.content.strip()) >= 80
+            and item.reliability_score >= 0.75
+        ):
+            item.verification_status = "verified"
+            continue
+
         if len(current_words) < 3 or not current_domain:
             item.verification_status = "unverified"
             continue
@@ -462,10 +472,12 @@ class WebResearch:
         # Provider 0: Google News RSS for news questions
         # ------------------------------------------------------------
         news_query = bool(re.search(
-            r"\b(news|latest|breaking|headline|headlines|current events|today)\b",
+            r"\b(news|latest|breaking|headline|headlines|current events|today)\b"
+            r"|খবর|সর্বশেষ|আজকের|আজ|ব্রেকিং|সংবাদ|সাম্প্রতিকতম",
             question,
             re.IGNORECASE,
         ))
+
         if news_query:
             try:
                 google_news_url = (
@@ -588,7 +600,13 @@ class WebResearch:
         # Provider 2: Bing RSS
         # ------------------------------------------------------------
         try:
-            news_query = bool(re.search(r'\b(news|latest|breaking|headline|headlines|current events|today)\b', question, re.IGNORECASE))
+            news_query = bool(re.search(
+                r"\b(news|latest|breaking|headline|headlines|current events|today)\b"
+                r"|খবর|সর্বশেষ|আজকের|আজ|ব্রেকিং|সংবাদ|সাম্প্রতিকতম",
+                question,
+                re.IGNORECASE,
+            ))
+            
             bing_base = 'https://www.bing.com/news/search?format=rss&q=' if news_query else 'https://www.bing.com/search?format=rss&q='
             bing_url = bing_base + urllib.parse.quote_plus(question)
 
@@ -971,15 +989,28 @@ class WebResearch:
         if not question:
             return None
         location_match = re.search(
-            r"\b(?:in|at|for)\s+([A-Za-z][A-Za-z .,'-]{1,80}?)(?:\s+(?:now|today|tonight|currently|current)\b|\?|$)",
+            r"\b(?:in|at|for)\s+([A-Za-z][A-Za-z .,'-]{1,80}?)(?:\s+(?:now|today|tonight|currently|current|tomorrow)\b|\?|$)",
             question,
             re.IGNORECASE,
         )
+
+        if not location_match:
+            bengali_match = re.search(
+                r"\b([A-Za-z][A-Za-z .,'-]{1,80}?)(?:-এর|-র|-এ)\s*"
+                r"(?:আজকের|আজ|এখন|বর্তমানে|আগামীকাল|কাল)\b",
+                question,
+                re.IGNORECASE,
+            )
+
+            if bengali_match:
+                location = bengali_match.group(1).strip(" .,")
+            else:
+                location = ""
+        else:
+            location = location_match.group(1).strip(" .,")
         if not location_match:
             return None
-        location = location_match.group(1).strip(" .,")
-        if not location:
-            return None
+        
         try:
             geocode_url = (
                 "https://geocoding-api.open-meteo.com/v1/search?"
