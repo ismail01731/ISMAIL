@@ -9,6 +9,7 @@ import zlib
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from typing import List, Optional
+from datetime import datetime, timezone, timedelta
 @dataclass
 class WebEvidence:
     title: str
@@ -444,6 +445,60 @@ class WebResearch:
 
 
 
+    def _extract_google_news_date(item_xml: str) -> Optional[datetime]:
+        """Extract publication date from a Google News RSS item."""
+        if not item_xml:
+            return None
+
+        patterns = (
+            r"<pubDate\b[^>]*>(.*?)</pubDate>",
+            r"<published\b[^>]*>(.*?)</published>",
+            r"<dc:date\b[^>]*>(.*?)</dc:date>",
+        )
+
+        for pattern in patterns:
+            match = re.search(
+                pattern,
+                item_xml,
+                re.IGNORECASE | re.DOTALL,
+            )
+
+            if not match:
+                continue
+
+            raw_date = html.unescape(match.group(1)).strip()
+
+            try:
+                from email.utils import parsedate_to_datetime
+
+                parsed = parsedate_to_datetime(raw_date)
+
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+
+                return parsed.astimezone(timezone.utc)
+
+            except Exception:
+                pass
+
+            try:
+                parsed = datetime.fromisoformat(
+                    raw_date.replace("Z", "+00:00")
+                )
+
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+
+                return parsed.astimezone(timezone.utc)
+
+            except Exception:
+                pass
+
+        return None
+
+
+
+
     def search(self, question: str, max_sources: int = 5):
         """Search the web using multiple providers with fallbacks."""
         question = (question or "").strip()
@@ -477,8 +532,12 @@ class WebResearch:
             )
             and news_query
         )
+
         if bangladesh_news:
-            search_question = "Bangladesh latest news today"
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            search_question = (
+                f"Bangladesh latest news today {today}"
+            )
 
         if news_query:
             try:
@@ -515,6 +574,19 @@ class WebResearch:
                     re.IGNORECASE | re.DOTALL,
                 )
                 for item_xml in item_pattern.findall(google_news_xml):
+
+
+                    published_at = _extract_google_news_date(item_xml)
+
+                    # For "latest/current/today" Bangladesh news,
+                    # reject articles older than 48 hours.
+                    if bangladesh_news and published_at is not None:
+                        now_utc = datetime.now(timezone.utc)
+
+                        if now_utc - published_at > timedelta(hours=48):
+                            continue
+
+
                     title_match = title_pattern.search(item_xml)
                     link_match = link_pattern.search(item_xml)
                     source_match = source_pattern.search(item_xml)
@@ -991,101 +1063,159 @@ class WebResearch:
             99: "Thunderstorm with heavy hail",
         }
         return descriptions.get(code)
+
+
+
     def _structured_bitcoin(
         self,
         question: str,
     ) -> Optional[WebEvidence]:
-        """Fetch current Bitcoin price with multiple public API fallbacks."""
+        """Fetch current Bitcoin price using multiple live sources."""
         question = (question or "").strip().lower()
 
-        bitcoin_words = ("bitcoin", "btc", "বিটকয়েন", "বিটকয়েন")
+        bitcoin_words = (
+            "bitcoin",
+            "btc",
+            "বিটকয়েন",
+            "বিটকয়েন",
+        )
+
         price_words = (
-            "price", "দাম", "মূল্য", "বর্তমান দাম", "বর্তমান মূল্য",
-            "কত", "কত টাকা",
+            "price",
+            "দাম",
+            "মূল্য",
+            "বর্তমান দাম",
+            "বর্তমান মূল্য",
+            "current price",
         )
 
         if not any(word in question for word in bitcoin_words):
             return None
+
         if not any(word in question for word in price_words):
             return None
 
+        # ------------------------------------------------------------
         # Provider 1: CoinGecko
-        providers = [
-            (
-                "CoinGecko",
+        # ------------------------------------------------------------
+        try:
+            api_url = (
                 "https://api.coingecko.com/api/v3/simple/price?"
                 + urllib.parse.urlencode({
                     "ids": "bitcoin",
                     "vs_currencies": "usd",
                     "include_24hr_change": "true",
-                }),
-            ),
-            # Provider 2: Binance public ticker
-            (
-                "Binance",
-                "https://api.binance.com/api/v3/ticker/24hr?"
-                + urllib.parse.urlencode({"symbol": "BTCUSDT"}),
-            ),
-            # Provider 3: CoinCap
-            (
-                "CoinCap",
-                "https://api.coincap.io/v2/assets/bitcoin",
-            ),
-        ]
+                })
+            )
 
-        for source_name, api_url in providers:
-            try:
-                request = urllib.request.Request(
-                    api_url,
-                    headers={
-                        "User-Agent": self.USER_AGENT,
-                        "Accept": "application/json",
-                    },
-                    method="GET",
+            request = urllib.request.Request(
+                api_url,
+                headers={
+                    "User-Agent": self.USER_AGENT,
+                    "Accept": "application/json",
+                },
+                method="GET",
+            )
+
+            with urllib.request.urlopen(
+                request,
+                timeout=10,
+            ) as response:
+                data = json.loads(
+                    response.read().decode("utf-8")
                 )
-                with urllib.request.urlopen(request, timeout=12) as response:
-                    data = json.loads(response.read().decode("utf-8"))
 
-                price = None
-                change = None
+            bitcoin = data.get("bitcoin") or {}
+            price = bitcoin.get("usd")
+            change = bitcoin.get("usd_24h_change")
 
-                if source_name == "CoinGecko":
-                    bitcoin = data.get("bitcoin") or {}
-                    price = bitcoin.get("usd")
-                    change = bitcoin.get("usd_24h_change")
-                elif source_name == "Binance":
-                    price = data.get("lastPrice")
-                    change = data.get("priceChangePercent")
-                else:
-                    asset = data.get("data") or {}
-                    price = asset.get("priceUsd")
-                    change = asset.get("changePercent24Hr")
-
-                if price is None:
-                    continue
-
+            if price is not None:
                 content = (
-                    "Asset: Bitcoin (BTC)\n"
+                    f"Asset: Bitcoin (BTC)\n"
                     f"Current price: ${float(price):,.2f} USD"
                 )
+
                 if change is not None:
-                    content += f"\n24-hour change: {float(change):.2f}%"
+                    content += (
+                        f"\n24-hour change: {float(change):.2f}%"
+                    )
 
                 return WebEvidence(
                     title="Bitcoin Current Price",
                     url=api_url,
-                    source=source_name,
+                    source="CoinGecko",
                     snippet=content,
                     content=content,
-                    reliability_score=0.90,
+                    reliability_score=0.95,
                     reliability_level="high",
                     verification_status="verified",
                     source_url=api_url,
                 )
-            except Exception:
-                continue
 
+        except Exception:
+            pass
+
+        # ------------------------------------------------------------
+        # Provider 2: Coinbase public API
+        # ------------------------------------------------------------
+        try:
+            api_url = (
+                "https://api.coinbase.com/v2/prices/"
+                "BTC-USD/spot"
+            )
+
+            request = urllib.request.Request(
+                api_url,
+                headers={
+                    "User-Agent": self.USER_AGENT,
+                    "Accept": "application/json",
+                },
+                method="GET",
+            )
+
+            with urllib.request.urlopen(
+                request,
+                timeout=10,
+            ) as response:
+                data = json.loads(
+                    response.read().decode("utf-8")
+                )
+
+            amount = (
+                data.get("data", {})
+                .get("amount")
+            )
+
+            if amount is not None:
+                content = (
+                    f"Asset: Bitcoin (BTC)\n"
+                    f"Current spot price: ${float(amount):,.2f} USD"
+                )
+
+                return WebEvidence(
+                    title="Bitcoin Current Spot Price",
+                    url=api_url,
+                    source="Coinbase",
+                    snippet=content,
+                    content=content,
+                    reliability_score=0.95,
+                    reliability_level="high",
+                    verification_status="verified",
+                    source_url=api_url,
+                )
+
+        except Exception:
+            pass
+
+        # ------------------------------------------------------------
+        # No reliable live provider available
+        # ------------------------------------------------------------
         return None
+
+
+
+
+    
 
     def _structured_weather(
         self,
