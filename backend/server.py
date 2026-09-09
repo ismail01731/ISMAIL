@@ -827,13 +827,20 @@ def root():
         "status": "online",
         "version": "0.1.0"
     }
+
+
 @app.get("/api/ai/status")
-
-
 def ai_status():
     return {
         "name": "ISMAIL AI",
-        "engine": ai_engine.status()
+        "engine": ai_engine.status(),
+        "build": {
+            "git_commit": os.getenv(
+                "RENDER_GIT_COMMIT",
+                "local",
+            ),
+            "structured_live_formatter": True,
+        },
     }
 
 
