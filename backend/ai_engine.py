@@ -167,10 +167,19 @@ class AIEngine:
 
         if not context:
             return (
-                "You are ISMAIL AI. Answer the user's question carefully. "
-                "Do not invent or guess current facts. "
-                "If reliable current information is unavailable, say so clearly.\n\n"
-                f"User question: {message}"
+                "You are ISMAIL AI.\n\n"
+                "The user asked for current or time-sensitive information, "
+                "but no reliable current evidence is available.\n\n"
+                "STRICT RULES:\n"
+                "1. Do not answer the current factual question from memory.\n"
+                "2. Do not guess or estimate current facts.\n"
+                "3. Do not invent dates, prices, temperatures, scores, "
+                "news, availability, versions, events, or other live facts.\n"
+                "4. Clearly tell the user that reliable current information "
+                "could not be verified.\n"
+                "5. You may briefly explain what information is missing, "
+                "but do not fabricate an answer.\n\n"
+                f"User question:\n{message}"
             )
 
         return (
