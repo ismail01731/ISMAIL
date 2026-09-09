@@ -388,6 +388,51 @@ class AIEngine:
 
 
 
+    def _build_conversation_context(
+        self,
+        user_id: str,
+        chat_id: str,
+        max_messages: int = 20,
+    ) -> str:
+        """Build recent conversation context for better follow-up understanding."""
+        if not user_id or not chat_id:
+            return ""
+
+        try:
+            history = self.knowledge_base.get_chat_history(
+                user_id,
+                chat_id,
+            )
+        except Exception:
+            return ""
+
+        if not history:
+            return ""
+
+        recent = history[-max_messages:]
+
+        lines = []
+
+        for item in recent:
+            role = str(item.get("role", "")).strip().lower()
+            content = str(item.get("content", "")).strip()
+
+            if not content:
+                continue
+
+            if role == "user":
+                label = "User"
+            elif role == "assistant":
+                label = "ISMAIL AI"
+            else:
+                label = role.capitalize() or "Message"
+
+            lines.append(f"{label}: {content}")
+
+        return "\n".join(lines)
+
+
+
 
     def generate(
         self,
@@ -405,17 +450,18 @@ class AIEngine:
 
         user_id = str(user_id).strip()
 
-        self._save_explicit_memory(
-            user_id,
-            message,
-        )
-
         chat_id = str(chat_id).strip()
 
         conversation_context = self._build_conversation_context(
             user_id,
             chat_id,
         )
+
+        self._save_explicit_memory(
+            user_id,
+            message,
+        )
+
 
         browser_action = detect_browser_action(message)
 
@@ -449,6 +495,16 @@ class AIEngine:
             "answer that you are ISMAIL AI. "
             "Do not identify yourself as ChatGPT, OpenAI, or another AI name. "
             "The user's name is separate from your own identity.\n\n"
+            
+            "You are a conversational AI. "
+            "Understand the current user message together with the recent conversation. "
+            "If the user says 'এটা', 'এটার', 'ওটা', 'সেটা', 'আগেরটা', "
+            "'this', 'that', 'it', or similar expressions, resolve the reference "
+            "using the most relevant previous message. "
+            "Do not ask the user to repeat information that is already clear "
+            "from the conversation. "
+            "If the user continues an existing topic, answer within that topic "
+            "instead of starting a new generic explanation.\n\n"
         )
 
         if file_context:

@@ -108,6 +108,20 @@ class IntentDetector:
     )
 
 
+    CONTEXT_PATTERNS = (
+        r"^(এটা|এটির|এটার|ওটা|ওটির|ওটার|সেটা|সেটার|আগেরটা|আগেরটির|আগেরটার)",
+        r"^(etar|etār|eta|otar|ota|seta|setar|ager ta|ager tar|agerটার)",
+        r"\b(this|that|it|the above|previous one)\b",
+        r"(এর জন্য|এটার জন্য|ওটার জন্য|সেটার জন্য|আগেরটার জন্য)",
+        r"(etar jonno|otar jonno|setar jonno|ager tar jonno)",
+        r"(কোনটা ভালো|কোনটি ভালো|কোনটা ভাল|কোনটি ভাল)",
+        r"(which one is better|which is better|what is better)",
+        r"(কীভাবে করব|কিভাবে করব|কীভাবে করবো|কিভাবে করবো)",
+        r"(kivabe korbo|kibhabe korbo|kivabe korbo)",
+        r"(তারপর কি|তারপর কী|এরপর কি|এরপর কী|then what|what next)",
+    )
+
+
 
     QUESTION_PATTERNS = (
         r"\?$",
@@ -141,6 +155,13 @@ class IntentDetector:
             self.CONVERSATION_PATTERNS,
         )
 
+
+        context_matches = self._find_pattern_matches(
+            normalized,
+            self.CONTEXT_PATTERNS,
+        )
+
+
         live_matches = self._find_keyword_matches(
             normalized,
             self.LIVE_KEYWORDS,
@@ -150,6 +171,21 @@ class IntentDetector:
             normalized,
             self.KNOWLEDGE_KEYWORDS,
         )
+
+
+        if context_matches:
+            return self._result(
+                intent="contextual",
+                route="general",
+                confidence="high",
+                reason="The message depends on previous conversation context.",
+                matches=context_matches,
+                normalized=normalized,
+                input_type=input_type,
+            )
+
+
+
 
         if conversation_matches:
             return self._result(
