@@ -16,7 +16,6 @@ from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 
 
 
-
 from pypdf import PdfReader
 from docx import Document
 from openpyxl import load_workbook
