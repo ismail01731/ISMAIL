@@ -25,8 +25,11 @@ plugin = {
     "description": "News Search",
     "capabilities": [
         "news",
-        "breaking news",
         "today news",
+        "breaking news",
+        "latest news",
+        "আজকের খবর",
+        "সর্বশেষ খবর",
         "খবর",
         "সংবাদ"
     ],

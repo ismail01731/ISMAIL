@@ -24,12 +24,15 @@ plugin = {
     "name": "sports",
     "description": "Sports",
     "capabilities": [
-        "sports",
-        "football",
-        "cricket",
-        "messi",
-        "ronaldo",
-        "খেলা"
-    ],
+    "sports",
+    "sport",
+    "cricket",
+    "ক্রিকেট",
+    "ক্রিকেটে",
+    "football",
+    "ফুটবল",
+    "messi",
+    "খেলা"
+],
     "run": run
 }

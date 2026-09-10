@@ -3,28 +3,49 @@ from app.planner.task import Task
 
 class Planner:
 
-    def create_plan(self, intent: str):
+    def create_plan(self, intents):
 
-        if intent == "sports":
-            return [
-                Task(
-                    name="Search Sports",
-                    tool="sports"
-                )
-            ]
+        if isinstance(intents, str):
+            intents = [intents]
 
-        elif intent == "news":
-            return [
-                Task(
-                    name="Search News",
-                    tool="news"
-                )
-            ]
+        tasks = []
 
-        else:
-            return [
-                Task(
-                    name="General",
-                    tool="general"
+        for intent in intents:
+
+            if intent == "news":
+
+                tasks.append(
+                    Task(
+                        name="Search News",
+                        tool="news"
+                    )
                 )
-            ]
+
+            elif intent == "weather":
+
+                tasks.append(
+                    Task(
+                        name="Weather",
+                        tool="weather"
+                    )
+                )
+
+            elif intent == "sports":
+
+                tasks.append(
+                    Task(
+                        name="Sports",
+                        tool="sports"
+                    )
+                )
+
+            else:
+
+                tasks.append(
+                    Task(
+                        name="General",
+                        tool="general"
+                    )
+                )
+
+        return tasks

@@ -1,7 +1,7 @@
 from app.brain.intent import detect_intent
 from app.planner.planner import Planner
 from app.brain.router import Router
-from app.plugins.capability_matcher import find_plugin
+from app.plugins.capability_matcher import find_plugins
 
 
 class AgentController:
@@ -12,9 +12,9 @@ class AgentController:
 
     async def execute(self, message):
 
-        intent = find_plugin(message)
+        intents = find_plugins(message)
 
-        plan = self.planner.create_plan(intent)
+        plan = self.planner.create_plan(intents)
 
         results = []
 
@@ -28,7 +28,7 @@ class AgentController:
             results.append(result)
 
         return {
-            "intent": intent,
+            "intent": intents,
             "plan": [t.name for t in plan],
             "results": results
         }

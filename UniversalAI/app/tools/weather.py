@@ -1,6 +1,11 @@
-def weather_tool(message: str):
+from app.search.search_engine import search
+
+
+async def run(message):
+
+    result = search(message)
 
     return {
-        "tool": "Weather Tool",
-        "answer": "Weather Tool চালু হয়েছে।"
+        "tool": "Weather",
+        "result": result["results"]
     }

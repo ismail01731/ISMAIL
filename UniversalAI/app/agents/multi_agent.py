@@ -30,7 +30,11 @@ class MultiAgent:
         ):
             results.append(await self.sports.execute(message))
 
-        if "news" in text or "সংবাদ" in text:
+        if (
+            "news" in text
+            or "সংবাদ" in text
+            or "খবর" in text
+        ):
             results.append(await self.news.execute(message))
 
         if not results:
