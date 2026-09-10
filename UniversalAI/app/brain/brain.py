@@ -29,27 +29,29 @@ async def process_message(message: str):
     print("STEP 1")
     agent_result = await agent.execute(message)
     print("STEP 2")
+
+    intent = agent_result["intent"]
+    results = agent_result["results"]
+    plan = agent_result["plan"]
+
     history = get_history()
     print("STEP 3")
+
     prompt = context.build(
         message,
         history,
         results
     )
     print("STEP 4")
+
     answer = await llm.generate(prompt)
     print("STEP 5")
+        
+
     
-    prompt = context.build(...)
-    
 
-    intent = agent_result["intent"]
 
-    results = agent_result["results"]
-
-    plan = agent_result["plan"]
-
-    # Load conversation history
+   
    
 
     # Build Prompt
