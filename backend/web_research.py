@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from html.parser import HTMLParser
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
+from backend.web_research import WebResearch, WebEvidence
 @dataclass
 class WebEvidence:
     title: str

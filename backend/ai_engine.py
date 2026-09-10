@@ -1,9 +1,5 @@
-﻿import hashlib
-import hmac
-import json
-import base64
+﻿import json
 import os
-import secrets
 import re
 import urllib.error
 import urllib.request
@@ -14,6 +10,8 @@ from backend.openai_provider import OpenAIProvider
 from backend.browser_actions import detect_browser_action
 from backend.intent_detector import IntentDetector
 load_dotenv("config/.env")
+from typing import List
+from backend.web_research import WebResearch, WebEvidence
 
 
 
@@ -76,6 +74,24 @@ class AIEngine:
         "available",
         "availability",
         "status",
+
+        "আজ",
+        "এখন",
+        "বর্তমানে",
+        "সর্বশেষ",
+        "সাম্প্রতিকতম",
+        "খবর",
+        "সংবাদ",
+        "আবহাওয়া",
+        "আবহাওয়া",
+        "তাপমাত্রা",
+        "পূর্বাভাস",
+        "দাম",
+        "মূল্য",
+        "বিটকয়েন",
+        "বিটকয়েন",
+        "আগামীকাল",
+        "কাল",
     }
 
 
@@ -132,33 +148,6 @@ class AIEngine:
         return self.intent_detector.detect(message)
 
 
-    
-    def _build_research_context(self, evidence) -> str:
-        """Build a safe context from verified/corroborated web evidence only."""
-        verified = [
-            item for item in evidence
-            if getattr(item, "verification_status", "")
-            in ("corroborated", "verified")
-        ]
-        if not verified:
-            return ""
-        parts = []
-        for index, item in enumerate(verified, start=1):
-            title = str(getattr(item, "title", "")).strip()
-            source = str(getattr(item, "source", "")).strip()
-            url = str(getattr(item, "url", "")).strip()
-            content = str(getattr(item, "content", "")).strip()
-            snippet = str(getattr(item, "snippet", "")).strip()
-            evidence_text = content or snippet
-            if not evidence_text:
-                continue
-            parts.append(
-                f"[Source {index}] {title}\n"
-                f"Source: {source}\n"
-                f"URL: {url}\n"
-                f"Evidence: {evidence_text[:4000]}"
-            )
-        return "\n\n".join(parts)
     
 
 
@@ -383,115 +372,6 @@ class AIEngine:
 
 
 
-    def _format_weather_evidence(
-        self,
-        evidence: List[WebEvidence],
-    ) -> str:
-        """Format verified structured weather evidence without LLM reinterpretation."""
-
-        weather_items = []
-
-        for item in evidence:
-            title = str(
-                getattr(item, "title", "") or ""
-            ).strip()
-
-            source = str(
-                getattr(item, "source", "") or ""
-            ).strip()
-
-            content = str(
-                getattr(item, "content", "") or ""
-            ).strip()
-
-            if not content:
-                content = str(
-                    getattr(item, "snippet", "") or ""
-                ).strip()
-
-            if "weather" not in title.lower():
-                continue
-
-            if not content:
-                continue
-
-            weather_items.append(
-                {
-                    "title": title,
-                    "source": source,
-                    "content": content,
-                }
-            )
-
-        if not weather_items:
-            return ""
-
-        sections = []
-
-        for item in weather_items:
-            content = item["content"]
-
-            lines = []
-
-            for raw_line in content.splitlines():
-                line = raw_line.strip()
-
-                if not line:
-                    continue
-
-                if ":" not in line:
-                    continue
-
-                field, value = line.split(":", 1)
-
-                field = field.strip()
-                value = value.strip()
-
-                if not field or not value:
-                    continue
-
-                allowed_fields = {
-                    "Location",
-                    "Observation time",
-                    "Forecast date",
-                    "Temperature",
-                    "Feels like",
-                    "Relative humidity",
-                    "Precipitation",
-                    "Rain",
-                    "Showers",
-                    "Snowfall",
-                    "Wind speed",
-                    "Weather condition",
-                    "Minimum",
-                    "Maximum",
-                    "Precipitation probability",
-                }
-
-                if field not in allowed_fields:
-                    continue
-
-                lines.append(
-                    f"- {field}: {value}"
-                )
-
-            if not lines:
-                continue
-
-            sections.append(
-                f"{item['title']}\n"
-                f"Source: {item['source']}\n"
-                + "\n".join(lines)
-            )
-
-        if not sections:
-            return ""
-
-        return (
-            "LIVE WEATHER DATA\n"
-            "=================\n\n"
-            + "\n\n".join(sections)
-        )
 
 
     
@@ -851,59 +731,6 @@ class AIEngine:
                 )
 
 
-    def _build_conversation_context(
-        self,
-        user_id: str,
-        chat_id: str,
-        max_messages: int = 20,
-    ) -> str:
-        """
-        Build recent conversation context for the AI.
-
-        Only messages belonging to the authenticated
-        user and selected chat are included.
-        """
-
-        if not user_id or not chat_id:
-            return ""
-
-        history = self.knowledge_base.get_chat_history(
-            user_id,
-            chat_id,
-        )
-
-        if not history:
-            return ""
-
-        recent_history = history[-max_messages:]
-
-        lines = []
-
-        for item in recent_history:
-            role = str(
-                item.get("role", "")
-            ).strip().lower()
-
-            message = str(
-                item.get("message", "")
-            ).strip()
-
-            if not message:
-                continue
-
-            if role == "user":
-                speaker = "User"
-            elif role == "assistant":
-                speaker = "ISMAIL AI"
-            else:
-                continue
-
-            lines.append(
-                f"{speaker}: {message}"
-            )
-
-        return "\n".join(lines)
-
 
     
 
@@ -1024,17 +851,14 @@ class AIEngine:
 
         # Safety net: even if intent detection misses a Bengali/mixed-language
         # live query, obvious current-data requests must still reach research.
-        live_markers = (
-            "today", "tonight", "now", "currently", "current", "latest",
-            "recent", "breaking", "weather", "temperature", "forecast",
-            "price", "prices", "bitcoin", "btc", "news", "score", "status",
-            "আজ", "এখন", "বর্তমানে", "সর্বশেষ", "সাম্প্রতিকতম",
-            "খবর", "সংবাদ", "আবহাওয়া", "আবহাওয়া", "তাপমাত্রা",
-            "পূর্বাভাস", "দাম", "মূল্য", "বিটকয়েন", "বিটকয়েন",
-            "আগামীকাল", "কাল",
-        )
+        
         message_lower = message.lower()
-        obvious_live = any(marker in message_lower for marker in live_markers)
+
+        obvious_live = any(
+            marker in message_lower
+            for marker in self.LIVE_KEYWORDS
+        )
+        
 
         if (route == "live" or obvious_live) and not file_context:
             try:
