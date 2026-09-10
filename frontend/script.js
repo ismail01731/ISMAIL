@@ -1,5 +1,5 @@
 ﻿const chatContainer = document.getElementById("chatContainer");
-const messageInput = document.getElementById("messageInput");ProjectFiles.txt
+const messageInput = document.getElementById("messageInput");
 const sendButton = document.getElementById("sendButton");
 const attachButton =
     document.getElementById("attachButton");
