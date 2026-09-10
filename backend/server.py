@@ -12,7 +12,15 @@ import secrets
 
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    Request,
+    UploadFile,
+    File,
+    Depends,
+)
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 
 
@@ -59,6 +67,7 @@ app = FastAPI(
     description="ISMAIL AI backend"
 )
 
+security = HTTPBearer()
 
 FRONTEND_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "frontend")
@@ -357,6 +366,11 @@ def register_account(
                 ),
             )
         username = request.username.strip().lower()
+
+        print("=" * 60)
+        print("REGISTER USERNAME:", request.username)
+        print("REGISTER PASSWORD:", repr(request.password))
+        print("=" * 60)
         
         password_error = validate_registration_password(
             request.password
@@ -375,7 +389,10 @@ def register_account(
             )
 
         user_id = _generate_identity()
+
         password_hash = _hash_password(request.password)
+
+        print("REGISTER HASH:", password_hash)
 
         created = knowledge_base.create_user_account(
             user_id,
@@ -435,6 +452,10 @@ def login_account(
             )
         username = request.username.strip().lower()
 
+        print("=" * 60)
+        print("LOGIN USERNAME:", username)
+        print("=" * 60)
+
         account = knowledge_base.get_user_account(
             username
         )
@@ -445,10 +466,16 @@ def login_account(
                 detail="Invalid username or password.",
             )
 
-        if not _verify_password(
+        print("ACCOUNT:", account)
+
+        password_ok = _verify_password(
             request.password,
             account["password_hash"],
-        ):
+        )
+
+        print("PASSWORD MATCH:", password_ok)
+
+        if not password_ok:
             raise HTTPException(
                 status_code=401,
                 detail="Invalid username or password.",
@@ -1249,23 +1276,23 @@ def clear_chat_history(http_request: Request):
 
     
 @app.post("/api/chat")
-def chat(request: ChatRequest, http_request: Request):
+async def chat(
+    request: ChatRequest,
+    http_request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
     try:
+        raw = await http_request.body()
+
+
+        print("=" * 60)
+        print("RAW BODY:", raw)
+        print("RAW BODY UTF8:", raw.decode("utf-8", errors="replace"))
+        print("=" * 60)
+
         authorization = http_request.headers.get("Authorization", "").strip()
 
-        if not authorization.startswith("Bearer "):
-            raise HTTPException(
-                status_code=401,
-                detail="Authentication required.",
-            )
-
-        identity_token = authorization[7:].strip()
-
-        if not identity_token:
-            raise HTTPException(
-                status_code=401,
-                detail="Authentication required.",
-            )
+        identity_token = credentials.credentials
 
         try:
             authenticated_user_id = _verify_identity(identity_token)
@@ -1288,6 +1315,11 @@ def chat(request: ChatRequest, http_request: Request):
             )
 
         security = input_security.scan(request.message)
+
+        print("=" * 60)
+        print(f"MESSAGE: {request.message}")
+        print(f"REPR: {repr(request.message)}")
+        print("=" * 60)
 
         if not security.allowed:
             raise HTTPException(

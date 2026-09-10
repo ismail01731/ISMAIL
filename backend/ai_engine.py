@@ -866,6 +866,12 @@ class AIEngine:
                     message,
                     max_sources=5,
                 )
+
+                prompt = self._build_grounded_prompt(
+                    message,
+                    evidence
+                )
+                
             except Exception as exc:
                 print(
                     f"[LIVE RESEARCH ERROR] {type(exc).__name__}: {exc}",
@@ -1005,8 +1011,16 @@ class AIEngine:
             user_id,
         )
 
+        print("\n" + "=" * 80)
+        print("FINAL PROMPT")
+        print("=" * 80)
+        print(prompt)
+        print("=" * 80 + "\n")
+
         if self.provider in ("openai", "groq"):
             return self.openai_provider.generate(prompt)
+
+        
 
         if self.provider == "ollama":
             if not self.model:

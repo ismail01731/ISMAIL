@@ -225,6 +225,20 @@ def _verify_evidence_agreement(
             item.verification_status = "corroborated"
         else:
             item.verification_status = "unverified"
+
+            print("=" * 80)
+            print("FINAL EVIDENCE")
+            for i, item in enumerate(evidence, 1):
+                print(
+                    i,
+                    item.title,
+                    item.source,
+                    item.verification_status,
+                    item.reliability_score,
+                )
+            print("=" * 80)
+
+
     return evidence
 class _HTMLTextParser(HTMLParser):
     """
@@ -658,6 +672,9 @@ class WebResearch:
         """Search the web using multiple providers with fallbacks."""
         question = (question or "").strip()
 
+        print("\n========== SEARCH START ==========")
+        print("Question:", question)
+
         if not question:
             return []
 
@@ -822,6 +839,7 @@ class WebResearch:
                 and "unfortunately, bots use duckduckgo too" not in lower_html
             ):
                 parsed = self._parse_search_results(ddg_html)
+                print("DuckDuckGo Parsed:", len(parsed))
 
                 for title, url, snippet in parsed:
                     normalized = self._normalize_url(url)
@@ -843,6 +861,8 @@ class WebResearch:
 
                     if len(results) >= max_sources:
                         return results[:max_sources]
+                    
+                print("Google News Results:", len(results))
 
         except Exception:
             pass
@@ -868,6 +888,7 @@ class WebResearch:
             )
 
             bing_results = self._parse_bing_results(bing_xml)
+            print("Bing Results:", len(bing_results))
 
             for title, url, snippet in bing_results:
                 normalized = self._normalize_url(url)
@@ -1026,7 +1047,29 @@ class WebResearch:
             if url:
                 seen_urls.add(url)
 
+        def add_evidence(item: Optional[WebEvidence]):
+            if item is None:
+                return
+
+            url = self._normalize_url(
+                getattr(item, "url", "") or ""
+            )
+
+            if url and url in seen_urls:
+                return
+
+            if url:
+                seen_urls.add(url)
+
+            print("=" * 60)
+            print("ADDING EVIDENCE")
+            print("Title:", item.title)
+            print("Source:", item.source)
+            print("Verification:", item.verification_status)
+            print("=" * 60)
+
             collected.append(item)
+
 
         # ---------------------------------------------------------
         # Process every sub-question independently.
@@ -1108,6 +1151,18 @@ class WebResearch:
                         part,
                         max_sources=max_sources,
                     )
+
+                    print("=" * 80)
+                    print("SEARCH RESULTS:", len(results))
+
+                    for r in results:
+                        print(
+                            r.title,
+                            r.url,
+                            r.verification_status,
+                        )
+
+                    print("=" * 80)
                 except Exception:
                     results = []
 
@@ -1189,7 +1244,24 @@ class WebResearch:
         # ---------------------------------------------------------
         # Final verification.
         # ---------------------------------------------------------
-        return _verify_evidence_agreement(collected)
+        verified = _verify_evidence_agreement(collected)
+
+        print("=" * 80)
+        print("FINAL VERIFIED EVIDENCE")
+        print("Total:", len(verified))
+
+        for i, item in enumerate(verified, 1):
+            print(
+                i,
+                item.title,
+                item.source,
+                item.verification_status,
+                item.reliability_score,
+            )
+
+        print("=" * 80)
+
+        return verified
     
 
     
@@ -1297,11 +1369,15 @@ class WebResearch:
         # Remove duplicate URLs while preserving order.
         unique = []
         seen = set()
+
         for title, url, snippet in results:
             key = self._normalize_url(url)
+
             if not key or key in seen:
                 continue
+
             seen.add(key)
+
             unique.append(
                 (
                     title,
@@ -1309,6 +1385,7 @@ class WebResearch:
                     snippet,
                 )
             )
+
         return unique
 
     
