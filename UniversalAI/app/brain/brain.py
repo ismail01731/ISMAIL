@@ -26,7 +26,22 @@ async def process_message(message: str):
     save_user(message)
 
     # Agent Execute
+    print("STEP 1")
     agent_result = await agent.execute(message)
+    print("STEP 2")
+    history = get_history()
+    print("STEP 3")
+    prompt = context.build(
+        message,
+        history,
+        results
+    )
+    print("STEP 4")
+    answer = await llm.generate(prompt)
+    print("STEP 5")
+    
+    prompt = context.build(...)
+    
 
     intent = agent_result["intent"]
 
@@ -35,14 +50,10 @@ async def process_message(message: str):
     plan = agent_result["plan"]
 
     # Load conversation history
-    history = get_history()
+   
 
     # Build Prompt
-    prompt = context.build(
-        message,
-        history,
-        results
-    )
+    
 
     print("========== PROMPT ==========")
     print(prompt)
