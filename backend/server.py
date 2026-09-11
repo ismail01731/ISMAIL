@@ -28,13 +28,6 @@ from pypdf import PdfReader
 from docx import Document
 from openpyxl import load_workbook
 
-import base64
-import hashlib
-import hmac
-import json
-import os
-from dotenv import load_dotenv
-
 load_dotenv(
     os.path.join(
         os.path.dirname(__file__),
@@ -73,7 +66,8 @@ FRONTEND_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "frontend")
 )
 
-app.mount("/app", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+if os.path.isdir(FRONTEND_DIR):
+    app.mount("/app", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
 
 
 app.add_middleware(
@@ -367,11 +361,7 @@ def register_account(
             )
         username = request.username.strip().lower()
 
-        print("=" * 60)
-        print("REGISTER USERNAME:", request.username)
-        print("REGISTER PASSWORD:", repr(request.password))
-        print("=" * 60)
-        
+
         password_error = validate_registration_password(
             request.password
         )
@@ -391,8 +381,6 @@ def register_account(
         user_id = _generate_identity()
 
         password_hash = _hash_password(request.password)
-
-        print("REGISTER HASH:", password_hash)
 
         created = knowledge_base.create_user_account(
             user_id,
@@ -426,7 +414,7 @@ def register_account(
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"Registration error: {type(exc).__name__}: {exc}",
+            detail="Registration failed. Please try again later.",
         )
 
 
@@ -452,10 +440,6 @@ def login_account(
             )
         username = request.username.strip().lower()
 
-        print("=" * 60)
-        print("LOGIN USERNAME:", username)
-        print("=" * 60)
-
         account = knowledge_base.get_user_account(
             username
         )
@@ -466,14 +450,10 @@ def login_account(
                 detail="Invalid username or password.",
             )
 
-        print("ACCOUNT:", account)
-
         password_ok = _verify_password(
             request.password,
             account["password_hash"],
         )
-
-        print("PASSWORD MATCH:", password_ok)
 
         if not password_ok:
             raise HTTPException(
@@ -502,7 +482,7 @@ def login_account(
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"Login error: {type(exc).__name__}: {exc}",
+            detail="Login failed. Please try again later.",
         )
 
 
@@ -561,7 +541,7 @@ def google_login(
     except Exception as exc:
         raise HTTPException(
             status_code=401,
-            detail=f"Google Login failed: {type(exc).__name__}: {exc}",
+            detail="Google Login failed. Please try again later.",
         )
 
 
@@ -825,8 +805,8 @@ class ChatHistoryClearRequest(BaseModel):
 
 
 class ResearchRequest(BaseModel):
-    question: str
-    max_sources: int = 5
+    question: str = Field(..., min_length=1, max_length=12000)
+    max_sources: int = Field(5, ge=1, le=10)
 
 
 class KnowledgeSaveRequest(BaseModel):
@@ -1154,7 +1134,7 @@ def get_chat_history(
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"Chat history error: {type(exc).__name__}: {exc}"
+            detail="Chat history operation failed. Please try again later."
         )
 
 
@@ -1213,7 +1193,7 @@ def save_chat_history(
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"Chat history error: {type(exc).__name__}: {exc}"
+            detail="Chat history operation failed. Please try again later."
         )
 
 
@@ -1266,7 +1246,7 @@ def clear_chat_history(http_request: Request):
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"Chat history error: {type(exc).__name__}: {exc}"
+            detail="Chat history operation failed. Please try again later."
         )
 
 
@@ -1282,16 +1262,6 @@ async def chat(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ):
     try:
-        raw = await http_request.body()
-
-
-        print("=" * 60)
-        print("RAW BODY:", raw)
-        print("RAW BODY UTF8:", raw.decode("utf-8", errors="replace"))
-        print("=" * 60)
-
-        authorization = http_request.headers.get("Authorization", "").strip()
-
         identity_token = credentials.credentials
 
         try:
@@ -1315,11 +1285,6 @@ async def chat(
             )
 
         security = input_security.scan(request.message)
-
-        print("=" * 60)
-        print(f"MESSAGE: {request.message}")
-        print(f"REPR: {repr(request.message)}")
-        print("=" * 60)
 
         if not security.allowed:
             raise HTTPException(
@@ -1371,7 +1336,7 @@ async def chat(
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"AI generation error: {type(exc).__name__}: {exc}"
+            detail="AI generation failed. Please try again later."
         )
 
 

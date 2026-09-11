@@ -660,8 +660,10 @@ class WebResearch:
                         )
                     )
 
-            except Exception:
-                continue
+            except Exception as e:
+                import traceback
+                print("HTTP ERROR:", e)
+                traceback.print_exc()
 
         return results
 
@@ -870,10 +872,27 @@ class WebResearch:
         # ------------------------------------------------------------
         # Provider 2: Bing RSS
         # ------------------------------------------------------------
+
+        print("ENTERING BING")
+
         try:
-            news_query = bool(re.search(r'\b(news|latest|breaking|headline|headlines|current events|today)\b|খবর|সর্বশেষ|আজকের|আজ|ব্রেকিং|সংবাদ|সাম্প্রতিকতম', question, re.IGNORECASE))
-            bing_base = 'https://www.bing.com/news/search?format=rss&q=' if news_query else 'https://www.bing.com/search?format=rss&q='
+            news_query = bool(
+                re.search(
+                    r'\b(news|latest|breaking|headline|headlines|current events|today)\b|খবর|সর্বশেষ|আজকের|আজ|ব্রেকিং|সংবাদ|সাম্প্রতিকতম',
+                    question,
+                    re.IGNORECASE,
+                )
+            )
+
+            bing_base = (
+                "https://www.bing.com/news/search?format=rss&q="
+                if news_query
+                else "https://www.bing.com/search?format=rss&q="
+            )
+
             bing_url = bing_base + urllib.parse.quote_plus(search_question)
+
+            print("Fetching Bing RSS...")
 
             bing_xml = self._http_get(
                 bing_url,
@@ -887,8 +906,20 @@ class WebResearch:
                 },
             )
 
+            print("Fetched Bing RSS")
+
+            # DEBUG
+            print("=" * 80)
+            print("BING URL:", bing_url)
+            print(bing_xml[:3000])
+            print("=" * 80)
+
             bing_results = self._parse_bing_results(bing_xml)
             print("Bing Results:", len(bing_results))
+
+            for result in bing_results[:5]:
+                print(result)
+
 
             for title, url, snippet in bing_results:
                 normalized = self._normalize_url(url)
@@ -911,15 +942,17 @@ class WebResearch:
                 if len(results) >= max_sources:
                     break
 
-        except Exception:
-            pass
+        except Exception as e:
+            import traceback
+            print("BING ERROR:", e)
+            traceback.print_exc()
 
         return results[:max_sources]
 
 
 
     def _parse_bing_results(self, xml_text: str):
-        """Parse Bing RSS search results."""
+        
         results = []
 
         if not xml_text:
@@ -929,6 +962,8 @@ class WebResearch:
             r"<item\b[^>]*>(.*?)</item>",
             re.IGNORECASE | re.DOTALL,
         )
+
+        print("ITEM COUNT:", len(item_pattern.findall(xml_text)))
 
         title_pattern = re.compile(
             r"<title\b[^>]*>(.*?)</title>",
@@ -1033,19 +1068,7 @@ class WebResearch:
         # ---------------------------------------------------------
         # Helper: add evidence safely.
         # ---------------------------------------------------------
-        def add_evidence(item: Optional[WebEvidence]):
-            if item is None:
-                return
-
-            url = self._normalize_url(
-                getattr(item, "url", "") or ""
-            )
-
-            if url and url in seen_urls:
-                return
-
-            if url:
-                seen_urls.add(url)
+        
 
         def add_evidence(item: Optional[WebEvidence]):
             if item is None:
@@ -1740,7 +1763,7 @@ class WebResearch:
         known_location = location_aliases.get(location_key)
 
         if not location:
-            return None
+            location = "Bangladesh"
 
         try:
             geocode_url = (
@@ -1921,7 +1944,13 @@ class WebResearch:
                 source_url=forecast_url,
             )
 
-        except Exception:
+        except Exception as exc:
+            print("=" * 60)
+            print("WEATHER ERROR")
+            print("Question:", question)
+            print("Location:", location)
+            print("Error:", repr(exc))
+            print("=" * 60)
             return None
 
     def _fetch_page(self, url: str) -> str:
@@ -2417,6 +2446,23 @@ class WebResearch:
         if match:
             return match.group(1)
         return None
+
+
+if __name__ == "__main__":
+    researcher = WebResearch()
+
+    results = researcher.collect_evidence(
+        "Dhaka weather today",
+        max_sources=5,
+    )
+
+    print("\nRESULTS:", len(results))
+
+    for item in results:
+        print(item.title)
+        print(item.url)
+        print(item.snippet)
+        print("-" * 80)
 
 
 

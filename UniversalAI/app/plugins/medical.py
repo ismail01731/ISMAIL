@@ -1,0 +1,77 @@
+﻿from app.agents.modules.medical_agent import MedicalAgent
+medical_agent = MedicalAgent()
+async def run(message):
+    result = await medical_agent.execute(message)
+    return {
+        "tool": "Medical",
+        "result": result
+    }
+plugin = {
+    "name": "medical",
+    "description": "Medical Information and Safety",
+    "capabilities": [
+        # English
+        "medical",
+        "medicine",
+        "medication",
+        "doctor",
+        "symptom",
+        "symptoms",
+        "disease",
+        "illness",
+        "health",
+        "treatment",
+        "diagnosis",
+        "hospital",
+        "clinic",
+        "emergency",
+        "side effect",
+        "drug interaction",
+        "fever",
+        "pain",
+        "headache",
+        "cough",
+        "cold",
+        "vomiting",
+        "diarrhea",
+        "bleeding",
+        "breathing problem",
+        "difficulty breathing",
+        "chest pain",
+        # বাংলা
+        "ওষুধ",
+        "ঔষধ",
+        "ডাক্তার",
+        "চিকিৎসা",
+        "রোগ",
+        "অসুখ",
+        "লক্ষণ",
+        "স্বাস্থ্য",
+        "হাসপাতাল",
+        "ক্লিনিক",
+        "জরুরি",
+        "পার্শ্বপ্রতিক্রিয়া",
+        "পার্শ্বপ্রতিক্রিয়া",
+        "রোগের লক্ষণ",
+        "চিকিৎসা কী",
+        "ওষুধ কী",
+        "জ্বর",
+        "ব্যথা",
+        "মাথাব্যথা",
+        "কাশি",
+        "সর্দি",
+        "বমি",
+        "ডায়রিয়া",
+        "ডায়রিয়া",
+        "রক্তপাত",
+        "শ্বাসকষ্ট",
+        "শ্বাস নিতে কষ্ট",
+        "বুকে ব্যথা",
+        "বুকে প্রচণ্ড ব্যথা",
+        "অজ্ঞান",
+        "খিঁচুনি",
+        "স্ট্রোক",
+        "হার্ট অ্যাটাক"
+    ],
+    "run": run
+}

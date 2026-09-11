@@ -2,78 +2,69 @@ from app.llm.provider_factory import get_provider
 from app.memory.memory import save_user, save_assistant, get_history
 from app.context.context_manager import ContextManager
 from app.agents.controller import AgentController
-from app.agents.multi_agent import MultiAgent
-
+from app.agents.modules.medical_safety import MedicalSafety
 
 llm = get_provider()
 context = ContextManager()
 agent = AgentController()
-multi_agent = MultiAgent()
+medical_safety = MedicalSafety()
+
 
 async def process_message(message: str):
-
-    agent_summary = await multi_agent.execute(message)
-
-    print(agent_summary)
-
-    from app.memory.memory import (
-        save_user,
-        save_assistant,
-        get_history
-    )
-
-    # User message save
+    # Save user message
     save_user(message)
 
-    # Agent Execute
-    print("STEP 1")
+    # Agent + Planner + Plugins
     agent_result = await agent.execute(message)
-    print("STEP 2")
 
     intent = agent_result["intent"]
-    results = agent_result["results"]
     plan = agent_result["plan"]
+    results = agent_result["results"]
 
+    # Conversation history
     history = get_history()
-    print("STEP 3")
 
+    # Build LLM prompt
     prompt = context.build(
         message,
         history,
         results
     )
-    print("STEP 4")
 
-    answer = await llm.generate(prompt)
-    print("STEP 5")
-        
-
-    
-
-
-   
-   
-
-    # Build Prompt
-    
-
-    print("========== PROMPT ==========")
-    print(prompt)
-    print("============================")
-
-    # Generate Answer
+    # Generate answer ONCE
     answer = await llm.generate(prompt)
 
+    # -------------------------------------------------
+    # MEDICAL SAFETY LAYER
+    # -------------------------------------------------
+    if "medical" in intent:
+        try:
+            # Apply deterministic medical safety filtering
+            answer = medical_safety.quality_filter(
+                message,
+                answer
+            )
 
-    print("TYPE:", type(answer))
-    print("REPR:", repr(answer))
-    print("ANSWER:", answer)
+            # Validate final response
+            if not medical_safety.validate_response(answer):
+                answer = (
+                    "এই প্রশ্নের জন্য নিরাপদ ও নির্ভরযোগ্য তথ্য দিতে "
+                    "চিকিৎসকের পরামর্শ নেওয়া সবচেয়ে ভালো। "
+                    "যদি গুরুতর উপসর্গ থাকে, দ্রুত চিকিৎসা সহায়তা নিন।"
+                )
 
-    print("========== ANSWER ==========")
-    print(answer)
-    print("============================")
+        except Exception as e:
+            print("Medical Safety Error:", e)
 
-    # Save Assistant Message
+            # Fail-safe response
+            answer = (
+                "স্বাস্থ্যসংক্রান্ত এই বিষয়ে নিশ্চিতভাবে "
+                "পরামর্শ দেওয়ার জন্য চিকিৎসকের সঙ্গে কথা বলা "
+                "সবচেয়ে নিরাপদ। গুরুতর উপসর্গ থাকলে দ্রুত "
+                "চিকিৎসা সহায়তা নিন।"
+            )
+
+    # Save final safe answer
     save_assistant(answer)
 
     return {

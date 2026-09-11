@@ -12,6 +12,7 @@ from backend.intent_detector import IntentDetector
 load_dotenv("config/.env")
 from typing import List
 from backend.web_research import WebResearch, WebEvidence
+from backend.creator_identity import get_identity_answer
 
 
 
@@ -102,7 +103,7 @@ class AIEngine:
         self.openai_provider = OpenAIProvider()
         self.intent_detector = IntentDetector()        
         self.provider = os.getenv("AI_PROVIDER", "").strip().lower()
-        self.model = os.getenv("AI_MODEL", "").strip()
+        self.model = os.getenv("AI_MODEL", "").strip() or self.openai_provider.model
         self.ollama_url = os.getenv(
             "OLLAMA_URL",
             "http://127.0.0.1:11434/api/generate"
@@ -124,7 +125,7 @@ class AIEngine:
             except Exception:
                 connected = False
 
-        elif self.provider in ("openai", "groq"):
+        elif self.provider in ("openai", "openrouter", "groq"):
             connected = self.openai_provider.status().get(
                 "configured",
                 False
@@ -873,10 +874,6 @@ class AIEngine:
                 )
                 
             except Exception as exc:
-                print(
-                    f"[LIVE RESEARCH ERROR] {type(exc).__name__}: {exc}",
-                    flush=True,
-                )
                 evidence = []
 
 
@@ -1011,13 +1008,7 @@ class AIEngine:
             user_id,
         )
 
-        print("\n" + "=" * 80)
-        print("FINAL PROMPT")
-        print("=" * 80)
-        print(prompt)
-        print("=" * 80 + "\n")
-
-        if self.provider in ("openai", "groq"):
+        if self.provider in ("openai", "openrouter", "groq"):
             return self.openai_provider.generate(prompt)
 
         

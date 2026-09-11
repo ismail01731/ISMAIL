@@ -35,7 +35,7 @@ def extract_text_from_file(filename: str, file_bytes: bytes) -> str:
     if len(file_bytes) > MAX_FILE_SIZE:
         raise ValueError("File is too large. Maximum size is 10 MB.")
 
-    extension = "." + filename.lower().split(".")[-1]
+    extension = __import__("os").path.splitext(filename)[1].lower()
 
     if extension not in ALLOWED_EXTENSIONS:
         raise ValueError(
@@ -143,13 +143,23 @@ def _extract_excel(file_bytes: bytes) -> str:
     return _limit_text("\n".join(parts))
 
 
+def _decode_text(file_bytes: bytes) -> str:
+    """Decode common text encodings without exposing decoding exceptions."""
+    for encoding in ("utf-8-sig", "utf-16", "cp1252"):
+        try:
+            return file_bytes.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return file_bytes.decode("utf-8", errors="replace")
+
+
 def _extract_text(file_bytes: bytes) -> str:
-    text = file_bytes.decode("utf-8", errors="replace")
+    text = _decode_text(file_bytes)
     return _limit_text(text)
 
 
 def _extract_csv(file_bytes: bytes) -> str:
-    text = file_bytes.decode("utf-8-sig", errors="replace")
+    text = _decode_text(file_bytes)
 
     reader = csv.reader(io.StringIO(text))
 
