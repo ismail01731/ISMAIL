@@ -816,6 +816,11 @@ class AIEngine:
         if not message:
             raise ValueError("Message cannot be empty.")
 
+        identity_answer = get_identity_answer(message)
+
+        if identity_answer is not None:
+            return identity_answer
+
         user_id = str(user_id).strip()
 
         
