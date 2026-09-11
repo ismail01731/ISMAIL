@@ -39,11 +39,57 @@ const welcome = document.getElementById("welcome");
 const exportChatButton =
     document.getElementById("exportChatButton");
 
-const BACKEND_BASE_URL =
-    window.location.hostname === "127.0.0.1" ||
-    window.location.hostname === "localhost"
-        ? "http://127.0.0.1:8000"
-        : "https://ismail-ai-api.onrender.com";
+/* =========================================================
+   ISMAIL AI BACKEND CONFIGURATION
+   Localhost → LAN → Render fallback
+   ========================================================= */
+
+const BACKEND_URLS = [
+    "http://127.0.0.1:8000",
+    "http://192.168.0.103:8000",
+    "https://ismail-ai-api.onrender.com"
+];
+
+let BACKEND_BASE_URL = BACKEND_URLS[0];
+
+/* =========================================================
+   ISMAIL AI AUTOMATIC BACKEND FAILOVER
+   Localhost → LAN → Render
+   ========================================================= */
+async function requestBackend(url, options = {}) {
+    let path = url;
+    try {
+        const parsed = new URL(url);
+        path = parsed.pathname + parsed.search;
+    } catch (error) {
+        // Keep path unchanged
+    }
+    let lastError = null;
+    for (const backend of BACKEND_URLS) {
+        const targetUrl = `${backend}${path}`;
+        try {
+            const response = await fetch(
+                targetUrl,
+                options
+            );
+            BACKEND_BASE_URL = backend;
+            console.log(
+                '[ISMAIL AI] Backend connected:',
+                backend
+            );
+            return response;
+        } catch (error) {
+            lastError = error;
+            console.warn(
+                '[ISMAIL AI] Backend unavailable:',
+                backend
+            );
+        }
+    }
+    throw lastError || new Error(
+        'No ISMAIL AI backend server is available.'
+    );
+}
 const API_URL = `${BACKEND_BASE_URL}/api/chat`;
 
 
@@ -614,7 +660,7 @@ async function loginAccount(
         "Logging in..."
     );
 
-    const response = await fetch(
+    const response = await requestBackend(
         `${BACKEND_BASE_URL}/api/auth/login`,
         {
             method: "POST",
@@ -662,7 +708,7 @@ async function registerAccount(
         "Creating account..."
     );
 
-    const response = await fetch(
+    const response = await requestBackend(
         `${BACKEND_BASE_URL}/api/auth/register`,
         {
             method: "POST",
@@ -711,7 +757,7 @@ async function loginWithGoogleCredential(credential) {
 
     showAuthMessage("Google Login হচ্ছে...");
 
-    const response = await fetch(
+    const response = await requestBackend(
         `${BACKEND_BASE_URL}/api/auth/google`,
         {
             method: "POST",
@@ -1023,7 +1069,7 @@ async function loadCentralChatHistory() {
 
         const session = await getSession();
 
-        const response = await fetch(
+        const response = await requestBackend(
             `${BACKEND_BASE_URL}/api/chat/history`,
             {
                 method: "GET",
@@ -1098,7 +1144,7 @@ async function checkCentralChatHistory() {
 
         const session = await getSession();
 
-        const response = await fetch(
+        const response = await requestBackend(
             `${BACKEND_BASE_URL}/api/chat/history?chat_id=${encodeURIComponent(String(currentChat.id))}`,
             {
                 method: "GET",
@@ -1253,7 +1299,7 @@ async function syncChatMessage(role, message) {
 
         const session = await getSession();
 
-        const response = await fetch(
+        const response = await requestBackend(
             `${BACKEND_BASE_URL}/api/chat/history`,
             {
                 method: "POST",
@@ -1627,7 +1673,7 @@ async function regenerateAnswer(question, aiMessageElement) {
 
     try {
 
-        const response = await fetch(API_URL, {
+        const response = await requestBackend(API_URL, {
             method: "POST",
 
             headers: {
@@ -1995,7 +2041,7 @@ async function sendMessage() {
 
 
             const uploadResponse =
-                await fetch(
+                await requestBackend(
                     `${BACKEND_BASE_URL}/api/file/upload`,
                     {
                         method: "POST",
@@ -2094,7 +2140,7 @@ async function sendMessage() {
         // =================================================
 
         const response =
-            await fetch(
+            await requestBackend(
                 API_URL,
                 {
                     method: "POST",
