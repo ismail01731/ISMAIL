@@ -173,20 +173,6 @@ def _verify_evidence_agreement(
         if item.verification_status == "verified":
             continue
 
-        # A high-reliability source can remain usable even when
-        # independent corroboration is unavailable.
-        #
-        # This does NOT mark the evidence as corroborated.
-        # It only preserves strong primary-source evidence so that
-        # broad live queries do not become empty.
-        if (
-            item.reliability_score >= 0.90
-            and len(current_words) >= 3
-            and current_domain
-        ):
-            item.verification_status = "high_confidence_source"
-            continue
-
         if len(current_words) < 3 or not current_domain:
             item.verification_status = "unverified"
             continue
@@ -475,7 +461,7 @@ class WebResearch:
 
 
 
-    def _extract_google_news_date(self, item_xml: str) -> Optional[datetime]:
+    def _extract_google_news_date(item_xml: str) -> Optional[datetime]:
         """Extract publication date from a Google News RSS item."""
         if not item_xml:
             return None
@@ -714,39 +700,7 @@ class WebResearch:
             re.IGNORECASE,
         ))
 
-        
-
         search_question = question
-
-
-        broad_current_events = bool(
-            re.search(
-                r"বর্তমানে কী কী ঘটনা ঘটছে|"
-                r"বর্তমানে কি কি ঘটনা ঘটছে|"
-                r"এখন কী কী ঘটনা ঘটছে|"
-                r"এখন কি কি ঘটনা ঘটছে|"
-                r"আজ কী কী ঘটনা ঘটছে|"
-                r"আজ কি কি ঘটনা ঘটছে|"
-                r"কী কী ঘটনা ঘটছে|"
-                r"কি কি ঘটনা ঘটছে|"
-                r"what is happening now|"
-                r"what's happening now|"
-                r"current events|"
-                r"what is happening today",
-                question,
-                re.IGNORECASE,
-            )
-        )
-
-        if broad_current_events and news_query:
-            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            search_question = (
-                f"latest breaking world news current events today "
-                f"{today} -9/11 -September 11 anniversary"
-            )
-
-
-
         bangladesh_news = bool(
             re.search(
                 r"bangladesh|বাংলাদেশ|দেশের",
@@ -756,28 +710,11 @@ class WebResearch:
             and news_query
         )
 
-        global_news = bool(
-            re.search(
-                r"world|global|international|বিশ্ব|আন্তর্জাতিক|বিশ্বজুড়ে|বিশ্বব্যাপী",
-                question,
-                re.IGNORECASE,
-            )
-            and news_query
-            and not bangladesh_news
-        )
-
         if bangladesh_news:
             today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
             search_question = (
                 f"Bangladesh latest news today {today}"
             )
-        elif global_news:
-            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            search_question = (
-                f"World news today {today}"
-            )
-
-        
 
         if news_query:
             try:
@@ -820,7 +757,7 @@ class WebResearch:
 
                     # For "latest/current/today" Bangladesh news,
                     # reject articles older than 48 hours.
-                    if (bangladesh_news or global_news) and published_at is not None:
+                    if bangladesh_news and published_at is not None:
                         now_utc = datetime.now(timezone.utc)
 
                         if now_utc - published_at > timedelta(hours=48):
@@ -832,141 +769,9 @@ class WebResearch:
                     source_match = source_pattern.search(item_xml)
                     if not title_match or not link_match:
                         continue
-
-
                     title = self._repair_mojibake(
                         self._strip_html(html.unescape(title_match.group(1)))
                     ).strip()
-
-                    # ------------------------------------------------------------
-                    # Strict relevance filter for Bangladesh / Global live news
-                    # ------------------------------------------------------------
-
-                    title_lower = title.lower()
-
-                    # Broad current-event queries should prefer
-                    # genuinely current developments, not anniversary/
-                    # remembrance/history coverage.
-                    # Reject generic pages and non-event headlines
-                    # for broad current-event searches.
-                    if broad_current_events:
-                        generic_page_patterns = [
-                            r"\bon this day\b",
-                            r"\binternational news\b",
-                            r"\bworld news\b",
-                            r"\blatest world news\b",
-                            r"\binternational headlines\b",
-                            r"\bworld headlines\b",
-                            r"\bforeign policy news\b",
-                            r"\bnews, videos? & photos\b",
-                            r"\bnews videos? photos\b",
-                        ]
-
-                        if any(
-                            re.search(
-                                pattern,
-                                title_lower,
-                                re.IGNORECASE,
-                            )
-                            for pattern in generic_page_patterns
-                        ):
-                            continue
-
-
-
-                        historical_event_patterns = [
-                            r"\b9\s*[/\-]\s*11\b",
-                            r"\bseptember\s+11\b",
-                            r"\bsept(?:ember)?\s+11\b",
-                            r"\b9/11\s+anniversary\b",
-                            r"\b25th\s+anniversary\b",
-                            r"9/11-এর\s+২৫তম\s+বার্ষিকী",
-                            r"৯/১১",
-                            r"বার্ষিকী",
-                            r"anniversary",
-                            r"remembering",
-                            r"remembrance",
-                            r"victims",
-                            r"legacy",
-                        ]
-
-                        if any(
-                            re.search(
-                                pattern,
-                                title_lower,
-                                re.IGNORECASE,
-                            )
-                            for pattern in historical_event_patterns
-                        ):
-                            continue
-
-                    spam_patterns = [
-                        r"\bsex\b",
-                        r"\bporn\b",
-                        r"\bxxx\b",
-                        r"\bnude\b",
-                        r"\badult\b",
-                        r"সেক্স",
-                        r"পর্ণ",
-                        r"পর্ন",
-                        r"অশ্লীল",
-                        r"ভিডিও",
-                        r"xxx-",
-                    ]
-
-                    if any(re.search(pattern, title_lower, re.IGNORECASE)
-                        for pattern in spam_patterns):
-                        continue
-
-                    # Never accept obvious social-media posts as primary live-news evidence.
-                    if re.search(
-                        r"facebook\.com|youtube\.com|instagram\.com|tiktok\.com",
-                        title_lower,
-                        re.IGNORECASE,
-                    ):
-                        continue
-
-                    # Bangladesh query must contain Bangladesh-related signals.
-                    if bangladesh_news:
-                        bangladesh_signals = [
-                            "bangladesh",
-                            "বাংলাদেশ",
-                            "ঢাকা",
-                            "dhaka",
-                            "চট্টগ্রাম",
-                            "chattogram",
-                            "চট্টগ্রাম",
-                            "সিলেট",
-                            "sylhet",
-                            "খুলনা",
-                            "khulna",
-                            "রাজশাহী",
-                            "rajshahi",
-                            "বরিশাল",
-                            "barisal",
-                            "রংপুর",
-                            "rangpur",
-                            "ময়মনসিংহ",
-                            "mymensingh",
-                        ]
-
-                        if not any(
-                            signal in title_lower
-                            for signal in bangladesh_signals
-                        ):
-                            continue
-
-                    # Global query must not accidentally accept Bangladesh-only content.
-                    if global_news:
-                        if re.search(
-                            r"\b(bangladesh|dhaka|chittagong|sylhet)\b|"
-                            r"বাংলাদেশ|ঢাকা|চট্টগ্রাম|সিলেট",
-                            title_lower,
-                            re.IGNORECASE,
-                        ):
-                            continue
-
-
                     article_url = html.unescape(link_match.group(1)).strip()
                     publisher_url = ""
                     publisher_name = ""
@@ -995,8 +800,8 @@ class WebResearch:
                         )
                     )
                     seen_urls.add(normalized)
-                    if len(results) >= max_sources * 2:
-                        break
+                    if len(results) >= max_sources:
+                        return results[:max_sources]
             except Exception:
                 pass
 
@@ -1041,114 +846,6 @@ class WebResearch:
                 print("DuckDuckGo Parsed:", len(parsed))
 
                 for title, url, snippet in parsed:
-
-                    title_lower = (title or "").lower()
-
-                    if broad_current_events:
-                        generic_patterns = [
-                            r"\bms now\b",
-                            r"\bmsnbc\b",
-                            r"\babc news live\b",
-                            r"\bnbc news now\b",
-                            r"\bcbs news\b",
-                            r"\bnewsbreak\b",
-                            r"\bheadlines\b",
-                            r"\btop headlines\b",
-                            r"\bpersonalized news\b",
-                            r"\blive updates\b",
-                            r"\bthe latest\b",
-                            r"\blatest news\b",
-                            r"\binternational news\b",
-                            r"\bworld news\b",
-                            r"\bnews today\b",
-                            r"\bnews 24/7\b",
-                            r"\b24/7 news\b",
-                            r"即时新闻",
-                            r"国际要闻",
-                            r"新华国际",
-                        ]
-
-                        if any(
-                            re.search(pattern, title_lower, re.IGNORECASE)
-                            for pattern in generic_patterns
-                        ):
-                            continue
-
-                        if re.search(
-                            r"youtube\.com|youtu\.be",
-                            url or "",
-                            re.IGNORECASE,
-                        ):
-                            continue
-
-                    if broad_current_events:
-                        generic_page_patterns = [
-                            r"\bwar today\b",
-                            r"\blive war news\b",
-                            r"\bevery active conflict\b",
-
-                            r"\blive:\s*abc news\b",
-                            r"\babc news live\b",
-                            r"\bnews live\b",
-                            r"\b24/7 news\b",
-                            r"\bnews 24/7\b",
-                            r"\blive breaking news\b",
-                            r"\bbreaking news and top stories\b",
-
-                            r"\bthe latest\b",
-                            r"\blatest news\b",
-                            r"\blatest news headlines\b",
-                            r"\blatest world news\b",
-
-                            r"\binternational news\b",
-                            r"\bworld news\b",
-                            r"\binternational headlines\b",
-                            r"\bworld headlines\b",
-
-                            r"\bcnn politics\b",
-                            r"\bpolitics \| cnn\b",
-                        ]
-
-                        if any(
-                            re.search(pattern, title_lower, re.IGNORECASE)
-                            for pattern in generic_page_patterns
-                        ):
-                            continue
-
-
-                        if broad_current_events:
-                            generic_domain_patterns = [
-                                r"ms\.now",
-                                r"youtube\.com",
-                                r"newsbreak\.com",
-                                r"cnn\.com",
-                                r"cbsnews\.com",
-                                r"nbcnews\.com",
-                                r"abcnews\.com",
-                                r"pbs\.org",
-                                r"usatoday\.com",
-                                r"reuters\.com",
-                                r"apnews\.com",
-                            ]
-
-                            if any(
-                                re.search(pattern, url or "", re.IGNORECASE)
-                                for pattern in generic_domain_patterns
-                            ):
-                                continue
-
-
-                            if broad_current_events:
-                                if re.search(
-                                    r"youtube\.com|youtu\.be",
-                                    url or "",
-                                    re.IGNORECASE,
-                                ):
-                                    continue
-
-
-
-
                     normalized = self._normalize_url(url)
 
                     if not normalized or normalized in seen_urls:
@@ -1171,8 +868,8 @@ class WebResearch:
                     
                 print("Google News Results:", len(results))
 
-        except Exception as e:
-            print("GOOGLE NEWS ERROR:", repr(e))
+        except Exception:
+            pass
 
         # ------------------------------------------------------------
         # Provider 2: Bing RSS
@@ -1183,17 +880,7 @@ class WebResearch:
         try:
             news_query = bool(
                 re.search(
-                    r'\b(news|latest|breaking|headline|headlines|current events|today)\b'
-                    r'|খবর|সর্বশেষ|আজকের|আজ|ব্রেকিং|সংবাদ|সাম্প্রতিকতম'
-                    r'|ঘটনা|ঘটনাগুলো|ঘটনাসমূহ'
-                    r'|কী ঘটছে|কি ঘটছে'
-                    r'|কী হচ্ছে|কি হচ্ছে'
-                    r'|বর্তমানে কী কী ঘটনা ঘটছে'
-                    r'|বর্তমানে কি কি ঘটনা ঘটছে'
-                    r'|এখন কী কী ঘটনা ঘটছে'
-                    r'|এখন কি কি ঘটনা ঘটছে'
-                    r'|আজ কী কী ঘটনা ঘটছে'
-                    r'|আজ কি কি ঘটনা ঘটছে',
+                    r'\b(news|latest|breaking|headline|headlines|current events|today)\b|খবর|সর্বশেষ|আজকের|আজ|ব্রেকিং|সংবাদ|সাম্প্রতিকতম',
                     question,
                     re.IGNORECASE,
                 )
@@ -1237,74 +924,6 @@ class WebResearch:
 
 
             for title, url, snippet in bing_results:
-                title_lower = (title or "").lower()
-                snippet_lower = (snippet or "").lower()
-                url_lower = (url or "").lower()
-
-                # ------------------------------------------------------------
-                # Broad current-events query: reject obvious Bing junk
-                # ------------------------------------------------------------
-                if broad_current_events:
-                    junk_patterns = [
-                        # Search engines / portals / generic pages
-                        r"yandex",
-                        r"百度知道",
-                        r"baidu",
-                        r"microsoft community",
-                        r"microsoft\.com",
-                        r"answers\.microsoft\.com",
-
-                        # Games / cheats / unrelated knowledge
-                        r"age of empires",
-                        r"秘籍",
-                        r"cheat",
-                        r"cheats",
-                        r"walkthrough",
-                        r"game guide",
-
-                        # Math / reference pages
-                        r"π等于多少",
-                        r"\bpi equals\b",
-                        r"\bwhat is pi\b",
-
-                        # Generic news portals
-                        r"ms now",
-                        r"msnbc",
-                        r"newsbreak",
-                        r"personalized news",
-                        r"top headlines",
-                        r"latest news",
-                        r"world news",
-                        r"international news",
-                        r"live updates",
-                        r"24/7 news",
-                        r"news 24/7",
-                        r"即时新闻",
-                        r"国际要闻",
-                        r"新华国际",
-                    ]
-
-                    combined_text = (
-                        f"{title_lower} {snippet_lower} {url_lower}"
-                    )
-
-                    if any(
-                        re.search(pattern, combined_text, re.IGNORECASE)
-                        for pattern in junk_patterns
-                    ):
-                        print("BING FILTERED JUNK:", title)
-                        continue
-
-                    # Social/video results are not suitable for broad event verification
-                    if re.search(
-                        r"youtube\.com|youtu\.be|facebook\.com|"
-                        r"instagram\.com|tiktok\.com",
-                        url_lower,
-                        re.IGNORECASE,
-                    ):
-                        print("BING FILTERED SOCIAL:", title)
-                        continue
-
                 normalized = self._normalize_url(url)
 
                 if not normalized or normalized in seen_urls:
@@ -1447,8 +1066,6 @@ class WebResearch:
 
         # Prevent duplicate URLs/evidence.
         seen_urls = set()
-
-
 
         # ---------------------------------------------------------
         # Helper: add evidence safely.

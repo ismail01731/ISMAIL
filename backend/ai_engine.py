@@ -9,6 +9,7 @@ from backend.web_research import WebResearch
 from backend.openai_provider import OpenAIProvider
 from backend.browser_actions import detect_browser_action
 from backend.intent_detector import IntentDetector
+from backend.live_intelligence.router import LiveIntelligenceRouter
 load_dotenv("config/.env")
 from typing import List
 from backend.web_research import WebResearch, WebEvidence
@@ -75,6 +76,46 @@ class AIEngine:
         "available",
         "availability",
         "status",
+
+        "event",
+        "events",
+        "incident",
+        "ঘটনা",
+        "ঘটনাগুলো",
+        "ঘটনাসমূহ",
+        "গুরুত্বপূর্ণ ঘটনা",
+        "বর্তমান ঘটনা",
+        "সাম্প্রতিক ঘটনা",
+        "কী ঘটছে",
+        "কি ঘটছে",
+        "কী হচ্ছে",
+        "কি হচ্ছে",
+        "আজ কী ঘটেছে",
+        "আজ কি ঘটেছে",
+        "আজ কী ঘটছে",
+        "আজ কি ঘটছে",
+        "এখন কী ঘটছে",
+        "এখন কি ঘটছে",
+        "বর্তমানে কী ঘটছে",
+        "বর্তমানে কি ঘটছে",
+        "আন্তর্জাতিক ঘটনা",
+        "গুরুত্বপূর্ণ আন্তর্জাতিক ঘটনা",
+        "incidents",
+        "happening",
+        "happenings",
+        "what's happening",
+        "what is happening",
+        "ঘটনা",
+        "ঘটনাগুলো",
+        "ঘটনাসমূহ",
+        "কী ঘটছে",
+        "কি ঘটছে",
+        "কী হচ্ছে",
+        "কি হচ্ছে",
+        "গুরুত্বপূর্ণ ঘটনা",
+        "বর্তমান ঘটনা",
+        "সাম্প্রতিক ঘটনা",
+        "আন্তর্জাতিক ঘটনা",
 
         "আজ",
         "এখন",
@@ -432,6 +473,10 @@ class AIEngine:
             "Answer the user's current question using ONLY the verified "
             "evidence supplied below.\n\n"
 
+            "For broad current-event questions, begin with a concise summary and "
+            "then give 2-5 bullet points of distinct reported developments when "
+            "the evidence supports them. Do not imply that the list is exhaustive.\n\n"
+
             "==================== ABSOLUTE GROUNDING RULES ====================\n"
 
             "1. Use ONLY facts explicitly present in the supplied evidence.\n"
@@ -450,6 +495,64 @@ class AIEngine:
             "6. Preserve the meaning of every evidence field exactly.\n"
 
             "7. Do NOT rename one evidence field into another field.\n"
+
+            "8. For current news, events, incidents, or 'what is happening now' "
+            "questions, do NOT generalize from one article to the whole world, country, "
+            "or population.\n"
+            "9. Report only the specific events or developments explicitly supported "
+            "by the evidence.\n"
+            "10. If multiple evidence items describe the same event, combine them "
+            "into one concise point instead of repeating the same event.\n"
+            "11. If the evidence covers only one or a few events, explicitly say that "
+            "these are among the notable reported developments rather than claiming "
+            "they represent everything happening.\n"
+            "12. NEVER invent attendance numbers, leaders, countries, reactions, "
+            "casualties, causes, locations, or other details that are not explicitly "
+            "present in the evidence.\n"
+            "13. For a broad current-event question, identify distinct real-world "
+            "events supported by the evidence. If multiple evidence items refer to "
+            "the same event, mention that event only once. If only one distinct event "
+            "is supported, provide only that event rather than inventing additional "
+            "events.\n"
+            "14. Do NOT use phrases such as 'প্রথম প্রমাণ', 'দ্বিতীয় প্রমাণ', "
+            "'প্রথম evidence', or 'দ্বিতীয় evidence' in the final answer.\n"
+            "15. Use natural conversational language. Do not describe the evidence "
+            "itself; describe the reported events.\n"
+            "16. Do NOT create a bullet point merely because multiple sources "
+            "reported the same event. Sources are supporting evidence, not events.\n"
+            "17. Do NOT mention 'media sources', 'evidence', 'sources', or "
+
+            "18. Multiple evidence items may describe the same real-world event. "
+            "Treat repeated coverage of the same event as ONE event with multiple "
+            "supporting sources, not as separate events.\n"
+            "19. Never infer a new event merely from a source name, URL, or article "
+            "title fragment. An event must be explicitly supported by the evidence "
+            "text.\n"
+            "20. If the available evidence is narrowly focused on one event, say so "
+            "clearly. Do not pretend that it represents all events happening "
+            "worldwide.\n"
+
+            "21. SOURCE, URL, TITLE, and publisher names are metadata. "
+            "Never treat a source name, URL, or publisher name as factual evidence.\n"
+            "22. A headline alone does not prove every detail implied by the headline. "
+            "Only state details that are explicitly supported by the supplied evidence text.\n"
+            "23. When several evidence items describe the same named event, location, "
+            "date, anniversary, ceremony, incident, or development, merge them into "
+            "ONE event. The number of sources must never become the number of events.\n"
+            "24. Do not create a separate event merely because another source has a "
+            "different headline describing the same underlying event.\n"
+            "25. Do not say 'বিশ্বব্যাপী', 'বিভিন্ন দেশ থেকে', 'সারা বিশ্বে', "
+            "'অনেক মানুষ', 'বিভিন্ন স্থানে', or similar broad claims unless those "
+            "claims are explicitly supported by the evidence text.\n"
+            "26. For broad current-event questions, if all verified evidence concerns "
+            "one underlying event, report only that one event and clearly state that "
+            "the currently retrieved evidence is focused on that event.\n"
+
+
+            "'evidence items' in the answer unless the user explicitly asks about "
+            "sources or verification.\n"
+
+
             "   Examples:\n"
             "   - 'Feels like' must remain 'Feels like'.\n"
             "   - 'Wind speed' must remain 'Wind speed'.\n"
@@ -607,11 +710,307 @@ class AIEngine:
             f"{question}\n\n"
 
             "FINAL INSTRUCTION:\n"
-            "Answer the user now.\n"
-            "Use ONLY the supplied verified evidence.\n"
-            "Preserve factual values and field meanings exactly.\n"
-            "Do not add unsupported facts.\n"
+            "Answer the user now.\n\n"
+
+            "STRICT SOURCE-BOUND MODE:\n"
+            "Every factual statement in your answer MUST be directly supported "
+            "by the supplied evidence text.\n"
+            "If a fact is not explicitly present in the evidence, DO NOT say it.\n"
+            "Do not infer, assume, explain, interpret, or complete missing details.\n"
+            "Do not use your general knowledge to fill gaps.\n\n"
+
+            "IMPORTANT FOR BROAD CURRENT-EVENT QUESTIONS:\n"
+            "If the evidence only supports one event or one topic, report ONLY "
+            "that supported event or topic.\n"
+            "Do not turn five sources about the same event into five different events.\n"
+            "Do not add people, countries, locations, organizations, attendance, "
+            "opinions, causes, consequences, casualties, ceremonies, or reactions "
+            "unless explicitly stated in the evidence.\n\n"
+
+            "IMPORTANT FOR HEADLINE-ONLY EVIDENCE:\n"
+            "If the supplied evidence mainly contains headlines and does not contain "
+            "supporting factual details, DO NOT invent details from the headlines.\n"
+            "In that situation, present the exact supported headline(s) and source "
+            "rather than explaining facts that are not explicitly available.\n\n"
+
+            "NEVER COMPLETE A SENTENCE WITH AN UNSUPPORTED FACT.\n"
+            "NEVER GUESS WHAT HAPPENED.\n"
+            "NEVER ADD DETAILS JUST TO MAKE THE ANSWER LONGER.\n\n"
+
+            "Prefer a short answer over an unsupported answer.\n"
         )
+
+    def _clean_live_response(
+        self,
+        response: str,
+        evidence: list,
+    ) -> str:
+        """Keep live answers concise and remove obvious unsupported output."""
+
+        response = str(response).strip()
+
+        if not response:
+            return "দুঃখিত, নির্ভরযোগ্য তথ্য থেকে উত্তর তৈরি করা যায়নি।"
+
+        # Remove incomplete trailing sentence/bullet.
+        lines = response.splitlines()
+
+        cleaned = []
+
+        for line in lines:
+            line = line.strip()
+
+            if not line:
+                continue
+
+            cleaned.append(line)
+
+        if not cleaned:
+            return "দুঃখিত, নির্ভরযোগ্য তথ্য থেকে উত্তর তৈরি করা যায়নি।"
+
+        # Keep the answer short for small local models.
+        cleaned = cleaned[:6]
+
+        return "\n".join(cleaned).strip()
+
+
+
+
+    def _format_verified_live_answer(
+        self,
+        question: str,
+        evidence: list,
+    ) -> str:
+        """Build a safe live answer from verified evidence."""
+
+        verified = [
+            item
+            for item in evidence
+            if getattr(item, "verification_status", "")
+            in (
+                "verified",
+                "corroborated",
+                "high_confidence_source",
+            )
+        ]
+
+        if not verified:
+            return "দুঃখিত, নির্ভরযোগ্য তথ্য যাচাই করা যায়নি।"
+
+        # ---------------------------------------------------------
+        # Normalize headline for safe same-event comparison.
+        # ---------------------------------------------------------
+        def normalize_title(title: str) -> set:
+            text = (title or "").lower()
+
+            # Normalize explicit date/event identifiers.
+            text = re.sub(
+                r"\b(sept|sep|september)\s+(\d{1,2})\b",
+                r"9-\2",
+                text,
+            )
+
+            text = re.sub(
+                r"(\d+)\s*/\s*(\d+)",
+                r"\1-\2",
+                text,
+            )
+
+            # Keep normalized event identifiers intact.
+            text = text.replace("9-11", "event911")
+
+            text = re.sub(
+                r"[^a-z0-9\u0980-\u09ff-]+",
+                " ",
+                text,
+            )
+
+            stop_words = {
+                "the", "a", "an", "and", "or", "of",
+                "to", "in", "on", "for", "with", "at",
+                "is", "are", "was", "were",
+                "this", "that", "its", "about",
+                "live", "watch", "news", "today",
+                "latest", "updates", "gather",
+                "remember", "remembering",
+
+                "years", "year", "later",
+                "ceremony", "site", "marks",
+                "gather", "divided", "legacy",
+                "those", "lost",
+
+                "আজ", "আজকের", "এখন", "বর্তমানে",
+                "সর্বশেষ", "খবর", "সংবাদ", "গুরুত্বপূর্ণ",
+                "ঘটনা", "ঘটনাগুলো", "ঘটনাসমূহ",
+            }
+
+            return {
+                word
+                for word in text.split()
+                if len(word) > 1
+                and word not in stop_words
+            }
+
+        # ---------------------------------------------------------
+        # Group only when headlines have strong word overlap.
+        # This avoids treating unrelated events as one event.
+        # ---------------------------------------------------------
+        groups = []
+
+        for item in verified[:5]:
+            title = str(
+                getattr(item, "title", "") or ""
+            ).strip()
+
+            if not title:
+                continue
+
+
+
+            words = normalize_title(title)
+
+            # Detect strong canonical event identifiers.
+            event_markers = set()
+
+            if re.search(
+                r"\b9\s*[-/]\s*11\b"
+                r"|\bsept(?:ember)?\s+11\b"
+                r"|\b11\s+september\b",
+                title,
+                re.IGNORECASE,
+            ):
+                event_markers.add("event_9_11")
+
+            matched_group = None
+
+            for group in groups:
+                # Strong event marker match.
+                if event_markers & group["event_markers"]:
+                    matched_group = group
+                    break
+
+                common = words & group["words"]
+
+                distinctive_common = {
+                    word
+                    for word in common
+                    if len(word) >= 4
+                    and word not in {
+                        "live",
+                        "watch",
+                        "news",
+                        "today",
+                        "latest",
+                        "event",
+                        "events",
+                        "remember",
+                        "remembering",
+                    }
+                }
+
+                if len(distinctive_common) >= 2:
+                    matched_group = group
+                    break
+
+
+
+            
+
+            if matched_group is not None:
+                matched_group["items"].append(item)
+                matched_group["words"].update(words)
+                matched_group["event_markers"].update(event_markers)
+            else:
+                groups.append(
+                    {
+                        "items": [item],
+                        "words": set(words),
+                        "event_markers": set(event_markers),
+                    }
+                )
+
+        if not groups:
+            return "দুঃখিত, নির্ভরযোগ্য তথ্য থেকে উত্তর তৈরি করা যায়নি।"
+
+        lines = [
+            "সর্বশেষ যাচাই করা তথ্য অনুযায়ী:"
+        ]
+
+        # ---------------------------------------------------------
+        # Format each distinct event/topic once.
+        # ---------------------------------------------------------
+        for group in groups:
+            items = group["items"]
+
+            first = items[0]
+
+            title = str(
+                getattr(first, "title", "") or ""
+            ).strip()
+
+            if not title:
+                continue
+
+            sources = []
+
+            for item in items:
+                source = str(
+                    getattr(item, "source", "") or ""
+                ).strip()
+
+                if source and source not in sources:
+                    sources.append(source)
+
+            event_markers = group.get(
+                "event_markers",
+                set(),
+            )
+
+
+
+        # -----------------------------------------
+        # Safe Bengali formatting for known events.
+        # -----------------------------------------
+
+        if "event_9_11" in event_markers:
+            event_text = (
+                "9/11-এর ২৫তম বার্ষিকী নিয়ে "
+                "স্মরণ ও সাম্প্রতিক প্রতিবেদন"
+            )
+        else:
+            # Unknown event:
+            # Do not invent a Bengali summary.
+            event_text = title
+
+        source = str(
+            getattr(item, "source", "") or ""
+        ).strip()
+
+        if source and source not in sources:
+            sources.append(source)
+
+        if len(sources) > 1:
+            source_text = ", ".join(sources)
+            lines.append(
+                f"• {event_text} — {source_text}"
+            )
+        elif sources:
+            lines.append(
+                f"• {event_text} — {sources[0]}"
+            )
+        else:
+            lines.append(
+                f"• {event_text}"
+            )
+
+            if len(lines) == 1:
+                return "দুঃখিত, নির্ভরযোগ্য তথ্য থেকে উত্তর তৈরি করা যায়নি।"
+
+        return "\n".join(lines)
+
+
+
+
 
 
 
@@ -626,8 +1025,10 @@ class AIEngine:
             "stream": False,
             "options": {
                 "num_ctx": 4096,
-                "num_predict": 700,
-                "temperature": 0.1,
+                "num_predict": 400,
+                "temperature": 0.05,
+                "top_p": 0.8,
+                "repeat_penalty": 1.15,
             },
         }
 
@@ -816,6 +1217,26 @@ class AIEngine:
         if not message:
             raise ValueError("Message cannot be empty.")
 
+
+        # =========================================================
+        # LIVE INTELLIGENCE: TIME / DATE
+        # =========================================================
+
+        live_result = LiveIntelligenceRouter.handle(message)
+
+        if live_result is not None:
+            if live_result["type"] == "time":
+                return (
+                    f"এখন সময় {live_result['time_12']}। "
+                    f"সময় অঞ্চল: {live_result['timezone']}।"
+                )
+
+            if live_result["type"] == "date":
+                return (
+                    f"আজ {live_result['date']}। "
+                    f"বার: {live_result['day']}।"
+                )
+
         identity_answer = get_identity_answer(message)
 
         if identity_answer is not None:
@@ -886,30 +1307,7 @@ class AIEngine:
             evidence
         )
 
-        if (
-            structured_live
-            and (
-                "weather" in message_lower
-                or "আবহাওয়া" in message_lower
-                or "আবহাওয়া" in message_lower
-                or "temperature" in message_lower
-                or "তাপমাত্রা" in message_lower
-                or "forecast" in message_lower
-                or "পূর্বাভাস" in message_lower
-                or "bitcoin" in message_lower
-                or "btc" in message_lower
-                or "বিটকয়েন" in message_lower
-                or "বিটকয়েন" in message_lower
-                or "news" in message_lower
-                or "latest" in message_lower
-                or "breaking" in message_lower
-                or "খবর" in message_lower
-                or "সংবাদ" in message_lower
-                or "সর্বশেষ" in message_lower
-                or "আজকের" in message_lower
-            )
-        ):
-            return structured_live
+        
 
 
 
@@ -1021,6 +1419,12 @@ class AIEngine:
         if self.provider == "ollama":
             if not self.model:
                 return "Ollama model is not configured."
+
+            if (route == "live" or obvious_live) and evidence:
+                return self._format_verified_live_answer(
+                    message,
+                    evidence,
+                )
 
             return self._generate_with_ollama(prompt)
 
