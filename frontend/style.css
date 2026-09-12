@@ -2635,3 +2635,231 @@ body.dark .voice-button:hover {
 }
 
 
+/* Hide native file inputs */
+#fileInput,
+#imageInput {
+    display: none !important;
+}
+
+
+
+/* =========================================================
+   ISMAIL AI VOICE SCREEN
+   Dedicated full-screen voice mode
+   ========================================================= */
+.voice-screen {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100vh !important;
+    z-index: 999999 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    background: #000000 !important;
+    color: #ffffff !important;
+}
+.voice-screen[hidden] {
+    display: none !important;
+}
+.voice-topbar {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-height: 64px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0 20px !important;
+    box-sizing: border-box !important;
+    background: #000000 !important;
+    position: relative !important;
+    z-index: 2 !important;
+}
+.voice-close-button {
+    width: 42px !important;
+    height: 42px !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    background: #171717 !important;
+    color: #ffffff !important;
+    font-size: 28px !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+}
+.voice-brand {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+.voice-brand-logo {
+    font-size: 20px !important;
+}
+.voice-brand-name {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    letter-spacing: 1px !important;
+}
+.voice-brand-dot {
+    width: 6px !important;
+    height: 6px !important;
+    border-radius: 50% !important;
+    background: #ffffff !important;
+}
+.voice-topbar-spacer {
+    width: 42px !important;
+    height: 42px !important;
+}
+.voice-content {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    padding: 24px 20px 40px !important;
+    overflow: hidden !important;
+    text-align: center !important;
+}
+.voice-status {
+    margin-bottom: 24px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #bdbdbd !important;
+}
+.voice-visual {
+    position: relative !important;
+    width: 220px !important;
+    height: 220px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-bottom: 30px !important;
+}
+.voice-orb {
+    width: 132px !important;
+    height: 132px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #151515 !important;
+    border: 1px solid #303030 !important;
+    box-shadow: 0 0 50px rgba(255, 255, 255, 0.08) !important;
+    position: relative !important;
+    z-index: 2 !important;
+}
+.voice-orb-symbol {
+    font-size: 42px !important;
+}
+.voice-orb-ring {
+    position: absolute !important;
+    border: 1px solid #252525 !important;
+    border-radius: 50% !important;
+    pointer-events: none !important;
+}
+.voice-orb-ring-1 {
+    width: 160px !important;
+    height: 160px !important;
+}
+.voice-orb-ring-2 {
+    width: 190px !important;
+    height: 190px !important;
+}
+.voice-orb-ring-3 {
+    width: 220px !important;
+    height: 220px !important;
+}
+.voice-title {
+    margin: 0 0 10px !important;
+    font-size: 28px !important;
+    font-weight: 700 !important;
+}
+.voice-subtitle {
+    max-width: 420px !important;
+    margin: 0 0 26px !important;
+    color: #999999 !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+}
+.voice-mic-button {
+    width: 72px !important;
+    height: 72px !important;
+    flex: 0 0 auto !important;
+    border: 1px solid #333333 !important;
+    border-radius: 50% !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    box-shadow: 0 8px 30px rgba(255, 255, 255, 0.12) !important;
+}
+.voice-mic-icon {
+    font-size: 27px !important;
+}
+.voice-hint {
+    margin-top: 16px !important;
+    color: #777777 !important;
+    font-size: 12px !important;
+}
+body.voice-screen-open {
+    overflow: hidden !important;
+}
+@media (max-width: 600px) {
+    .voice-topbar {
+        min-height: 58px !important;
+        padding: 0 14px !important;
+    }
+    .voice-content {
+        padding: 18px 16px 28px !important;
+    }
+    .voice-visual {
+        width: 190px !important;
+        height: 190px !important;
+        margin-bottom: 22px !important;
+    }
+    .voice-orb {
+        width: 112px !important;
+        height: 112px !important;
+    }
+    .voice-orb-ring-1 {
+        width: 140px !important;
+        height: 140px !important;
+    }
+    .voice-orb-ring-2 {
+        width: 165px !important;
+        height: 165px !important;
+    }
+    .voice-orb-ring-3 {
+        width: 190px !important;
+        height: 190px !important;
+    }
+    .voice-title {
+        font-size: 24px !important;
+    }
+}
+
+
+
+
+/* =========================================================
+   ISMAIL AI VOICE WINDOW
+   Show only the dedicated Voice Screen in #voice window.
+   ========================================================= */
+
+html.voice-window-mode body > *:not(#voiceScreen) {
+    display: none !important;
+}
+
+html.voice-window-mode #voiceScreen {
+    display: flex !important;
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 999999 !important;
+}

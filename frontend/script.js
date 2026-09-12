@@ -7,6 +7,9 @@ const attachButton =
 const fileInput =
     document.getElementById("fileInput");
 
+const imageInput =
+    document.getElementById("imageInput");
+
 const attachmentPreview =
     document.getElementById("attachmentPreview");
 
@@ -22,9 +25,60 @@ const attachMenu =
 const fileOption =
     document.getElementById("fileOption");
 
+const imageOption =
+    document.getElementById("imageOption");
+
 let selectedFile = null;
 const voiceButton =
 document.getElementById("voiceButton");
+
+const voiceScreen =
+    document.getElementById("voiceScreen");
+
+const voiceCloseButton =
+    document.getElementById("voiceCloseButton");
+
+const voiceOption =
+    document.getElementById("voiceOption");
+
+const voiceStatus =
+    document.getElementById("voiceStatus");
+
+const voiceSubtitle =
+    document.getElementById("voiceSubtitle");
+
+const voiceMicButton =
+    document.getElementById("voiceMicButton");
+
+const voiceHint =
+    document.getElementById("voiceHint");
+
+
+    if (window.location.hash === "#voice") {
+    document.documentElement.classList.add("voice-window-mode");
+
+    window.addEventListener("DOMContentLoaded", function () {
+        if (voiceScreen) {
+            voiceScreen.removeAttribute("hidden");
+            voiceScreen.setAttribute("aria-hidden", "false");
+        }
+
+        document.body.classList.add("voice-screen-open");
+
+        if (voiceStatus) {
+            voiceStatus.textContent = "Voice";
+        }
+
+        if (voiceSubtitle) {
+            voiceSubtitle.textContent =
+                "Tap the microphone to start a conversation.";
+        }
+
+        if (voiceHint) {
+            voiceHint.textContent = "Ready when you are";
+        }
+    });
+}
 
 
 
@@ -1739,39 +1793,31 @@ async function regenerateAnswer(question, aiMessageElement) {
 // =========================================================
 
 function openVoiceScreen() {
-    if (!voiceScreen) return;
+    const voiceUrl =
+        `${window.location.origin}${window.location.pathname}#voice`;
 
-    if (attachMenuElement) {
-        attachMenuElement.setAttribute("hidden", "");
+    const voiceWindow = window.open(
+        voiceUrl,
+        "ISMAIL_AI_VOICE",
+        "width=520,height=900,resizable=yes,scrollbars=no"
+    );
+
+    if (voiceWindow) {
+        voiceWindow.focus();
+    } else {
+        console.warn(
+            "[ISMAIL AI] Voice window was blocked by the browser."
+        );
     }
-
-    voiceScreen.removeAttribute("hidden");
-    voiceScreen.setAttribute("aria-hidden", "false");
-
-    document.body.classList.add("voice-screen-open");
-
-    if (voiceStatus) {
-        voiceStatus.textContent = "Voice";
-    }
-
-    if (voiceSubtitle) {
-        voiceSubtitle.textContent =
-            "Tap the microphone to start a conversation.";
-    }
-
-    if (voiceHint) {
-        voiceHint.textContent = "Ready when you are";
-    }
-
-    setTimeout(() => {
-        if (voiceMicButton) {
-            voiceMicButton.focus();
-        }
-    }, 50);
 }
 
 
 function closeVoiceScreen() {
+    if (window.location.hash === "#voice" && window.opener) {
+        window.close();
+        return;
+    }
+
     if (!voiceScreen) return;
 
     voiceScreen.setAttribute("hidden", "");
@@ -1846,6 +1892,7 @@ const fileOptionElement =
     document.getElementById("fileOption");
 
 
+
 if (attachButton && attachMenuElement) {
 
     // + button
@@ -1880,9 +1927,14 @@ if (attachButton && attachMenuElement) {
                     ""
                 );
 
+                fileInput.accept =
+                    ".pdf,.doc,.docx,.txt";
+
                 fileInput.click();
             }
         );
+
+    
 
 
         // File selected
@@ -1937,6 +1989,53 @@ if (attachButton && attachMenuElement) {
                 messageInput.focus();
             }
         );
+    }
+
+
+
+
+
+
+
+    // Image selected
+    if (imageInput) {
+        imageInput.addEventListener("change", function () {
+
+            const file =
+                imageInput.files &&
+                imageInput.files[0];
+
+            if (!file) {
+                return;
+            }
+
+            const maxSize =
+                10 * 1024 * 1024;
+
+            if (file.size > maxSize) {
+                alert(
+                    "Image is too large. Maximum size is 10 MB."
+                );
+                imageInput.value = "";
+                return;
+            }
+
+            selectedFile = file;
+
+            if (attachmentPreview) {
+                attachmentPreview.hidden = false;
+            }
+
+            if (attachmentName) {
+                attachmentName.textContent =
+                    file.name;
+            }
+
+            messageInput.style.height =
+                "auto";
+
+            messageInput.focus();
+        });
     }
 
 
@@ -2022,111 +2121,204 @@ async function sendMessage() {
             await getSession();
 
         let fileContext = "";
+        let imageData = "";
+        let imageType = "";
         let displayMessage = message;
 
 
-        // =================================================
-        // FILE MODE
-        // =================================================
+// =================================================
+// FILE MODE
+// =================================================
 
-        if (selectedFile) {
+if (selectedFile) {
 
-            const formData =
-                new FormData();
-
-            formData.append(
-                "file",
-                selectedFile
-            );
+    const isImage =
+        selectedFile.type.startsWith("image/");
 
 
-            const uploadResponse =
-                await requestBackend(
-                    `${BACKEND_BASE_URL}/api/file/upload`,
-                    {
-                        method: "POST",
+    // =================================================
+    // IMAGE MODE
+    // =================================================
 
-                        headers: {
-                            "Authorization":
-                                `Bearer ${session.token}`
-                        },
+    if (isImage) {
 
-                        body: formData
-                    }
+        imageType =
+            selectedFile.type;
+
+        imageData =
+            await new Promise((resolve, reject) => {
+
+                const reader =
+                    new FileReader();
+
+                reader.onload = () => {
+
+                    const result =
+                        String(reader.result || "");
+
+                    const commaIndex =
+                        result.indexOf(",");
+
+                    resolve(
+                        commaIndex >= 0
+                            ? result.slice(commaIndex + 1)
+                            : result
+                    );
+                };
+
+                reader.onerror = () => {
+
+                    reject(
+                        new Error(
+                            "Unable to read image."
+                        )
+                    );
+                };
+
+                reader.readAsDataURL(
+                    selectedFile
                 );
+            });
 
 
-            if (!uploadResponse.ok) {
+        displayMessage =
+            `🖼️ ${selectedFile.name}\n${message || "Analyze this image."}`;
 
-                let errorMessage =
-                    "File upload failed.";
 
-                try {
+        addMessage(
+            displayMessage,
+            "user"
+        );
 
-                    const errorData =
-                        await uploadResponse.json();
 
-                    errorMessage =
-                        errorData.detail ||
-                        errorMessage;
+        syncChatMessage(
+            "user",
+            displayMessage
+        );
 
-                } catch (error) {
-                    // Ignore JSON parsing error.
+
+        selectedFile = null;
+
+
+        if (fileInput) {
+            fileInput.value = "";
+        }
+
+
+        if (attachmentPreview) {
+            attachmentPreview.hidden = true;
+        }
+
+
+    } else {
+
+
+        // =================================================
+        // DOCUMENT / FILE MODE
+        // =================================================
+
+        const formData =
+            new FormData();
+
+
+        formData.append(
+            "file",
+            selectedFile
+        );
+
+
+        const uploadResponse =
+            await requestBackend(
+                `${BACKEND_BASE_URL}/api/file/upload`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Authorization":
+                            `Bearer ${session.token}`
+                    },
+
+                    body: formData
                 }
-
-                throw new Error(
-                    errorMessage
-                );
-            }
-
-
-            const fileData =
-                await uploadResponse.json();
-
-
-            fileContext =
-                String(fileData.text || "");
-
-
-            displayMessage =
-                `📎 ${fileData.filename}\n${message || "Analyze this file."}`;
-
-
-            addMessage(
-                displayMessage,
-                "user"
             );
 
 
-            syncChatMessage(
-                "user",
-                displayMessage
-            );
+        if (!uploadResponse.ok) {
 
+            let errorMessage =
+                "File upload failed.";
 
-            selectedFile = null;
+            try {
 
-            if (fileInput) {
-                fileInput.value = "";
+                const errorData =
+                    await uploadResponse.json();
+
+                errorMessage =
+                    errorData.detail ||
+                    errorMessage;
+
+            } catch (error) {
+                // Ignore JSON parsing error.
             }
 
 
-            if (attachmentPreview) {
-                attachmentPreview.hidden = true;
-            }
-
-        } else {
-
-            addMessage(
-                message,
-                "user"
-            );
-
-            syncChatMessage(
-                "user",
-                message
+            throw new Error(
+                errorMessage
             );
         }
+
+
+        const fileData =
+            await uploadResponse.json();
+
+
+        fileContext =
+            String(fileData.text || "");
+
+
+        displayMessage =
+            `📎 ${fileData.filename}\n${message || "Analyze this file."}`;
+
+
+        addMessage(
+            displayMessage,
+            "user"
+        );
+
+
+        syncChatMessage(
+            "user",
+            displayMessage
+        );
+
+
+        selectedFile = null;
+
+
+        if (fileInput) {
+            fileInput.value = "";
+        }
+
+
+        if (attachmentPreview) {
+            attachmentPreview.hidden = true;
+        }
+    }
+
+
+} else {
+
+    addMessage(
+        message,
+        "user"
+    );
+
+
+    syncChatMessage(
+        "user",
+        message
+    );
+}
 
 
         messageInput.value = "";
@@ -2155,10 +2347,11 @@ async function sendMessage() {
 
                     body: JSON.stringify({
 
-                        // User's actual question.
                         message:
                             message ||
-                            "Analyze this file.",
+                            (imageData
+                                ? "Analyze this image."
+                                : "Analyze this file."),
 
                         user_id:
                             USER_ID,
@@ -2166,9 +2359,14 @@ async function sendMessage() {
                         chat_id:
                             String(currentChat.id),
 
-                        // Extracted document content.
                         file_context:
-                            fileContext
+                            fileContext,
+
+                        image_data:
+                            imageData,
+
+                        image_type:
+                            imageType
                     })
                 }
             );
@@ -3280,5 +3478,11 @@ window.receiveNativeVoice = function (text) {
 
 };
 
+
+
+
+
+// IMAGE PICKER DEBUG
+document.getElementById('imageOption')?.addEventListener('click', function () { console.log('IMAGE LABEL CLICKED'); });
 
 
