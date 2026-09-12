@@ -2236,7 +2236,8 @@ async function sendMessage() {
             assistantMessage
         );
 
-        speakAIResponse(assistantMessage);
+        // Automatic AI voice disabled
+        // speakAIResponse(assistantMessage);
 
 
         saveCurrentChat();
@@ -2400,40 +2401,18 @@ voiceButton.addEventListener(
 
 /* =========================
    ISMAIL AI SPEAK RESPONSE
+   DISABLED
 ========================= */
 
 function speakAIResponse(text) {
 
-    if (!("speechSynthesis" in window)) {
-        return;
+    // Stop any speech that may already be playing
+    if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
     }
 
-    if (!text) {
-        return;
-    }
-
-    window.speechSynthesis.cancel();
-
-    const cleanText =
-        text
-            .replace(/```[\s\S]*?```/g, "")
-            .replace(/\*\*/g, "")
-            .replace(/[`#]/g, "")
-            .trim();
-
-    if (!cleanText) {
-        return;
-    }
-
-    const speech =
-        new SpeechSynthesisUtterance(cleanText);
-
-    speech.lang = "bn-BD";
-    speech.rate = 1;
-    speech.pitch = 1;
-    speech.volume = 1;
-
-    window.speechSynthesis.speak(speech);
+    // Automatic AI response voice disabled
+    return;
 }
 
 
@@ -3279,21 +3258,11 @@ clearAllHistoryMenuButton.addEventListener("click", function () {
 
 
 function speak(text) {
-
-    if (!("speechSynthesis" in window)) {
-        return;
+    if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
     }
 
-    window.speechSynthesis.cancel();
-
-    const utter = new SpeechSynthesisUtterance(text);
-
-    utter.lang = "bn-BD";
-    utter.rate = 1;
-    utter.pitch = 1;
-
-    window.speechSynthesis.speak(utter);
-
+    return;
 }
 
 
