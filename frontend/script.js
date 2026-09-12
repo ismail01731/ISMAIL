@@ -54,30 +54,45 @@ const voiceHint =
     document.getElementById("voiceHint");
 
 
-    if (window.location.hash === "#voice") {
+if (window.location.hash === "#voice") {
     document.documentElement.classList.add("voice-window-mode");
 
-    window.addEventListener("DOMContentLoaded", function () {
+    const initializeVoiceWindow = () => {
         if (voiceScreen) {
             voiceScreen.removeAttribute("hidden");
+            voiceScreen.hidden = false;
             voiceScreen.setAttribute("aria-hidden", "false");
-        }
 
-        document.body.classList.add("voice-screen-open");
+            voiceScreen.style.setProperty("display", "flex", "important");
+            voiceScreen.style.setProperty("position", "fixed", "important");
+            voiceScreen.style.setProperty("inset", "0", "important");
+            voiceScreen.style.setProperty("width", "100vw", "important");
+            voiceScreen.style.setProperty("height", "100vh", "important");
+            voiceScreen.style.setProperty("background", "#000", "important");
+            voiceScreen.style.setProperty("color", "#fff", "important");
 
-        if (voiceStatus) {
-            voiceStatus.textContent = "Voice";
-        }
+            document.body.classList.add("voice-screen-open");
 
-        if (voiceSubtitle) {
-            voiceSubtitle.textContent =
-                "Tap the microphone to start a conversation.";
-        }
+            if (voiceStatus) {
+                voiceStatus.textContent = "Voice";
+            }
 
-        if (voiceHint) {
-            voiceHint.textContent = "Ready when you are";
+            if (voiceSubtitle) {
+                voiceSubtitle.textContent =
+                    "Tap the microphone to start a voice conversation.";
+            }
+
+            if (voiceHint) {
+                voiceHint.textContent = "Ready when you are";
+            }
         }
-    });
+    };
+
+    if (document.readyState === "loading") {
+        window.addEventListener("DOMContentLoaded", initializeVoiceWindow);
+    } else {
+        initializeVoiceWindow();
+    }
 }
 
 
@@ -1813,7 +1828,7 @@ function openVoiceScreen() {
 
 
 function closeVoiceScreen() {
-    if (window.location.hash === "#voice" && window.opener) {
+    if (window.location.hash === "#voice") {
         window.close();
         return;
     }
