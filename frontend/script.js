@@ -119,11 +119,17 @@ const exportChatButton =
    Localhost → LAN → Render fallback
    ========================================================= */
 
-const BACKEND_URLS = [
-    "http://127.0.0.1:8000",
-    "http://192.168.0.103:8000",
-    "https://ismail-ai-api.onrender.com"
-];
+const BACKEND_URLS =
+    window.location.hostname ===
+        "ismail-ai-api.onrender.com"
+        ? [
+            "https://ismail-ai-api.onrender.com"
+        ]
+        : [
+            "http://127.0.0.1:8000",
+            "http://192.168.0.103:8000",
+            "https://ismail-ai-api.onrender.com"
+        ];
 
 let BACKEND_BASE_URL = BACKEND_URLS[0];
 
