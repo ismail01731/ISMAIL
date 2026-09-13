@@ -1,7 +1,3 @@
-fastapi
-uvicorn[standard]
-openai
-gunicorn
 pypdf
 python-docx
 openpyxl
@@ -11,4 +7,9 @@ google-auth
 requests
 pydantic
 groq
+fastapi
+uvicorn[standard]
+openai
+gunicorn
 numpy
+faster-whisper
