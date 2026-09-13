@@ -1873,6 +1873,27 @@ if (window.ISMAILVoiceAI) {
     ismailVoiceAI = new window.ISMAILVoiceAI();
 }
 
+
+if (ismailVoiceAI) {
+    ismailVoiceAI.onText(function (transcript) {
+
+        if (!transcript || !transcript.trim()) {
+            return;
+        }
+
+        messageInput.value = transcript.trim();
+
+        messageInput.style.height = "auto";
+        messageInput.style.height =
+            `${Math.min(messageInput.scrollHeight, 150)}px`;
+
+        sendMessage();
+    });
+}
+
+
+
+
 if (voiceMicButton) {
     voiceMicButton.addEventListener("click", async function () {
 
@@ -2534,132 +2555,7 @@ sendButton.addEventListener("click", sendMessage);
 
 
 /* =========================
-   ISMAIL AI VOICE SYSTEM
-========================= */
 
-let recognition = null;
-let isListening = false;
-
-const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
-
-if (voiceButton && SpeechRecognition) {
-
-    console.log("SpeechRecognition:", window.SpeechRecognition);
-    console.log("webkitSpeechRecognition:", window.webkitSpeechRecognition);
-
-    alert(
-        "SpeechRecognition = " +
-        (window.SpeechRecognition ? "YES" : "NO") +
-        "\nwebkitSpeechRecognition = " +
-        (window.webkitSpeechRecognition ? "YES" : "NO")
-    );
-
-    recognition = new SpeechRecognition();
-
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = "bn-BD";
-
-    recognition.onstart = function () {
-
-        isListening = true;
-
-        voiceButton.classList.add("recording");
-        voiceButton.textContent = "🔴";
-        voiceButton.title = "Listening...";
-    };
-
-    recognition.onresult = function (event) {
-
-        const transcript =
-            event.results[0][0].transcript;
-
-        messageInput.value = transcript;
-
-        messageInput.style.height = "auto";
-
-        messageInput.style.height =
-            `${Math.min(messageInput.scrollHeight, 150)}px`;
-
-        voiceButton.classList.remove("recording");
-        voiceButton.textContent = "🎙️";
-        voiceButton.title = "Voice";
-
-        isListening = false;
-
-        /*
-         * আপনার কথা বুঝে সরাসরি ISMAIL AI-তে পাঠাবে
-         */
-        sendMessage();
-    };
-
-    recognition.onerror = function (event) {
-
-        if (window.AndroidVoice) return;
-
-        console.error(
-            "Voice recognition error:",
-            event.error
-        );
-
-        isListening = false;
-
-        voiceButton.classList.remove("recording");
-
-        voiceButton.textContent = "🎙️";
-        voiceButton.title = "Voice";
-    };
-
-    recognition.onend = function () {
-
-        isListening = false;
-
-        voiceButton.classList.remove("recording");
-
-        voiceButton.textContent = "🎙️";
-        voiceButton.title = "Voice";
-    };
-
-voiceButton.addEventListener(
-    "click",
-    function () {
-
-        if (
-            window.AndroidVoice &&
-            window.AndroidVoice.startVoiceRecognition
-        ) {
-
-            window.AndroidVoice.startVoiceRecognition();
-            return;
-
-        }
-
-        try {
-
-            recognition.start();
-
-        } catch (error) {
-
-            console.error(error);
-
-        }
-
-    }
-);
-
-} else {
-
-    if (voiceButton) {
-
-        voiceButton.style.display = "none";
-    }
-
-}
-
-
-/* =========================
    ISMAIL AI SPEAK RESPONSE
    DISABLED
 ========================= */
