@@ -62,6 +62,21 @@
                     }
                 });
 
+                const micTrack =
+                    this.mediaStream.getAudioTracks()[0];
+
+                console.log(
+                    "ISMAIL AI MIC TRACK:",
+                    {
+                        enabled: micTrack?.enabled,
+                        muted: micTrack?.muted,
+                        readyState: micTrack?.readyState,
+                        settings: micTrack?.getSettings()
+                    }
+                );
+
+
+
             const wsBaseUrl =
                 window.location.hostname === "127.0.0.1" ||
                 window.location.hostname === "localhost"
