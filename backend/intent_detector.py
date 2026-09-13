@@ -30,6 +30,7 @@ class IntentDetector:
         "computer",
         "coding",
         "কি",
+        "কী",
         "কাকে বলে",
         "ব্যাখ্যা",
         "ব্যাখ্যা কর",
