@@ -11,7 +11,7 @@ from faster_whisper import WhisperModel
 class SpeechToText:
     def __init__(self):
         self.name = "ISMAIL AI Speech-to-Text"
-        self.model_name = "medium"
+        self.model_name = "tiny"
         self.last_error = ""
 
         try:
@@ -176,8 +176,7 @@ class SpeechToText:
                     wav_path,
                     language="bn",
                     task="transcribe",
-                    beam_size=5,
-                    best_of=5,
+                    beam_size=1,
                     temperature=0.0,
                     vad_filter=True,
                     vad_parameters={
