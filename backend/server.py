@@ -10,6 +10,8 @@ import csv
 import re
 import time
 import secrets
+import traceback
+
 
 from dotenv import load_dotenv
 
@@ -1598,7 +1600,9 @@ async def voice_websocket(websocket: WebSocket):
                 })
     except WebSocketDisconnect:
         return
-    except Exception:
+    except Exception as exc:
+        print("ISMAIL_VOICE_WS_ERROR:", repr(exc))
+        traceback.print_exc()
         try:
             await websocket.close(code=1011)
         except Exception:
