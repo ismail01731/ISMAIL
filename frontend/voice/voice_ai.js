@@ -8,6 +8,8 @@
         this.processorNode = null;
         this.textCallback = null;
 
+        this.voiceResponseCallback = null;
+
         this.sampleRate = 16000;
         this.channels = 1;
         this.audioStarted = false;
@@ -310,24 +312,28 @@
                 message.text
             );
 
+            return;
+        }
+
+        if (message.type === "voice_response") {
+            console.log(
+                "ISMAIL AI Voice: AI VOICE RESPONSE RECEIVED:",
+                message.text
+            );
+
             if (
                 message.final &&
                 message.text &&
-                this.textCallback
+                this.voiceResponseCallback
             ) {
-                console.log(
-                    "ISMAIL AI Voice: SENDING TRANSCRIPT TO CHAT:",
+                this.voiceResponseCallback(
                     message.text
                 );
-
-                this.textCallback(
-                    message.text
-                );
-
-                setTimeout(() => {
-                    this.cleanup();
-                }, 0);
             }
+
+            setTimeout(() => {
+                this.cleanup();
+            }, 0);
 
             return;
         }
@@ -630,6 +636,16 @@
             "function"
         ) {
             this.textCallback =
+                callback;
+        }
+    }
+
+    onVoiceResponse(callback) {
+        if (
+            typeof callback ===
+            "function"
+        ) {
+            this.voiceResponseCallback =
                 callback;
         }
     }

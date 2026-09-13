@@ -1884,19 +1884,33 @@ if (window.ISMAILVoiceAI) {
 
 
 if (ismailVoiceAI) {
-    ismailVoiceAI.onText(function (transcript) {
+    ismailVoiceAI.onVoiceResponse(function (response) {
 
-        if (!transcript || !transcript.trim()) {
+        if (!response || !response.trim()) {
             return;
         }
 
-        messageInput.value = transcript.trim();
+        console.log(
+            "ISMAIL AI Voice: SPEAKING RESPONSE:",
+            response
+        );
 
-        messageInput.style.height = "auto";
-        messageInput.style.height =
-            `${Math.min(messageInput.scrollHeight, 150)}px`;
+        if ("speechSynthesis" in window) {
+            window.speechSynthesis.cancel();
 
-        sendMessage(true);
+            const utterance =
+                new SpeechSynthesisUtterance(
+                    response.trim()
+                );
+
+            utterance.lang = "bn-BD";
+            utterance.rate = 1;
+            utterance.pitch = 1;
+
+            window.speechSynthesis.speak(
+                utterance
+            );
+        }
     });
 }
 

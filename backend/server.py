@@ -1584,6 +1584,20 @@ async def voice_websocket(websocket: WebSocket):
                         "text": transcript,
                         "final": True,
                     })
+
+                    voice_response = await asyncio.to_thread(
+                        ai_engine.generate,
+                        transcript,
+                        authenticated_user_id,
+                        None,
+                        chat_id,
+                    )
+
+                    await websocket.send_json({
+                        "type": "voice_response",
+                        "text": voice_response,
+                        "final": True,
+                    })
                 else:
                     await websocket.send_json({
                         "type": "transcript",
