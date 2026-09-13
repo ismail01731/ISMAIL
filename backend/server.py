@@ -19,6 +19,8 @@ from fastapi import (
     UploadFile,
     File,
     Depends,
+    WebSocket,
+    WebSocketDisconnect,
 )
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -1341,6 +1343,258 @@ async def chat(
 
 
 
+
+@app.websocket("/ws/voice")
+async def voice_websocket(websocket: WebSocket):
+    """
+    ISMAIL AI realtime voice transport.
+    Flow:
+        audio_start
+        -> continuous audio chunks
+        -> audio_end
+        -> STT
+    """
+    await websocket.accept()
+    try:
+        auth_message = await websocket.receive_json()
+        if not isinstance(auth_message, dict):
+            await websocket.close(code=1008)
+            return
+        if auth_message.get("type") != "auth":
+            await websocket.close(code=1008)
+            return
+        identity_token = auth_message.get("token", "")
+        try:
+            authenticated_user_id = _verify_identity(identity_token)
+        except (ValueError, TypeError):
+            await websocket.send_json({
+                "type": "error",
+                "code": "AUTH_FAILED",
+                "message": "Invalid or expired identity token.",
+            })
+            await websocket.close(code=1008)
+            return
+        chat_id = str(auth_message.get("chat_id", "")).strip()
+        if not chat_id:
+            await websocket.send_json({
+                "type": "error",
+                "code": "CHAT_ID_REQUIRED",
+                "message": "chat_id is required.",
+            })
+            await websocket.close(code=1008)
+            return
+        websocket._ismail_audio_buffer = bytearray()
+        websocket._ismail_sample_rate = 16000
+        websocket._ismail_voice_active = False
+        await websocket.send_json({
+            "type": "auth_ok",
+            "user_id": authenticated_user_id,
+            "chat_id": chat_id,
+            "status": "ready",
+        })
+        while True:
+            message = await websocket.receive_json()
+            if not isinstance(message, dict):
+                await websocket.send_json({
+                    "type": "error",
+                    "code": "INVALID_MESSAGE",
+                    "message": "Message must be a JSON object.",
+                })
+                continue
+            message_type = message.get("type")
+            if message_type == "ping":
+                await websocket.send_json({
+                    "type": "pong",
+                })
+            elif message_type == "close":
+                await websocket.close(code=1000)
+                return
+            elif message_type == "audio_start":
+                sample_rate = message.get("sample_rate", 16000)
+                channels = message.get("channels", 1)
+                if (
+                    not isinstance(sample_rate, int)
+                    or isinstance(sample_rate, bool)
+                    or sample_rate <= 0
+                ):
+                    await websocket.send_json({
+                        "type": "error",
+                        "code": "INVALID_SAMPLE_RATE",
+                        "message": "sample_rate must be a positive integer.",
+                    })
+                    continue
+                if (
+                    not isinstance(channels, int)
+                    or isinstance(channels, bool)
+                    or channels <= 0
+                ):
+                    await websocket.send_json({
+                        "type": "error",
+                        "code": "INVALID_CHANNELS",
+                        "message": "channels must be a positive integer.",
+                    })
+                    continue
+                websocket._ismail_audio_buffer = bytearray()
+                websocket._ismail_sample_rate = sample_rate
+                websocket._ismail_channels = channels
+                websocket._ismail_voice_active = True
+                await websocket.send_json({
+                    "type": "audio_started",
+                    "format": "pcm16",
+                    "sample_rate": sample_rate,
+                    "channels": channels,
+                    "status": "listening",
+                })
+            elif message_type == "audio":
+                audio_format = str(
+                    message.get("format", "")
+                ).strip().lower()
+                sample_rate = message.get(
+                    "sample_rate",
+                    getattr(websocket, "_ismail_sample_rate", 16000),
+                )
+                audio_data = message.get("data", "")
+                if not getattr(
+                    websocket,
+                    "_ismail_voice_active",
+                    False,
+                ):
+                    await websocket.send_json({
+                        "type": "error",
+                        "code": "AUDIO_SESSION_NOT_STARTED",
+                        "message": "Send audio_start before audio.",
+                    })
+                    continue
+                if audio_format not in {"pcm16", "audio/pcm"}:
+                    await websocket.send_json({
+                        "type": "error",
+                        "code": "UNSUPPORTED_AUDIO_FORMAT",
+                        "message": "Supported audio format: pcm16.",
+                    })
+                    continue
+                if (
+                    not isinstance(sample_rate, int)
+                    or isinstance(sample_rate, bool)
+                    or sample_rate <= 0
+                ):
+                    await websocket.send_json({
+                        "type": "error",
+                        "code": "INVALID_SAMPLE_RATE",
+                        "message": "sample_rate must be a positive integer.",
+                    })
+                    continue
+                if not isinstance(audio_data, str) or not audio_data:
+                    await websocket.send_json({
+                        "type": "error",
+                        "code": "INVALID_AUDIO_DATA",
+                        "message": "audio data must be a base64 string.",
+                    })
+                    continue
+                try:
+                    pcm_bytes = base64.b64decode(
+                        audio_data,
+                        validate=True,
+                    )
+                except (ValueError, TypeError):
+                    await websocket.send_json({
+                        "type": "error",
+                        "code": "INVALID_BASE64",
+                        "message": "audio data is not valid base64.",
+                    })
+                    continue
+                if not pcm_bytes:
+                    continue
+                if len(pcm_bytes) % 2 != 0:
+                    await websocket.send_json({
+                        "type": "error",
+                        "code": "INVALID_PCM16",
+                        "message": (
+                            "PCM16 audio must contain "
+                            "an even number of bytes."
+                        ),
+                    })
+                    continue
+                audio_buffer = getattr(
+                    websocket,
+                    "_ismail_audio_buffer",
+                    bytearray(),
+                )
+                audio_buffer.extend(pcm_bytes)
+                websocket._ismail_audio_buffer = audio_buffer
+                await websocket.send_json({
+                    "type": "audio_ack",
+                    "format": "pcm16",
+                    "sample_rate": sample_rate,
+                    "bytes_received": len(pcm_bytes),
+                    "buffered_bytes": len(audio_buffer),
+                    "samples_received": len(pcm_bytes) // 2,
+                    "status": "accepted",
+                })
+            elif message_type == "audio_end":
+                audio_buffer = getattr(
+                    websocket,
+                    "_ismail_audio_buffer",
+                    bytearray(),
+                )
+                sample_rate = getattr(
+                    websocket,
+                    "_ismail_sample_rate",
+                    16000,
+                )
+                channels = getattr(
+                    websocket,
+                    "_ismail_channels",
+                    1,
+                )
+                websocket._ismail_voice_active = False
+                pcm_bytes = bytes(audio_buffer)
+                if not pcm_bytes:
+                    await websocket.send_json({
+                        "type": "audio_committed",
+                        "bytes": 0,
+                        "samples": 0,
+                        "status": "empty",
+                    })
+                    continue
+                from backend.voice.speech_to_text import speech_to_text
+                transcript = speech_to_text.transcribe_pcm16(
+                    pcm_bytes,
+                    sample_rate=sample_rate,
+                    channels=channels,
+                )
+                await websocket.send_json({
+                    "type": "audio_committed",
+                    "bytes": len(pcm_bytes),
+                    "samples": len(pcm_bytes) // 2,
+                    "status": "committed",
+                })
+                if transcript:
+                    await websocket.send_json({
+                        "type": "transcript",
+                        "text": transcript,
+                        "final": True,
+                    })
+                else:
+                    await websocket.send_json({
+                        "type": "transcript",
+                        "text": "",
+                        "final": True,
+                        "status": "stt_provider_not_configured",
+                    })
+                websocket._ismail_audio_buffer = bytearray()
+            else:
+                await websocket.send_json({
+                    "type": "error",
+                    "code": "UNSUPPORTED_MESSAGE",
+                    "message": "Unsupported realtime message type.",
+                })
+    except WebSocketDisconnect:
+        return
+    except Exception:
+        try:
+            await websocket.close(code=1011)
+        except Exception:
+            pass
 
 if __name__ == "__main__":
     import uvicorn
