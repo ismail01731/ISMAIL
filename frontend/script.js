@@ -54,42 +54,48 @@ const voiceHint =
     document.getElementById("voiceHint");
 
 
-if (window.location.hash === "#voice") {
+if (
+    window.location.hash === "#voice" ||
+    window.name === "ISMAIL_AI_VOICE"
+) {
     document.documentElement.classList.add("voice-window-mode");
 
     const initializeVoiceWindow = () => {
-        if (voiceScreen) {
-            voiceScreen.removeAttribute("hidden");
-            voiceScreen.hidden = false;
-            voiceScreen.setAttribute("aria-hidden", "false");
+        if (!voiceScreen) return;
 
-            voiceScreen.style.setProperty("display", "flex", "important");
-            voiceScreen.style.setProperty("position", "fixed", "important");
-            voiceScreen.style.setProperty("inset", "0", "important");
-            voiceScreen.style.setProperty("width", "100vw", "important");
-            voiceScreen.style.setProperty("height", "100vh", "important");
-            voiceScreen.style.setProperty("background", "#000", "important");
-            voiceScreen.style.setProperty("color", "#fff", "important");
+        voiceScreen.removeAttribute("hidden");
+        voiceScreen.hidden = false;
+        voiceScreen.setAttribute("aria-hidden", "false");
 
-            document.body.classList.add("voice-screen-open");
+        voiceScreen.style.setProperty("display", "flex", "important");
+        voiceScreen.style.setProperty("position", "fixed", "important");
+        voiceScreen.style.setProperty("inset", "0", "important");
+        voiceScreen.style.setProperty("width", "100vw", "important");
+        voiceScreen.style.setProperty("height", "100vh", "important");
+        voiceScreen.style.setProperty("background", "#000", "important");
+        voiceScreen.style.setProperty("color", "#fff", "important");
 
-            if (voiceStatus) {
-                voiceStatus.textContent = "Voice";
-            }
+        document.body.classList.add("voice-screen-open");
 
-            if (voiceSubtitle) {
-                voiceSubtitle.textContent =
-                    "Tap the microphone to start a voice conversation.";
-            }
+        if (voiceStatus) {
+            voiceStatus.textContent = "Voice";
+        }
 
-            if (voiceHint) {
-                voiceHint.textContent = "Ready when you are";
-            }
+        if (voiceSubtitle) {
+            voiceSubtitle.textContent =
+                "Tap the microphone to start a voice conversation.";
+        }
+
+        if (voiceHint) {
+            voiceHint.textContent = "Ready when you are";
         }
     };
 
     if (document.readyState === "loading") {
-        window.addEventListener("DOMContentLoaded", initializeVoiceWindow);
+        window.addEventListener(
+            "DOMContentLoaded",
+            initializeVoiceWindow
+        );
     } else {
         initializeVoiceWindow();
     }
@@ -1861,22 +1867,45 @@ if (voiceCloseButton) {
     });
 }
 
+let ismailVoiceAI = null;
+
+if (window.ISMAILVoiceAI) {
+    ismailVoiceAI = new window.ISMAILVoiceAI();
+}
+
 
 if (voiceMicButton) {
     voiceMicButton.addEventListener("click", function () {
 
-        if (voiceStatus) {
-            voiceStatus.textContent = "Voice";
+        if (!ismailVoiceAI) {
+            if (voiceStatus) {
+                voiceStatus.textContent = "Unavailable";
+            }
+
+            if (voiceHint) {
+                voiceHint.textContent =
+                    "Voice engine is not available.";
+            }
+
+            return;
         }
 
-        if (voiceSubtitle) {
-            voiceSubtitle.textContent =
-                "Voice conversation will start here.";
-        }
+        const started = ismailVoiceAI.start();
 
-        if (voiceHint) {
-            voiceHint.textContent =
-                "Voice engine coming in Task 2";
+        if (started) {
+            if (voiceStatus) {
+                voiceStatus.textContent = "Listening";
+            }
+
+            if (voiceSubtitle) {
+                voiceSubtitle.textContent =
+                    "Speak now...";
+            }
+
+            if (voiceHint) {
+                voiceHint.textContent =
+                    "Microphone is active.";
+            }
         }
 
     });
