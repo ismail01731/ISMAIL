@@ -1170,6 +1170,7 @@ async function loadCentralChatHistory() {
 
         const data = await response.json();
 
+
         const history = Array.isArray(data.history)
             ? data.history
             : [];
@@ -1479,6 +1480,8 @@ function formatAIText(text, type) {
 
     return formatted;
 }
+
+
 
 
 
@@ -1893,7 +1896,7 @@ if (ismailVoiceAI) {
         messageInput.style.height =
             `${Math.min(messageInput.scrollHeight, 150)}px`;
 
-        sendMessage();
+        sendMessage(true);
     });
 }
 
@@ -2185,14 +2188,19 @@ if (removeAttachment) {
 
 
 
-async function sendMessage() {
+async function sendMessage(isVoiceMessage = false) {
+
+    console.log(
+        "ISMAIL AI: sendMessage START",
+        { isVoiceMessage }
+    );
 
     const message =
         messageInput.value.trim();
 
     if (
         (!message && !selectedFile) ||
-        sendButton.disabled
+        (sendButton.disabled && !isVoiceMessage)
     ) {
         return;
     }
@@ -2208,6 +2216,11 @@ async function sendMessage() {
 
         const session =
             await getSession();
+
+        console.log(
+            "ISMAIL AI: getSession OK",
+            { isVoiceMessage, user_id: session.user_id }
+        );
 
         let fileContext = "";
         let imageData = "";
@@ -2420,8 +2433,17 @@ if (selectedFile) {
         // SEND TO ISMAIL AI
         // =================================================
 
+
+        console.log(
+            "ISMAIL AI: SENDING AI REQUEST",
+            { isVoiceMessage, message }
+        );
+
+
         const response =
             await requestBackend(
+
+
                 API_URL,
                 {
                     method: "POST",
@@ -2457,6 +2479,14 @@ if (selectedFile) {
                         image_type:
                             imageType
                     })
+                }
+            );
+
+            console.log(
+                "ISMAIL AI: AI RESPONSE RECEIVED",
+                {
+                    ok: response.ok,
+                    status: response.status
                 }
             );
 

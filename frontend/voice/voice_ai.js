@@ -60,9 +60,15 @@
                     }
                 });
 
+            const wsBaseUrl =
+                window.location.hostname === "127.0.0.1" ||
+                window.location.hostname === "localhost"
+                    ? "http://127.0.0.1:8000"
+                    : window.location.origin;
+
             const wsUrl = new URL(
                 "/ws/voice",
-                window.location.origin
+                wsBaseUrl
             );
 
             wsUrl.protocol =
@@ -267,7 +273,11 @@
 
         this.audioStarted = false;
 
-        this.cleanup();
+        console.log(
+            "ISMAIL AI Voice: waiting for transcript..."
+        );
+
+        this.cleanup(false);
 
         console.log(
             "ISMAIL AI Voice: microphone stopped"
@@ -295,14 +305,28 @@
         );
 
         if (message.type === "transcript") {
+            console.log(
+                "ISMAIL AI Voice: TRANSCRIPT RECEIVED:",
+                message.text
+            );
+
             if (
                 message.final &&
                 message.text &&
                 this.textCallback
             ) {
+                console.log(
+                    "ISMAIL AI Voice: SENDING TRANSCRIPT TO CHAT:",
+                    message.text
+                );
+
                 this.textCallback(
                     message.text
                 );
+
+                setTimeout(() => {
+                    this.cleanup();
+                }, 0);
             }
 
             return;
@@ -610,7 +634,7 @@
         }
     }
 
-    cleanup() {
+    cleanup(closeWebSocket = true) {
         if (this.processorNode) {
             this.processorNode.onaudioprocess =
                 null;
@@ -650,25 +674,27 @@
             this.audioContext = null;
         }
 
-        if (
-            this.websocket &&
-            (
-                this.websocket.readyState ===
-                    WebSocket.OPEN ||
-                this.websocket.readyState ===
-                    WebSocket.CONNECTING
-            )
-        ) {
-            try {
-                this.websocket.close();
-            } catch (error) {}
+        if (closeWebSocket) {
+            if (
+                this.websocket &&
+                (
+                    this.websocket.readyState ===
+                        WebSocket.OPEN ||
+                    this.websocket.readyState ===
+                        WebSocket.CONNECTING
+                )
+            ) {
+                try {
+                    this.websocket.close();
+                } catch (error) {}
+            }
+
+            this.websocket = null;
         }
 
-        this.websocket = null;
         this.audioStarted = false;
     }
 }
 
 window.ISMAILVoiceAI =
     ISMAILVoiceAI;
-    
