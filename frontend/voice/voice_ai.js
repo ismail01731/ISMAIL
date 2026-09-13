@@ -198,6 +198,30 @@
                             0
                         );
 
+                        let sumSquares = 0;
+                        let peak = 0;
+
+                        for (let i = 0; i < input.length; i++) {
+                            const value = input[i];
+                            sumSquares += value * value;
+                            peak = Math.max(peak, Math.abs(value));
+                        }
+
+                        const rms = Math.sqrt(
+                            sumSquares / input.length
+                        );
+
+                        console.log(
+                            "ISMAIL AI MIC LEVEL:",
+                            {
+                                rms: rms,
+                                peak: peak,
+                                sampleRate: this.audioContext.sampleRate
+                            }
+                        );
+
+
+
                     const pcm16 =
                         this.convertToPCM16(
                             input,
