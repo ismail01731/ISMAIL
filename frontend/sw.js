@@ -1,4 +1,4 @@
-const CACHE_NAME = "ismail-ai-v5";
+const CACHE_NAME = "ismail-ai-v6";
 
 const APP_FILES = [
     "./",
@@ -60,7 +60,16 @@ self.addEventListener("fetch", (event) => {
                 return response;
             })
             .catch(() => {
-                return caches.match(event.request);
+                return caches.match(event.request)
+                    .then((cachedResponse) => {
+                        return cachedResponse || new Response(
+                            "Offline",
+                            {
+                                status: 503,
+                                statusText: "Service Unavailable"
+                            }
+                        );
+                    });
             })
     );
 });
