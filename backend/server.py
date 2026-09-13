@@ -1,5 +1,6 @@
 ﻿from typing import Optional
 import base64
+import asyncio
 import hashlib
 import hmac
 import json
@@ -1556,18 +1557,25 @@ async def voice_websocket(websocket: WebSocket):
                         "status": "empty",
                     })
                     continue
-                from backend.voice.speech_to_text import speech_to_text
-                transcript = speech_to_text.transcribe_pcm16(
-                    pcm_bytes,
-                    sample_rate=sample_rate,
-                    channels=channels,
-                )
+
+
                 await websocket.send_json({
                     "type": "audio_committed",
                     "bytes": len(pcm_bytes),
                     "samples": len(pcm_bytes) // 2,
                     "status": "committed",
                 })
+
+                from backend.voice.speech_to_text import speech_to_text
+
+                transcript = await asyncio.to_thread(
+                    speech_to_text.transcribe_pcm16,
+                    pcm_bytes,
+                    sample_rate,
+                    channels,
+                )
+
+
                 if transcript:
                     await websocket.send_json({
                         "type": "transcript",
