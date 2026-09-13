@@ -1587,6 +1587,7 @@ async def voice_websocket(websocket: WebSocket):
                     "status": "committed",
                 })
 
+
                 from backend.voice.speech_to_text import speech_to_text
 
                 transcript = await asyncio.to_thread(
@@ -1596,13 +1597,18 @@ async def voice_websocket(websocket: WebSocket):
                     channels,
                 )
 
-
                 if transcript:
                     await websocket.send_json({
                         "type": "transcript",
                         "text": transcript,
                         "final": True,
+                        "status": "ok",
                     })
+
+                    print(
+                        "ISMAIL_VOICE_TRANSCRIPT:",
+                        repr(transcript),
+                    )
 
                     voice_response = await asyncio.to_thread(
                         ai_engine.generate,
@@ -1612,24 +1618,31 @@ async def voice_websocket(websocket: WebSocket):
                         chat_id,
                     )
 
-                    # AI response may be JSON; extract the actual answer text.
-                    response_text = voice_response
+                    response_text = ""
 
                     try:
-                        parsed_voice_response = json.loads(voice_response)
-
-                        if isinstance(parsed_voice_response, dict):
+                        if isinstance(voice_response, dict):
                             response_text = (
-                                parsed_voice_response.get("response")
-                                or parsed_voice_response.get("message")
-                                or parsed_voice_response.get("text")
-                                or voice_response
+                                voice_response.get("text")
+                                or voice_response.get("response")
+                                or voice_response.get("answer")
+                                or ""
                             )
-
+                        else:
+                            response_text = str(
+                                voice_response or ""
+                            )
                     except (json.JSONDecodeError, TypeError):
-                        pass
+                        response_text = ""
 
-                    response_text = str(response_text).strip()
+                    response_text = str(
+                        response_text
+                    ).strip()
+
+                    print(
+                        "ISMAIL_VOICE_RESPONSE:",
+                        repr(response_text),
+                    )
 
                     await websocket.send_json({
                         "type": "voice_response",
@@ -1638,12 +1651,28 @@ async def voice_websocket(websocket: WebSocket):
                     })
 
                 else:
+                    stt_error = getattr(
+                        speech_to_text,
+                        "last_error",
+                        "",
+                    )
+
+                    print(
+                        "ISMAIL_VOICE_STT_FAILED:",
+                        repr(stt_error),
+                    )
+
                     await websocket.send_json({
                         "type": "transcript",
                         "text": "",
                         "final": True,
-                        "status": "stt_provider_not_configured",
+                        "status": "stt_failed",
+                        "error": stt_error or "UNKNOWN_STT_ERROR",
                     })
+
+                    websocket._ismail_audio_buffer = bytearray()
+
+                
                 websocket._ismail_audio_buffer = bytearray()
             else:
                 await websocket.send_json({
