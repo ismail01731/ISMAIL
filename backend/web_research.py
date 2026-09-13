@@ -12,6 +12,13 @@ from dataclasses import dataclass
 from html.parser import HTMLParser
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
+
+from .live_intelligence.news_filter import (
+    is_bad_broad_current_event_result,
+    is_relevant_broad_current_event,
+)
+
+
 @dataclass
 class WebEvidence:
     title: str
@@ -170,8 +177,10 @@ def _verify_evidence_agreement(
         current_domain = current["domain"]
 
 
+        # Provider-level "verified" does not mean factual verification.
+        # Re-run the normal verification logic.
         if item.verification_status == "verified":
-            continue
+            item.verification_status = "unverified"
 
         # A high-reliability source can remain usable even when
         # independent corroboration is unavailable.
@@ -683,6 +692,80 @@ class WebResearch:
 
 
 
+    def _is_bad_broad_current_event_result(
+        self,
+        title: str,
+        url: str,
+        snippet: str,
+        broad_current_events: bool,
+    ) -> bool:
+        if not broad_current_events:
+            return False
+
+        text = f"{title or ''} {url or ''} {snippet or ''}".lower()
+
+        patterns = [
+            # Historical / anniversary noise
+            r"\b9\s*[/\-·]\s*11\b",
+            r"\bseptember\s+11\b",
+            r"\bsept(?:ember)?\s+11\b",
+            r"\b11\s+september\b",
+            r"৯/১১",
+            r"বার্ষিকী",
+            r"anniversary",
+            r"remembrance",
+            r"remembering",
+            r"周年纪念",
+
+            # Generic news homepages
+            r"\bnews homepage\b",
+            r"\bnews home\b",
+            r"\btop headlines\b",
+            r"\bheadlines\b",
+            r"\blatest news\b",
+            r"\bworld news\b",
+            r"\binternational news\b",
+            r"\blive updates\b",
+            r"\b24/7 news\b",
+            r"\bnews 24/7\b",
+            r"即时新闻",
+            r"国际要闻",
+            r"新华国际",
+
+            # Social/video
+            r"youtube\.com",
+            r"youtu\.be",
+            r"facebook\.com",
+            r"instagram\.com",
+            r"tiktok\.com",
+
+            # Search/question/game junk
+            r"microsoft community",
+            r"answers\.microsoft\.com",
+            r"court records",
+            r"courtcasefinder",
+            r"ecourt",
+            r"records search",
+            r"age of empires",
+            r"\bwalkthrough\b",
+            r"\bgame guide\b",
+            r"\bcheat\b",
+            r"\bcheats\b",
+            r"\bwhat is pi\b",
+            r"\bpi equals\b",
+            r"π等于多少",
+            r"yandex",
+            r"百度知道",
+            r"\bbaidu\b",
+        ]
+
+        return any(
+            re.search(pattern, text, re.IGNORECASE)
+            for pattern in patterns
+        )
+
+
+
 
     def search(self, question: str, max_sources: int = 5):
         """Search the web using multiple providers with fallbacks."""
@@ -741,8 +824,7 @@ class WebResearch:
         if broad_current_events and news_query:
             today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
             search_question = (
-                f"latest breaking world news current events today "
-                f"{today} -9/11 -September 11 anniversary"
+                f"latest breaking world events today {today}"
             )
 
 
@@ -975,9 +1057,22 @@ class WebResearch:
                         publisher_name = self._repair_mojibake(
                             self._strip_html(html.unescape(source_match.group(2)))
                         ).strip()
+
+
+                    if broad_current_events and not is_relevant_broad_current_event(
+                        title,
+                        article_url,
+                        publisher_name,
+                    ):
+                        print("GOOGLE NEWS FILTERED IRRELEVANT:", title)
+                        continue
+
+
                     normalized = self._normalize_url(article_url)
                     if not normalized or normalized in seen_urls:
                         continue
+
+
                     reliability_score, reliability_level = _get_source_reliability(
                         publisher_url or normalized
                     )
@@ -991,7 +1086,7 @@ class WebResearch:
                             reliability_score=reliability_score,
                             reliability_level=reliability_level,
                             source_url=publisher_url,
-                            verification_status="verified",
+                            verification_status="unverified",
                         )
                     )
                     seen_urls.add(normalized)
@@ -1147,6 +1242,16 @@ class WebResearch:
                                     continue
 
 
+                            if is_bad_broad_current_event_result(
+                                title,
+                                url,
+                                snippet,
+                                broad_current_events,
+                            ):
+                                print("DDG FILTERED BROAD RESULT:", title)
+                                continue
+
+
 
 
                     normalized = self._normalize_url(url)
@@ -1237,7 +1342,63 @@ class WebResearch:
 
 
             for title, url, snippet in bing_results:
+
+                if is_bad_broad_current_event_result(
+                    title,
+                    url,
+                    snippet,
+                    broad_current_events,
+                ):
+                    print("BING FILTERED BROAD RESULT:", title)
+                    continue
+
+
                 title_lower = (title or "").lower()
+
+                if broad_current_events:
+                    combined_text = (
+                        f"{title_lower} "
+                        f"{snippet_lower} "
+                        f"{url_lower}"
+                    )
+
+                    broad_event_exclude_patterns = [
+                        # Historical / anniversary coverage
+                        r"\b9\s*[/\-]\s*11\b",
+                        r"\bseptember\s+11\b",
+                        r"\bsept(?:ember)?\s+11\b",
+                        r"\b11\s+september\b",
+                        r"9/11",
+                        r"৯/১১",
+                        r"বার্ষিকী",
+                        r"anniversary",
+                        r"remembering",
+                        r"remembrance",
+
+                        # Generic news homepages
+                        r"\bglobal perspective\b",
+                        r"\bhuman stories\b",
+                        r"\blatest south african news\b",
+                        r"\blatest news\b",
+                        r"\bworld news\b",
+                        r"\binternational news\b",
+                        r"\bnews homepage\b",
+                        r"\bnews home\b",
+                        r"\bheadlines\b",
+                    ]
+
+                    if any(
+                        re.search(
+                            pattern,
+                            combined_text,
+                            re.IGNORECASE,
+                        )
+                        for pattern in broad_event_exclude_patterns
+                    ):
+                        print("BING FILTERED BROAD RESULT:", title)
+                        continue
+
+
                 snippet_lower = (snippet or "").lower()
                 url_lower = (url or "").lower()
 
@@ -1502,6 +1663,31 @@ class WebResearch:
             if weather_evidence is not None:
                 add_evidence(weather_evidence)
 
+
+            # -----------------------------------------------------
+            # Broad current-events query detection
+            # -----------------------------------------------------
+            broad_current_events = bool(
+                re.search(
+                    r"বর্তমানে কী কী ঘটনা ঘটছে|"
+                    r"বর্তমানে কি কি ঘটনা ঘটছে|"
+                    r"এখন কী কী ঘটনা ঘটছে|"
+                    r"এখন কি কি ঘটনা ঘটছে|"
+                    r"আজ কী কী ঘটনা ঘটছে|"
+                    r"আজ কি কি ঘটনা ঘটছে|"
+                    r"কী কী ঘটনা ঘটছে|"
+                    r"কি কি ঘটনা ঘটছে|"
+                    r"what is happening now|"
+                    r"what's happening now|"
+                    r"current events|"
+                    r"what is happening today",
+                    part,
+                    re.IGNORECASE,
+                )
+            )
+
+            
+
             # -----------------------------------------------------
             # 3. Detect whether this individual part needs
             #    normal web/news search.
@@ -1583,6 +1769,14 @@ class WebResearch:
                 # Fetch and clean normal search results.
                 # -------------------------------------------------
                 for item in results:
+
+
+                    # Broad current-event results must reach the
+                    # verification stage before being accepted/rejected.
+                    # Do not discard fresh search evidence merely because
+                    # its initial status is "unverified".
+
+
                     normalized_url = self._normalize_url(
                         getattr(item, "url", "") or ""
                     )

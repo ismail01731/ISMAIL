@@ -1,26 +1,105 @@
 ﻿import io
 import os
+import wave
+import tempfile
 from typing import Optional
 
-from groq import Groq
+import numpy as np
+from faster_whisper import WhisperModel
 
 
 class SpeechToText:
     def __init__(self):
         self.name = "ISMAIL AI Speech-to-Text"
-        self.model = os.getenv(
-            "ISMAIL_STT_MODEL",
-            "whisper-large-v3-turbo",
-        )
+        self.model_name = "medium"
         self.last_error = ""
+
+        try:
+            self.model = WhisperModel(
+                self.model_name,
+                device="cpu",
+                compute_type="int8",
+            )
+        except Exception as exc:
+            self.model = None
+            self.last_error = f"{type(exc).__name__}: {exc}"
+            print("ISMAIL_STT_INIT_ERROR:", self.last_error)
 
     def normalize_text(self, text: str) -> str:
         if not isinstance(text, str):
             return ""
+
         return " ".join(text.strip().split())
 
     def process_text(self, text: str) -> str:
         return self.normalize_text(text)
+
+    def clean_audio(
+        self,
+        pcm_bytes: bytes,
+        sample_rate: int,
+    ) -> bytes:
+
+        audio = np.frombuffer(
+            pcm_bytes,
+            dtype=np.int16,
+        ).astype(np.float32)
+
+        if len(audio) == 0:
+            return pcm_bytes
+
+        # Remove DC offset
+        audio = audio - np.mean(audio)
+
+        # Find actual voice/audio level
+        peak = float(np.max(np.abs(audio)))
+
+        if peak <= 1:
+            return pcm_bytes
+
+        # Normalize microphone volume
+        target_peak = 16000.0
+        gain = target_peak / peak
+
+        # Prevent excessive amplification
+        gain = min(gain, 12.0)
+
+        audio *= gain
+
+        # Soft clipping protection
+        audio = np.clip(
+            audio,
+            -32768,
+            32767,
+        )
+
+        # Remove very quiet ending/beginning
+        threshold = max(
+            250.0,
+            float(np.max(np.abs(audio))) * 0.015,
+        )
+
+        active = np.where(
+            np.abs(audio) >= threshold
+        )[0]
+
+        if len(active) > 0:
+
+            padding = int(sample_rate * 0.20)
+
+            start = max(
+                0,
+                int(active[0]) - padding,
+            )
+
+            end = min(
+                len(audio),
+                int(active[-1]) + padding,
+            )
+
+            audio = audio[start:end]
+
+        return audio.astype(np.int16).tobytes()
 
     def transcribe_pcm16(
         self,
@@ -31,7 +110,10 @@ class SpeechToText:
 
         self.last_error = ""
 
-        if not isinstance(pcm_bytes, (bytes, bytearray)):
+        if not isinstance(
+            pcm_bytes,
+            (bytes, bytearray),
+        ):
             self.last_error = "INVALID_PCM_BYTES"
             return None
 
@@ -51,57 +133,100 @@ class SpeechToText:
             self.last_error = "INVALID_PCM16"
             return None
 
-        api_key = os.getenv("GROQ_API_KEY")
-
-        if not api_key:
-            self.last_error = "GROQ_API_KEY_NOT_SET"
+        if self.model is None:
+            self.last_error = "WHISPER_MODEL_NOT_READY"
             return None
 
         try:
-            client = Groq(api_key=api_key)
 
-            data_size = len(pcm_bytes)
-            byte_rate = sample_rate * channels * 2
-            block_align = channels * 2
+            # Clean and normalize microphone audio
+            pcm_bytes = self.clean_audio(
+                pcm_bytes,
+                sample_rate,
+            )
 
             wav_buffer = io.BytesIO()
 
-            wav_buffer.write(b"RIFF")
-            wav_buffer.write(
-                (36 + data_size).to_bytes(4, "little")
-            )
-            wav_buffer.write(b"WAVE")
+            with wave.open(
+                wav_buffer,
+                "wb",
+            ) as wav_file:
 
-            wav_buffer.write(b"fmt ")
-            wav_buffer.write((16).to_bytes(4, "little"))
-            wav_buffer.write((1).to_bytes(2, "little"))
-            wav_buffer.write(channels.to_bytes(2, "little"))
-            wav_buffer.write(sample_rate.to_bytes(4, "little"))
-            wav_buffer.write(byte_rate.to_bytes(4, "little"))
-            wav_buffer.write(block_align.to_bytes(2, "little"))
-            wav_buffer.write((16).to_bytes(2, "little"))
-
-            wav_buffer.write(b"data")
-            wav_buffer.write(
-                data_size.to_bytes(4, "little")
-            )
-            wav_buffer.write(pcm_bytes)
+                wav_file.setnchannels(channels)
+                wav_file.setsampwidth(2)
+                wav_file.setframerate(sample_rate)
+                wav_file.writeframes(pcm_bytes)
 
             wav_buffer.seek(0)
-            wav_buffer.name = "voice.wav"
 
-            result = client.audio.transcriptions.create(
-                file=("voice.wav", wav_buffer, "audio/wav"),
-                model=self.model,
-            )
+            with tempfile.NamedTemporaryFile(
+                suffix=".wav",
+                delete=False,
+            ) as temp_file:
 
-            text = getattr(result, "text", "")
+                temp_file.write(
+                    wav_buffer.getvalue()
+                )
 
-            return self.normalize_text(text)
+                wav_path = temp_file.name
+
+            try:
+
+                segments, info = self.model.transcribe(
+                    wav_path,
+                    language="bn",
+                    task="transcribe",
+                    beam_size=5,
+                    best_of=5,
+                    temperature=0.0,
+                    vad_filter=True,
+                    vad_parameters={
+                        "min_silence_duration_ms": 300,
+                    },
+                    condition_on_previous_text=False,
+                )
+
+                parts = []
+
+                for segment in segments:
+
+                    text = self.normalize_text(
+                        segment.text
+                    )
+
+                    if text:
+                        parts.append(text)
+
+                final_text = self.normalize_text(
+                    " ".join(parts)
+                )
+
+                if not final_text:
+                    self.last_error = (
+                        "EMPTY_TRANSCRIPTION"
+                    )
+                    return None
+
+                return final_text
+
+            finally:
+
+                try:
+                    os.remove(wav_path)
+                except Exception:
+                    pass
 
         except Exception as exc:
-            self.last_error = f"{type(exc).__name__}: {exc}"
-            print("ISMAIL_STT_ERROR:", self.last_error)
+
+            self.last_error = (
+                f"{type(exc).__name__}: {exc}"
+            )
+
+            print(
+                "ISMAIL_STT_ERROR:",
+                self.last_error,
+            )
+
             return None
 
 

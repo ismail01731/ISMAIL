@@ -14,6 +14,11 @@ load_dotenv("config/.env")
 from typing import List
 from backend.web_research import WebResearch, WebEvidence
 from backend.creator_identity import get_identity_answer
+from backend.llm.config import load_llm_config
+from backend.llm.router import LLMRouter
+from backend.medical.medical_response import MedicalResponse
+from backend.vision.vision_ai import VisionAI
+from backend.vision.vision_provider import OllamaVisionProvider
 
 
 
@@ -141,14 +146,21 @@ class AIEngine:
     def __init__(self) -> None:
         self.knowledge_base = KnowledgeBase()
         self.web_research = WebResearch()
-        self.openai_provider = OpenAIProvider()
-        self.intent_detector = IntentDetector()        
-        self.provider = os.getenv("AI_PROVIDER", "").strip().lower()
-        self.model = os.getenv("AI_MODEL", "").strip() or self.openai_provider.model
-        self.ollama_url = os.getenv(
-            "OLLAMA_URL",
-            "http://127.0.0.1:11434/api/generate"
-        ).strip()
+        self.intent_detector = IntentDetector()
+        self.llm_config = load_llm_config()
+        self.llm_router = LLMRouter.create(self.llm_config)
+        self.openai_provider = OpenAIProvider(self.llm_config)
+        self.provider = self.llm_config.provider
+        self.model = self.llm_config.model
+        self.ollama_url = self.llm_config.ollama_url
+        self.medical_response = MedicalResponse()
+
+
+        self.vision_ai = VisionAI()
+        self.vision_provider = OllamaVisionProvider(
+            model=os.getenv("VISION_MODEL", "qwen2.5vl:7b"),
+            ollama_url=self.ollama_url.replace("/api/generate", ""),
+        )
 
 
 
@@ -1202,6 +1214,21 @@ class AIEngine:
 
 
 
+    def _stream_llm_response(self, prompt: str):
+        """Stream final LLM text chunks through the active LLM router."""
+        if not isinstance(prompt, str) or not prompt.strip():
+            raise ValueError("Prompt cannot be empty.")
+
+        if self.provider in ("openai", "openrouter", "groq", "ollama"):
+            yield from self.llm_router.generate_stream(prompt)
+            return
+
+        yield "ISMAIL AI engine provider is not configured."
+
+
+
+
+
 
     def generate(
         self,
@@ -1209,13 +1236,38 @@ class AIEngine:
         user_id: str = "",
         file_context: str = "",
         chat_id: str = "",
+        image_bytes: bytes | None = None,
+        image_type: str = "",
     ) -> str:
 
         
         """Generate a final answer using knowledge, live evidence, or general AI."""
         message = message.strip()
+
+        if image_bytes is not None:
+            prompt = self.vision_ai.prepare_for_analysis(
+                image_bytes,
+                image_type,
+                message,
+            )
+            return self.vision_provider.analyze(
+                image_bytes,
+                prompt,
+            )
+
+
         if not message:
             raise ValueError("Message cannot be empty.")
+
+        # ================================
+        # MEDICAL SAFETY ROUTER
+        # ================================
+
+        medical_assessment = self.medical_response.assess(message)
+
+        if medical_assessment.is_medical:
+            if medical_assessment.urgency == "emergency":
+                return medical_assessment.response
 
 
         # =========================================================
@@ -1266,6 +1318,21 @@ class AIEngine:
 
         question_info = self.understand_question(message)
         route = question_info["route"]
+
+        # ================================
+        # ROUTINE MEDICAL LLM ROUTING
+        # ================================
+
+        medical_assessment = self.medical_response.assess(message)
+
+        if medical_assessment.is_medical:
+            if medical_assessment.urgency == "emergency":
+                return medical_assessment.response
+
+            return self.medical_response.get_response(message)
+
+            medical_prompt = self.medical_response.build_llm_prompt(message)
+            return self.llm_router.generate(medical_prompt)
 
         # Stable knowledge: use a non-expired stored answer first.
         if route == "knowledge" and not file_context:
@@ -1412,7 +1479,7 @@ class AIEngine:
         )
 
         if self.provider in ("openai", "openrouter", "groq"):
-            return self.openai_provider.generate(prompt)
+            return self.llm_router.generate(prompt)
 
         
 
@@ -1426,7 +1493,7 @@ class AIEngine:
                     evidence,
                 )
 
-            return self._generate_with_ollama(prompt)
+            return self.llm_router.generate(prompt)
 
         return "ISMAIL AI engine provider is not configured."
 

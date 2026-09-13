@@ -51,6 +51,7 @@ from backend.ai_engine import AIEngine
 from backend.input_security import InputSecurity
 from backend.web_research import WebResearch
 from backend.knowledge_base import KnowledgeBase
+from backend.voice.speech_to_text import speech_to_text
 
 
 
@@ -797,6 +798,8 @@ class ChatRequest(BaseModel):
     user_id: str = Field("", max_length=200, pattern=r"^[A-Za-z0-9._:-]*$")
     chat_id: str = Field("", max_length=200)
     file_context: str = Field("", max_length=65000)
+    image_data: str = Field("", max_length=14000000)
+    image_type: str = Field("", max_length=100)
 
 
 class ChatHistoryMessage(BaseModel):
@@ -1303,11 +1306,27 @@ async def chat(
         )
 
 
+        image_bytes = None
+
+        if request.image_data:
+            try:
+                image_bytes = base64.b64decode(
+                    request.image_data,
+                    validate=True,
+                )
+            except Exception:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid image data.",
+                )
+
         response = ai_engine.generate(
             request.message,
             authenticated_user_id,
             request.file_context,
             request.chat_id,
+            image_bytes=image_bytes,
+            image_type=request.image_type,
         )
 
         action = None
@@ -1593,11 +1612,31 @@ async def voice_websocket(websocket: WebSocket):
                         chat_id,
                     )
 
+                    # AI response may be JSON; extract the actual answer text.
+                    response_text = voice_response
+
+                    try:
+                        parsed_voice_response = json.loads(voice_response)
+
+                        if isinstance(parsed_voice_response, dict):
+                            response_text = (
+                                parsed_voice_response.get("response")
+                                or parsed_voice_response.get("message")
+                                or parsed_voice_response.get("text")
+                                or voice_response
+                            )
+
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
+                    response_text = str(response_text).strip()
+
                     await websocket.send_json({
                         "type": "voice_response",
-                        "text": voice_response,
+                        "text": response_text,
                         "final": True,
                     })
+
                 else:
                     await websocket.send_json({
                         "type": "transcript",
