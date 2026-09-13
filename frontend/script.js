@@ -1873,9 +1873,8 @@ if (window.ISMAILVoiceAI) {
     ismailVoiceAI = new window.ISMAILVoiceAI();
 }
 
-
 if (voiceMicButton) {
-    voiceMicButton.addEventListener("click", function () {
+    voiceMicButton.addEventListener("click", async function () {
 
         if (!ismailVoiceAI) {
             if (voiceStatus) {
@@ -1890,7 +1889,27 @@ if (voiceMicButton) {
             return;
         }
 
-        const started = ismailVoiceAI.start();
+        if (ismailVoiceAI.isListening) {
+            ismailVoiceAI.stop();
+
+            if (voiceStatus) {
+                voiceStatus.textContent = "Ready";
+            }
+
+            if (voiceSubtitle) {
+                voiceSubtitle.textContent =
+                    "Tap the microphone to speak.";
+            }
+
+            if (voiceHint) {
+                voiceHint.textContent =
+                    "Microphone is off.";
+            }
+
+            return;
+        }
+
+        const started = await ismailVoiceAI.start();
 
         if (started) {
             if (voiceStatus) {
@@ -1910,7 +1929,6 @@ if (voiceMicButton) {
 
     });
 }
-
 
 document.addEventListener("keydown", function (event) {
 
