@@ -1,0 +1,169 @@
+﻿from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+from backend.knowledge_base import KnowledgeBase
+from backend.medical.medical_response import MedicalResponse
+from backend.programming.programming_intelligence import ProgrammingIntelligence
+from backend.vision.vision_ai import VisionAI
+from backend.web_research import WebResearch
+
+
+@dataclass(frozen=True)
+class CapabilityInfo:
+    name: str
+    description: str
+    implementation: Any
+    domains: tuple[str, ...] = ()
+    actions: tuple[str, ...] = ()
+
+
+class CapabilityRegistry:
+    """
+    Central registry for ISMAIL AI capabilities.
+
+    The registry exposes existing capability implementations.
+    It does not execute them or replace their existing orchestration.
+    """
+
+    def __init__(self) -> None:
+        self._capabilities: dict[str, CapabilityInfo] = {}
+        self._register_builtin_capabilities()
+
+    def _register_builtin_capabilities(self) -> None:
+        self.register(
+            CapabilityInfo(
+                name="programming",
+                description="Programming analysis, generation, debugging, execution, testing, and documentation.",
+                implementation=ProgrammingIntelligence,
+                domains=(
+                    "programming",
+                    "software",
+                    "web",
+                    "development",
+                ),
+                actions=(
+                    "analyze_code",
+                    "analyze_project",
+                    "generate_code",
+                    "debug_code",
+                    "execute",
+                    "run_tests",
+                    "check_version",
+                    "documentation",
+                ),
+            )
+        )
+
+        self.register(
+            CapabilityInfo(
+                name="medical",
+                description="Safety-focused general medical information and assessment.",
+                implementation=MedicalResponse,
+                domains=("medical", "health"),
+                actions=(
+                    "assess",
+                    "get_response",
+                    "build_llm_prompt",
+                ),
+            )
+        )
+
+        self.register(
+            CapabilityInfo(
+                name="research",
+                description="Web research and evidence gathering for information that may require external sources.",
+                implementation=WebResearch,
+                domains=(
+                    "research",
+                    "current_information",
+                    "live_information",
+                ),
+                actions=(
+                    "search",
+                    "research",
+                ),
+            )
+        )
+
+        self.register(
+            CapabilityInfo(
+                name="knowledge",
+                description="Persistent knowledge and stored information access.",
+                implementation=KnowledgeBase,
+                domains=(
+                    "knowledge",
+                    "memory",
+                ),
+                actions=(
+                    "save",
+                    "lookup",
+                ),
+            )
+        )
+
+        self.register(
+            CapabilityInfo(
+                name="vision",
+                description="Image and visual-content understanding.",
+                implementation=VisionAI,
+                domains=(
+                    "vision",
+                    "image",
+                    "visual",
+                ),
+                actions=("assess",),
+            )
+        )
+
+    def register_existing(
+            self,
+            *,
+            name: str,
+            description: str,
+            implementation: Any,
+            domains: tuple[str, ...] = (),
+            actions: tuple[str, ...] = (),
+        ) -> None:
+            self.register(
+                CapabilityInfo(
+                    name=name,
+                    description=description,
+                    implementation=implementation,
+                    domains=domains,
+                    actions=actions,
+                )
+            )
+
+
+
+    def register(self, capability: CapabilityInfo) -> None:
+        key = capability.name.strip().lower()
+
+        if not key:
+            raise ValueError("Capability name cannot be empty.")
+
+        if key in self._capabilities:
+            raise ValueError(f"Capability already registered: {key}")
+
+        self._capabilities[key] = capability
+
+    def get(self, name: str) -> CapabilityInfo | None:
+        if not isinstance(name, str):
+            return None
+
+        return self._capabilities.get(name.strip().lower())
+
+    def has(self, name: str) -> bool:
+        return self.get(name) is not None
+
+    def all(self) -> list[CapabilityInfo]:
+        return list(self._capabilities.values())
+
+    def names(self) -> list[str]:
+        return list(self._capabilities.keys())
+
+
+capability_registry = CapabilityRegistry()
+

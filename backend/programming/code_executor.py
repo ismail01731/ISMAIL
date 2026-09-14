@@ -139,10 +139,11 @@ class CodeExecutor:
         command: list[str],
     ) -> bool:
         for part in command:
-            normalized = Path(part).name.lower()
-            if normalized in self.BLOCKED_COMMANDS:
+            raw = str(part).strip().lower()
+            normalized = Path(raw).name.lower()
+            if raw in self.BLOCKED_FLAGS:
                 return True
-            if normalized in self.BLOCKED_FLAGS:
+            if normalized in self.BLOCKED_COMMANDS:
                 return True
         return False
     def _normalize_timeout(

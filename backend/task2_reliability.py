@@ -71,6 +71,7 @@ class Task2ReliabilityLayer:
             if getattr(item, "verification_status", "") in (
                 "corroborated",
                 "verified",
+                "high_confidence_source",
             )
         ]
         if not corroborated:

@@ -122,6 +122,15 @@ class IntentDetector:
         r"\b(analyze|analyse|review|inspect)\b.*\b(code|script|project|repository|repo)\b",
         r"\b(refactor|optimize|improve)\b.*\b(code|function|class|project|script)\b",
         r"(কোড লিখে|কোড লেখ|কোড বানাও|কোড বানিয়ে|কোড তৈরি|কোড জেনারেট)",
+        r"(কোড কীভাবে লিখব|কোড কিভাবে লিখব|কোড কীভাবে লিখবো|কোড কিভাবে লিখবো)",
+        r"(কোড কীভাবে বানাবো|কোড কিভাবে বানাবো|কোড কীভাবে বানাব|কোড কিভাবে বানাব)",
+        r"(কোড কীভাবে তৈরি করব|কোড কিভাবে তৈরি করব|কোড কীভাবে তৈরি করবো|কোড কিভাবে তৈরি করবো)",
+        r"(python|javascript|typescript|java|c\+\+|c#|go|rust|php|ruby|kotlin|swift|dart)\s+code\s+(কীভাবে|কিভাবে)\s+(লিখব|লিখবো|বানাব|বানাবো|তৈরি করব|তৈরি করবো)",
+        r"(python|javascript|typescript|java|c\+\+|c#|go|rust|php|ruby|kotlin|swift|dart)\s+(program|script|প্রোগ্রাম|স্ক্রিপ্ট)\s+(কীভাবে|কিভাবে)\s+(লিখব|লিখবো|বানাব|বানাবো|তৈরি করব|তৈরি করবো)",
+        r"(python|javascript|typescript|java|c\+\+|c#|go|rust|php|ruby|kotlin|swift|dart)\s+code\s+(লিখে দাও|লিখে দিন|বানিয়ে দাও|তৈরি করে দাও)",
+        r"(python|javascript|typescript|java|c\+\+|c#|go|rust|php|ruby|kotlin|swift|dart)\s+code.*(error|bug|exception|traceback).*(ঠিক করো|ঠিক করুন|ফিক্স করো|সমাধান করো|ডিবাগ করো)",
+        r"(python|javascript|typescript|java|c\+\+|c#|go|rust|php|ruby|kotlin|swift|dart)\s+code.*(analyze|analyse|বিশ্লেষণ|অ্যানালাইস).*(করো|করুন)?",
+        r"(python|javascript|typescript|java|c\+\+|c#|go|rust|php|ruby|kotlin|swift|dart)\s+.*(calculator|program|app|script|tool).*(বানিয়ে দাও|তৈরি করে দাও|লিখে দাও|বানাও|তৈরি করো)",
         r"(কোড ঠিক|কোড ফিক্স|কোড ডিবাগ|বাগ ঠিক|এরর ঠিক|এরর সমাধান|ডিবাগ কর)",
         r"(কোড চালাও|কোড রান|কোড কম্পাইল|কোড টেস্ট|কোড পরীক্ষা)",
         r"(কোড বিশ্লেষণ|কোড অ্যানালাইস|প্রজেক্ট বিশ্লেষণ|প্রজেক্ট অ্যানালাইস)",
@@ -133,6 +142,7 @@ class IntentDetector:
         r"\b(?:python|javascript|typescript|java|node(?:\.js)?|go|rust|php|ruby|kotlin|swift|dart|c\+\+|c#)\s+v?\d+(?:\.\d+){1,2}\s+(?:compatible with|works with|compatible with version)\s+(?:python|javascript|typescript|java|node(?:\.js)?|go|rust|php|ruby|kotlin|swift|dart|c\+\+|c#)?\s*v?\d+(?:\.\d+){1,2}\b",
         r"\b(?:is|are)\s+(?:python|javascript|typescript|java|node(?:\.js)?|go|rust|php|ruby|kotlin|swift|dart|c\+\+|c#)\s+v?\d+(?:\.\d+){1,2}\s+(?:compatible with|works with)\s+(?:python|javascript|typescript|java|node(?:\.js)?|go|rust|php|ruby|kotlin|swift|dart|c\+\+|c#)\s+v?\d+(?:\.\d+){1,2}\b",
         r"\b(version compatibility|compatible version|version check|compatibility check)\b",
+
 
         r"(ডকুমেন্টেশন|এপিআই ডকুমেন্টেশন|এপিআই ডকস).*(পাইথন|জাভাস্ক্রিপ্ট|টাইপস্ক্রিপ্ট|কোড|ফাংশন|ক্লাস|এপিআই|প্রোগ্রামিং)",
         r"(পাইথন|জাভাস্ক্রিপ্ট|টাইপস্ক্রিপ্ট|কোড|ফাংশন|ক্লাস|এপিআই|প্রোগ্রামিং).*(ডকুমেন্টেশন|এপিআই ডকুমেন্টেশন|এপিআই ডকস)",
@@ -246,6 +256,16 @@ class IntentDetector:
                 input_type=input_type,
             )
 
+        if self._is_calculation_request(normalized):
+            return self._result(
+                intent="calculation",
+                route="calculation",
+                confidence="high",
+                reason="The message appears to require deterministic arithmetic calculation.",
+                matches=["calculation"],
+                normalized=normalized,
+                input_type=input_type,
+            )
         intent_scores = self._calculate_scores(
             normalized,
             live_matches,
@@ -309,6 +329,38 @@ class IntentDetector:
         )
 
 
+    def _is_calculation_request(self, text: str) -> bool:
+        """Detect simple arithmetic requests without executing them."""
+        normalized = (text or "").strip().lower()
+        if not normalized:
+            return False
+        calculation_words = (
+            "calculate",
+            "calculation",
+            "calculator",
+            "compute",
+            "what is",
+            "how much is",
+            "হিসাব",
+            "গণনা",
+            "কত",
+        )
+        has_calculation_word = any(
+            word in normalized
+            for word in calculation_words
+        )
+        arithmetic_pattern = re.fullmatch(
+            r"[0-9+\-*/%().\s]+",
+            normalized,
+        )
+        if arithmetic_pattern:
+            return True
+        if has_calculation_word and re.search(
+            r"[0-9]+\s*(?:\+|\-|\*|/|%|\*\*)\s*[0-9]+",
+            normalized,
+        ):
+            return True
+        return False
     def _detect_input_type(self, text: str) -> str:
         """Detect whether the user is asking a question or giving a command."""
 
@@ -499,5 +551,9 @@ class IntentDetector:
 
         
     
+
+
+
+
 
 

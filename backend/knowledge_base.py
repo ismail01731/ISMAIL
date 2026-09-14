@@ -205,10 +205,9 @@ class KnowledgeBase:
                     confidence,
                     created_at,
                     expires_at,
-                    type,
                     knowledge_type
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(normalized_question) DO UPDATE SET
                     question=excluded.question,
                     answer=excluded.answer,
@@ -219,7 +218,7 @@ class KnowledgeBase:
                     confidence=excluded.confidence,
                     created_at=excluded.created_at,
                     expires_at=excluded.expires_at,
-                    type=excluded.type,
+        
                     knowledge_type=excluded.knowledge_type
             ''', (
                 question,
@@ -232,7 +231,7 @@ class KnowledgeBase:
                 confidence,
                 now_str,
                 expires_at,
-                knowledge_type,
+            
                 knowledge_type,
             ))
             conn.commit()
