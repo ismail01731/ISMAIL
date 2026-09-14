@@ -20,29 +20,14 @@ from backend.llm.router import LLMRouter
 from backend.medical.medical_response import MedicalResponse
 from backend.vision.vision_ai import VisionAI
 from backend.vision.vision_provider import OllamaVisionProvider
-from backend.programming.calculator import SafeCalculator
 from backend.programming.programming_intelligence import(
     ProgrammingIntelligence,
-    ProgrammingRequest,
-    ProgrammingResult,
+    ProgrammingRequest,  
 )
 from backend.capabilities.capability_registry import CapabilityRegistry
 from backend.capabilities.capability_selector import CapabilitySelector
 from backend.task_planner import TaskPlanner
-from backend.domain_knowledge_router import DomainKnowledgeRouter
-from backend.programming.language_selector import LanguageSelector
-from backend.research_freshness_router import ResearchFreshnessRouter
-from backend.result_verifier import ResultVerifier
-from backend.task_understanding import TaskUnderstandingBuilder
-from backend.emotion.emotion_engine import emotion_engine
-from backend.emotion.mood_state import mood_state_engine
-from backend.emotion.emotion_models import EmotionalContext
-from backend.emotion.companion_strategy import companion_strategy
-from backend.emotion.companion_personality import companion_personality
-from backend.emotion.mood_detector import mood_detector
-from backend.emotion.conversation_context_builder import (
-    conversation_context_builder,
-)
+
 
 
 class AIEngine:
@@ -178,8 +163,6 @@ class AIEngine:
         self.model = self.llm_config.model
         self.ollama_url = self.llm_config.ollama_url
         self.medical_response = MedicalResponse()
-        self.calculator = SafeCalculator()
-        self.result_verifier = ResultVerifier()
         self.programming_intelligence = ProgrammingIntelligence(
             llm_router=self.llm_router
         )
@@ -194,10 +177,6 @@ class AIEngine:
         self.capability_registry = CapabilityRegistry()
         self.capability_selector = CapabilitySelector(self.capability_registry)
         self.task_planner = TaskPlanner()
-        self.domain_knowledge_router = DomainKnowledgeRouter()
-        self.language_selector = LanguageSelector()
-        self.research_freshness_router = ResearchFreshnessRouter()
-        self.task_understanding_builder = TaskUnderstandingBuilder()
 
 
 
@@ -239,23 +218,6 @@ class AIEngine:
         """
         question_info = self.intent_detector.detect(message)
         domain_matches = self.domain_detector.detect(message)
-        emotion_result = emotion_engine.detect(message)
-        emotional_context = EmotionalContext(
-            emotion=emotion_result.emotion,
-            confidence=emotion_result.confidence,
-            signals=emotion_result.signals,
-            companion_instruction=companion_strategy.build_instruction(
-                emotion_result.emotion
-            ),
-        )
-        question_info["emotional_context"] = {
-            "emotion": emotional_context.emotion,
-            "confidence": emotional_context.confidence,
-            "signals": emotional_context.signals,
-            "companion_instruction": (
-                emotional_context.companion_instruction
-            ),
-        }
 
         question_info["domains"] = [
             {
@@ -266,30 +228,11 @@ class AIEngine:
             for match in domain_matches
         ]
 
-        task_understanding = self.task_understanding_builder.build(
-            message=message,
-            question_info=question_info,
-        )
-
-        question_info["task_understanding"] = {
-            "message": task_understanding.message,
-            "goal": task_understanding.goal,
-            "task_type": task_understanding.task_type,
-            "constraints": task_understanding.constraints,
-            "required_information": (
-                task_understanding.required_information
-            ),
-            "confidence": task_understanding.confidence,
-        }
-
 
         capability_selections = self.capability_selector.select(
             intent=question_info.get("intent"),
             route=question_info.get("route"),
             domains=question_info.get("domains"),
-            task_type=question_info.get("task_understanding", {}).get(
-                "task_type"
-            ),
         )
 
         question_info["capabilities"] = [
@@ -301,39 +244,12 @@ class AIEngine:
             for selection in capability_selections
         ]
 
-        question_info["knowledge_routes"] = [
-            {
-                "domain": route.domain,
-                "source": route.source,
-                "reason": route.reason,
-                "confidence": route.confidence,
-            }
-            for route in self.domain_knowledge_router.route(
-                domains=question_info["domains"]
-            )
-        ]
-
-
-        research_freshness_decision = self.research_freshness_router.decide(
-            intent=question_info.get("intent"),
-            route=question_info.get("route"),
-            domains=question_info.get("domains"),
-        )
-
-        question_info["research_freshness"] = {
-            "needs_research": research_freshness_decision.needs_research,
-            "freshness_required": research_freshness_decision.freshness_required,
-            "reason": research_freshness_decision.reason,
-            "confidence": research_freshness_decision.confidence,
-        }
-
         question_info["task_plan"] = self.task_planner.create_plan(
             capabilities=question_info["capabilities"]
         )
 
-        
-
         return question_info
+
 
     
 
@@ -1429,14 +1345,11 @@ class AIEngine:
             "review this code",
             "inspect this code",
             "analyze this python code",
-            "analyze this python project",
             "analyze python code",
             "কোড বিশ্লেষণ",
             "কোড অ্যানালাইস",
             "প্রজেক্ট বিশ্লেষণ",
             "প্রজেক্ট অ্যানালাইস",
-            "code analyze",
-            "code analyse",
         )):
             if "project" in text or "প্রজেক্ট" in text:
                 return "analyze_project"
@@ -1469,31 +1382,6 @@ class AIEngine:
         ):
             return "check_version"
         return "generate_code"
-    @staticmethod
-    def _extract_calculation_expression(message: str) -> str:
-        text = (message or "").strip()
-        if not text:
-            return ""
-        # A pure arithmetic expression can be sent directly.
-        import re
-        if re.fullmatch(r"[0-9+\-*/%().\s]+", text):
-            return text
-        # Extract arithmetic from common calculation phrases.
-        patterns = (
-            r"^(?:calculate|calculation|calculator|compute)\s+(.+)$",
-            r"^what\s+is\s+(.+)$",
-            r"^how\s+much\s+is\s+(.+)$",
-        )
-        for pattern in patterns:
-            match = re.match(pattern, text, flags=re.IGNORECASE)
-            if match:
-                expression = match.group(1).strip()
-                if re.fullmatch(
-                    r"[0-9+\-*/%().\s]+",
-                    expression,
-                ):
-                    return expression
-        return text
     def generate(
         self,
         message: str,
@@ -1558,44 +1446,15 @@ class AIEngine:
         if identity_answer is not None:
             return identity_answer
 
-        emotion_result = emotion_engine.detect(message)
-
-        companion_instruction = companion_strategy.build_instruction(
-            emotion_result.emotion
-        )
-        personality = companion_personality.get_default()
-        personality_instruction = (
-            f"Personality traits: {', '.join(personality.traits)}. "
-            f"Communication style: {personality.communication_style} "
-            f"Safety boundaries: {' '.join(personality.safety_boundaries)}"
-        )
-
         user_id = str(user_id).strip()
+
+        
+
         chat_id = str(chat_id).strip()
 
         conversation_context = self._build_conversation_context(
             user_id,
             chat_id,
-        )
-
-        mood_state = mood_state_engine.detect(
-            message,
-            context=conversation_context,
-        )
-
-        mood_result = mood_detector.detect(emotion_result)
-
-        conversation_emotion_context = (
-            conversation_context_builder.build(
-                emotional_context=EmotionalContext(
-                    emotion=emotion_result.emotion,
-                    confidence=emotion_result.confidence,
-                    signals=emotion_result.signals,
-                    companion_instruction=companion_instruction,
-                ),
-                mood_result=mood_result,
-                conversation_context=conversation_context,
-            )
         )
 
         self._save_explicit_memory(
@@ -1610,71 +1469,7 @@ class AIEngine:
             return json.dumps(browser_action)
 
         question_info = self.understand_question(message)
-        question_info["conversation_emotion_context"] = {
-            "emotion": conversation_emotion_context.emotion,
-            "mood": conversation_emotion_context.mood,
-            "confidence": conversation_emotion_context.confidence,
-            "signals": conversation_emotion_context.signals,
-            "companion_instruction": (
-                conversation_emotion_context.companion_instruction
-            ),
-            "conversation_context": (
-                conversation_emotion_context.conversation_context
-            ),
-        }
-
-        task_understanding = question_info.get(
-            "task_understanding",
-            {}
-        )
-
-        research_freshness = question_info.get(
-            "research_freshness",
-            {}
-        )
-
-        needs_research = bool(
-            research_freshness.get("needs_research")
-        )
-        # Personal emotional messages should not trigger web research.
-        emotional_intents = {
-            "sad",
-            "lonely",
-            "happy",
-            "angry",
-            "stressed",
-            "excited",
-            "fun",
-            "romantic",
-            "confused",
-        }
-        if emotion_result.emotion in emotional_intents:
-            needs_research = False
-
-
         route = question_info["route"]
-        task_plan = question_info.get("task_plan", [])
-        # ================================
-        # DETERMINISTIC CALCULATION ROUTER
-        # ================================
-        if route == "calculation":
-            calculation_expression = self._extract_calculation_expression(
-                message
-            )
-            calculation_result = self.calculator.calculate(
-                calculation_expression
-            )
-            if not calculation_result.success:
-                return calculation_result.reason
-
-            calculation_verification = self.result_verifier.verify_calculation(
-                calculation_result
-            )
-
-            if not calculation_verification.verified:
-                return calculation_verification.reason
-
-            return str(calculation_result.result)
 
         # ================================
         # ROUTINE MEDICAL LLM ROUTING
@@ -1696,88 +1491,59 @@ class AIEngine:
         # ================================
         if route == "programming":
             programming_action = self._detect_programming_action(message)
-
-
             programming_text = (message or "").strip().lower()
-
-            language_selection = self.language_selector.select(
-                requirement=message,
+            language = ""
+            language_markers = (
+                ("python", "Python"),
+                ("py ", "python"),
+                ("javascript", "javascript"),
+                ("typescript", "typescript"),
+                ("java", "java"),
+                ("c++", "cpp"),
+                ("cpp", "cpp"),
+                ("c#", "csharp"),
+                ("csharp", "csharp"),
+                ("golang", "go"),
+                (" go ", "go"),
+                ("rust", "rust"),
+                ("php", "php"),
+                ("ruby", "ruby"),
+                ("kotlin", "kotlin"),
+                ("swift", "swift"),
+                ("dart", "dart"),
+                ("sql", "sql"),
+                ("html", "html"),
+                ("css", "css"),
+                ("bash", "bash"),
+                ("powershell", "powershell"),
             )
-
-            language = (
-                language_selection.language
-                if language_selection is not None
-                else ""
-            )
-
+            for marker, detected_language in language_markers:
+                if marker in programming_text:
+                    language = detected_language
+                    break
             if not language and file_context:
                 code_lower = file_context.lower()
                 if "def " in code_lower or "import " in code_lower:
                     language = "python"
                 elif "function " in code_lower or "const " in code_lower:
                     language = "javascript"
-
-
+            command = []
+            if programming_action in ("execute", "run_tests"):
+                if "pytest" in programming_text:
+                    command = ["python", "-m", "pytest"]
+                elif "npm test" in programming_text:
+                    command = ["npm", "test"]
+                elif "python " in programming_text:
+                    command = ["python"]
+                elif "node " in programming_text:
+                    command = ["node"]
+            error_message = ""
+            if programming_action == "debug_code":
+                error_message = message
             programming_code = file_context
 
             if not programming_code:
                 programming_code = message
-
-            command = []
-
-            if programming_action in ("execute", "run_tests"):
-                if "pytest" in programming_text:
-                    command = ["python", "-m", "pytest"]
-
-                elif "npm test" in programming_text:
-                    command = ["npm", "test"]
-
-                elif programming_action == "execute" and language.lower() == "python":
-                    execution_code = programming_code
-
-                    prefixes = (
-                        "run this python code:",
-                        "run the python code:",
-                        "execute this python code:",
-                        "execute the python code:",
-                        "python code:",
-                        "run python:",
-                        "execute python:",
-                    )
-
-                    for prefix in prefixes:
-                        if execution_code.lower().startswith(prefix):
-                            execution_code = execution_code[len(prefix):].strip()
-                            break
-
-                    command = ["python", "-c", execution_code]
-
-                elif programming_action == "execute" and language.lower() in (
-                    "javascript",
-                    "node.js",
-                ):
-                    execution_code = programming_code
-
-                    prefixes = (
-                        "run this javascript code:",
-                        "run the javascript code:",
-                        "execute this javascript code:",
-                        "execute the javascript code:",
-                        "javascript code:",
-                        "run javascript:",
-                        "execute javascript:",
-                    )
-
-                    for prefix in prefixes:
-                        if execution_code.lower().startswith(prefix):
-                            execution_code = execution_code[len(prefix):].strip()
-                            break
-
-                    command = ["node", "-e", execution_code]
-            error_message = ""
-            if programming_action == "debug_code":
-                error_message = message
-            
 
             if "analyze this python code:" in programming_code.lower():
                 programming_code = programming_code.split(":", 1)[1].strip()
@@ -1835,20 +1601,6 @@ class AIEngine:
             programming_result = self.programming_intelligence.handle(
                 programming_request
             )
-
-            if programming_action == "execute":
-                execution_verification = self.result_verifier.verify_execution(
-                    programming_result.result
-                )
-
-                if not execution_verification.verified:
-                    programming_result = ProgrammingResult(
-                        success=False,
-                        action=programming_result.action,
-                        result=programming_result.result,
-                        reason=execution_verification.reason,
-                    )
-
             return json.dumps(
                 {
                     "type": "programming",
@@ -1861,21 +1613,10 @@ class AIEngine:
                 default=str,
             )
         # Stable knowledge: use a non-expired stored answer first.
-
-        knowledge_routes = question_info.get("knowledge_routes", [])
-
-        has_knowledge_route = any(
-            isinstance(item, dict)
-            and item.get("source") == "knowledge"
-            for item in knowledge_routes
-        )
-
-
-        if (route == "knowledge" or has_knowledge_route) and not file_context:
+        if route == "knowledge" and not file_context:
             stored = self.knowledge_base.get(message)
             if stored is not None:
-                return stored["answer"]
-            
+                context=programming_context,
 
         # Live questions must be researched before final answer generation.
         evidence = []
@@ -1889,11 +1630,9 @@ class AIEngine:
             marker in message_lower
             for marker in self.LIVE_KEYWORDS
         )
-        if emotion_result.emotion in emotional_intents:
-            obvious_live = False
         
 
-        if (needs_research or obvious_live) and not file_context:
+        if (route == "live" or obvious_live) and not file_context:
             try:
                 evidence = self.web_research.research(
                     message,
@@ -1991,24 +1730,11 @@ class AIEngine:
             )
 
         prompt += (
-            "\nEMOTIONAL CONTEXT:\n"
-            f"Detected emotion: {emotion_result.emotion}\n"
-            f"Confidence: {emotion_result.confidence}\n"
-            f"Signals: {', '.join(emotion_result.signals)}\n"
-              f"Detected intent: {mood_state.intent}\n"
-              f"Intent confidence: {mood_state.intent_confidence}\n"
-            "Use this emotional context to make the response "
-            "appropriate, warm, and natural. Do not mention the "
-            "emotion detection system unless the user asks.\n"
-              f"Companion strategy: {companion_instruction}\n"
-            f"Companion personality: {personality_instruction}\n"
-        )
-        prompt += (
             "\nCURRENT USER MESSAGE:\n"
             f"{message}"
         )
 
-        if (needs_research or obvious_live) and not file_context:
+        if (route == "live" or obvious_live) and not file_context:
             # ---------------------------------------------------------
             # Task 4 Answer Synthesis Layer.
             # Reuse the synthesis result prepared by WebResearch.
@@ -2070,23 +1796,24 @@ class AIEngine:
             if not self.model:
                 return "Ollama model is not configured."
 
-            if needs_research and evidence:
-                if structured_live:
-                    return structured_live
-
+            if (route == "live" or obvious_live) and evidence:
                 return self._format_verified_live_answer(
                     message,
                     evidence,
                 )
 
-            if emotion_result.emotion in emotional_intents:
-                return companion_strategy.get_fallback(
-                    emotion_result.emotion
-                )
-
             return self.llm_router.generate(prompt)
 
         return "ISMAIL AI engine provider is not configured."
+
+
+
+
+
+
+
+
+
 
 
 

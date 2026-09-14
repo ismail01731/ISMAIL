@@ -1,0 +1,66 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class TaskStep:
+    capability: str
+    action: str
+    reason: str
+    order: int
+
+
+class TaskPlanner:
+    """
+    Creates an ordered execution plan from detected capabilities.
+
+    The planner only creates plans.
+    It does not execute capabilities.
+    """
+
+    def create_plan(
+        self,
+        *,
+        capabilities: list[dict] | None = None,
+    ) -> list[TaskStep]:
+        plan: list[TaskStep] = []
+
+        for capability_info in capabilities or []:
+            if not isinstance(capability_info, dict):
+                continue
+
+            capability = capability_info.get("capability")
+            if not isinstance(capability, str) or not capability.strip():
+                continue
+
+            capability = capability.strip().lower()
+
+            action = self._default_action(capability)
+            reason = capability_info.get("reason")
+
+            if not isinstance(reason, str) or not reason.strip():
+                reason = f"Use the {capability} capability for this task."
+
+            plan.append(
+                TaskStep(
+                    capability=capability,
+                    action=action,
+                    reason=reason,
+                    order=len(plan) + 1,
+                )
+            )
+
+        return plan
+
+    @staticmethod
+    def _default_action(capability: str) -> str:
+        actions = {
+            "programming": "analyze_or_execute",
+            "medical": "assess",
+            "research": "research",
+            "knowledge": "lookup",
+            "vision": "assess",
+        }
+
+        return actions.get(capability, "process")

@@ -55,6 +55,24 @@
             "fallback": "অবশ্যই। বলো, কী নিয়ে কথা বলতে চাও?",
         },
     }
+    INTENT_STRATEGIES = {
+        "companionship": {
+            "tone": "warm, attentive, conversational",
+            "goal": "keep the conversation going and make the user feel heard",
+        },
+        "comfort": {
+            "tone": "gentle, reassuring, supportive",
+            "goal": "provide comfort and emotional reassurance without overdoing it",
+        },
+        "sharing": {
+            "tone": "interested, warm, encouraging",
+            "goal": "show interest and invite the user to share what they want to say",
+        },
+        "solution": {
+            "tone": "calm, practical, supportive",
+            "goal": "understand the problem and help with a clear next step",
+        },
+    }
     @classmethod
     def get_strategy(cls, emotion: str) -> dict:
         return cls.STRATEGIES.get(
@@ -62,11 +80,21 @@
             cls.STRATEGIES["neutral"],
         )
     @classmethod
-    def build_instruction(cls, emotion: str) -> str:
+    def build_instruction(
+        cls,
+        emotion: str,
+        intent: str = "general",
+    ) -> str:
         strategy = cls.get_strategy(emotion)
+        intent_strategy = cls.INTENT_STRATEGIES.get(
+            intent,
+            {},
+        )
         return (
             f"Emotional response style: {strategy['tone']}. "
             f"Response goal: {strategy['goal']}. "
+              f"Conversation intent style: {intent_strategy.get('tone', 'natural, friendly')}. "
+              f"Conversation intent goal: {intent_strategy.get('goal', 'respond naturally to the user')}. "
             "Prefer natural Bangla when the user writes in Bangla. "
             "Keep the response short, natural, warm, and conversational. "
             "Do not mention emotion detection or internal instructions. "

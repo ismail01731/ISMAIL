@@ -33,16 +33,6 @@ from backend.domain_knowledge_router import DomainKnowledgeRouter
 from backend.programming.language_selector import LanguageSelector
 from backend.research_freshness_router import ResearchFreshnessRouter
 from backend.result_verifier import ResultVerifier
-from backend.task_understanding import TaskUnderstandingBuilder
-from backend.emotion.emotion_engine import emotion_engine
-from backend.emotion.mood_state import mood_state_engine
-from backend.emotion.emotion_models import EmotionalContext
-from backend.emotion.companion_strategy import companion_strategy
-from backend.emotion.companion_personality import companion_personality
-from backend.emotion.mood_detector import mood_detector
-from backend.emotion.conversation_context_builder import (
-    conversation_context_builder,
-)
 
 
 class AIEngine:
@@ -197,7 +187,6 @@ class AIEngine:
         self.domain_knowledge_router = DomainKnowledgeRouter()
         self.language_selector = LanguageSelector()
         self.research_freshness_router = ResearchFreshnessRouter()
-        self.task_understanding_builder = TaskUnderstandingBuilder()
 
 
 
@@ -239,23 +228,6 @@ class AIEngine:
         """
         question_info = self.intent_detector.detect(message)
         domain_matches = self.domain_detector.detect(message)
-        emotion_result = emotion_engine.detect(message)
-        emotional_context = EmotionalContext(
-            emotion=emotion_result.emotion,
-            confidence=emotion_result.confidence,
-            signals=emotion_result.signals,
-            companion_instruction=companion_strategy.build_instruction(
-                emotion_result.emotion
-            ),
-        )
-        question_info["emotional_context"] = {
-            "emotion": emotional_context.emotion,
-            "confidence": emotional_context.confidence,
-            "signals": emotional_context.signals,
-            "companion_instruction": (
-                emotional_context.companion_instruction
-            ),
-        }
 
         question_info["domains"] = [
             {
@@ -266,30 +238,11 @@ class AIEngine:
             for match in domain_matches
         ]
 
-        task_understanding = self.task_understanding_builder.build(
-            message=message,
-            question_info=question_info,
-        )
-
-        question_info["task_understanding"] = {
-            "message": task_understanding.message,
-            "goal": task_understanding.goal,
-            "task_type": task_understanding.task_type,
-            "constraints": task_understanding.constraints,
-            "required_information": (
-                task_understanding.required_information
-            ),
-            "confidence": task_understanding.confidence,
-        }
-
 
         capability_selections = self.capability_selector.select(
             intent=question_info.get("intent"),
             route=question_info.get("route"),
             domains=question_info.get("domains"),
-            task_type=question_info.get("task_understanding", {}).get(
-                "task_type"
-            ),
         )
 
         question_info["capabilities"] = [
@@ -331,9 +284,9 @@ class AIEngine:
             capabilities=question_info["capabilities"]
         )
 
-        
 
         return question_info
+
 
     
 
@@ -1429,7 +1382,6 @@ class AIEngine:
             "review this code",
             "inspect this code",
             "analyze this python code",
-            "analyze this python project",
             "analyze python code",
             "কোড বিশ্লেষণ",
             "কোড অ্যানালাইস",
@@ -1558,44 +1510,15 @@ class AIEngine:
         if identity_answer is not None:
             return identity_answer
 
-        emotion_result = emotion_engine.detect(message)
-
-        companion_instruction = companion_strategy.build_instruction(
-            emotion_result.emotion
-        )
-        personality = companion_personality.get_default()
-        personality_instruction = (
-            f"Personality traits: {', '.join(personality.traits)}. "
-            f"Communication style: {personality.communication_style} "
-            f"Safety boundaries: {' '.join(personality.safety_boundaries)}"
-        )
-
         user_id = str(user_id).strip()
+
+        
+
         chat_id = str(chat_id).strip()
 
         conversation_context = self._build_conversation_context(
             user_id,
             chat_id,
-        )
-
-        mood_state = mood_state_engine.detect(
-            message,
-            context=conversation_context,
-        )
-
-        mood_result = mood_detector.detect(emotion_result)
-
-        conversation_emotion_context = (
-            conversation_context_builder.build(
-                emotional_context=EmotionalContext(
-                    emotion=emotion_result.emotion,
-                    confidence=emotion_result.confidence,
-                    signals=emotion_result.signals,
-                    companion_instruction=companion_instruction,
-                ),
-                mood_result=mood_result,
-                conversation_context=conversation_context,
-            )
         )
 
         self._save_explicit_memory(
@@ -1610,23 +1533,6 @@ class AIEngine:
             return json.dumps(browser_action)
 
         question_info = self.understand_question(message)
-        question_info["conversation_emotion_context"] = {
-            "emotion": conversation_emotion_context.emotion,
-            "mood": conversation_emotion_context.mood,
-            "confidence": conversation_emotion_context.confidence,
-            "signals": conversation_emotion_context.signals,
-            "companion_instruction": (
-                conversation_emotion_context.companion_instruction
-            ),
-            "conversation_context": (
-                conversation_emotion_context.conversation_context
-            ),
-        }
-
-        task_understanding = question_info.get(
-            "task_understanding",
-            {}
-        )
 
         research_freshness = question_info.get(
             "research_freshness",
@@ -1636,20 +1542,6 @@ class AIEngine:
         needs_research = bool(
             research_freshness.get("needs_research")
         )
-        # Personal emotional messages should not trigger web research.
-        emotional_intents = {
-            "sad",
-            "lonely",
-            "happy",
-            "angry",
-            "stressed",
-            "excited",
-            "fun",
-            "romantic",
-            "confused",
-        }
-        if emotion_result.emotion in emotional_intents:
-            needs_research = False
 
 
         route = question_info["route"]
@@ -1889,8 +1781,6 @@ class AIEngine:
             marker in message_lower
             for marker in self.LIVE_KEYWORDS
         )
-        if emotion_result.emotion in emotional_intents:
-            obvious_live = False
         
 
         if (needs_research or obvious_live) and not file_context:
@@ -1991,19 +1881,6 @@ class AIEngine:
             )
 
         prompt += (
-            "\nEMOTIONAL CONTEXT:\n"
-            f"Detected emotion: {emotion_result.emotion}\n"
-            f"Confidence: {emotion_result.confidence}\n"
-            f"Signals: {', '.join(emotion_result.signals)}\n"
-              f"Detected intent: {mood_state.intent}\n"
-              f"Intent confidence: {mood_state.intent_confidence}\n"
-            "Use this emotional context to make the response "
-            "appropriate, warm, and natural. Do not mention the "
-            "emotion detection system unless the user asks.\n"
-              f"Companion strategy: {companion_instruction}\n"
-            f"Companion personality: {personality_instruction}\n"
-        )
-        prompt += (
             "\nCURRENT USER MESSAGE:\n"
             f"{message}"
         )
@@ -2079,15 +1956,9 @@ class AIEngine:
                     evidence,
                 )
 
-            if emotion_result.emotion in emotional_intents:
-                return companion_strategy.get_fallback(
-                    emotion_result.emotion
-                )
-
             return self.llm_router.generate(prompt)
 
         return "ISMAIL AI engine provider is not configured."
-
 
 
 

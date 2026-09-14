@@ -1,0 +1,75 @@
+﻿from __future__ import annotations
+from dataclasses import dataclass
+@dataclass(frozen=True)
+class TaskStep:
+    capability: str
+    action: str
+    reason: str
+    order: int
+class TaskPlanner:
+    """
+    Creates an ordered execution plan from detected capabilities.
+    The planner only creates plans.
+    It does not execute capabilities.
+    """
+    _CAPABILITY_PRIORITY = {
+        "knowledge": 10,
+        "medical": 20,
+        "research": 30,
+        "vision": 40,
+        "programming": 50,
+    }
+    def create_plan(
+        self,
+        *,
+        capabilities: list[dict] | None = None,
+    ) -> list[TaskStep]:
+        normalized: list[dict] = []
+        for capability_info in capabilities or []:
+            if not isinstance(capability_info, dict):
+                continue
+            capability = capability_info.get("capability")
+            if not isinstance(capability, str) or not capability.strip():
+                continue
+            capability = capability.strip().lower()
+            reason = capability_info.get("reason")
+            if not isinstance(reason, str) or not reason.strip():
+                reason = f"Use the {capability} capability for this task."
+            normalized.append(
+                {
+                    "capability": capability,
+                    "reason": reason,
+                    "input_order": len(normalized),
+                }
+            )
+        normalized.sort(
+            key=lambda item: (
+                self._CAPABILITY_PRIORITY.get(item["capability"], 100),
+                item["input_order"],
+            )
+        )
+        plan: list[TaskStep] = []
+        for item in normalized:
+            capability = item["capability"]
+            plan.append(
+                TaskStep(
+                    capability=capability,
+                    action=self._default_action(capability),
+                    reason=item["reason"],
+                    order=len(plan) + 1,
+                )
+            )
+        return plan
+    @classmethod
+    def _priority(cls, capability: str) -> int:
+        return cls._CAPABILITY_PRIORITY.get(capability, 100)
+    @staticmethod
+    def _default_action(capability: str) -> str:
+        actions = {
+            "programming": "analyze_or_execute",
+            "medical": "assess",
+            "research": "research",
+            "knowledge": "lookup",
+            "vision": "assess",
+        }
+        return actions.get(capability, "process")
