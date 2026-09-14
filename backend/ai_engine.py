@@ -19,6 +19,10 @@ from backend.llm.router import LLMRouter
 from backend.medical.medical_response import MedicalResponse
 from backend.vision.vision_ai import VisionAI
 from backend.vision.vision_provider import OllamaVisionProvider
+from backend.programming.programming_intelligence import (
+    ProgrammingIntelligence,
+    ProgrammingRequest,
+)
 
 
 
@@ -154,6 +158,9 @@ class AIEngine:
         self.model = self.llm_config.model
         self.ollama_url = self.llm_config.ollama_url
         self.medical_response = MedicalResponse()
+        self.programming_intelligence = ProgrammingIntelligence(
+            llm_router=self.llm_router
+        )
 
 
         self.vision_ai = VisionAI()
@@ -1230,6 +1237,109 @@ class AIEngine:
 
 
 
+    def _detect_programming_action(self, message: str) -> str:
+        """
+        Map a programming-related user message to a controlled
+        ProgrammingIntelligence action.
+        """
+        text = (message or "").strip().lower()
+        if any(
+            marker in text
+            for marker in (
+                "debug",
+                "fix this code",
+                "fix the code",
+                "fix code",
+                "repair code",
+                "bug",
+                "traceback",
+                "exception",
+                "error",
+                "ডিবাগ",
+                "কোড ঠিক",
+                "কোড ফিক্স",
+                "বাগ ঠিক",
+                "এরর ঠিক",
+                "এরর সমাধান",
+            )
+        ):
+            return "debug_code"
+        if any(
+            marker in text
+            for marker in (
+                "run this",
+                "run the code",
+                "run code",
+                "execute",
+                "compile",
+                "কোড চালাও",
+                "কোড রান",
+                "কোড কম্পাইল",
+            )
+        ):
+            return "execute"
+        if any(
+            marker in text
+            for marker in (
+                "test this",
+                "test the code",
+                "run tests",
+                "run test",
+                "unit test",
+                "কোড টেস্ট",
+                "কোড পরীক্ষা",
+                "টেস্ট চালাও",
+            )
+        ):
+            return "run_tests"
+        if any(marker in text for marker in (
+            "analyze this project",
+            "analyze the project",
+            "analyze project",
+            "review this project",
+            "inspect this project",
+            "analyze this code",
+            "analyze the code",
+            "review this code",
+            "inspect this code",
+            "analyze this python code",
+            "analyze python code",
+            "কোড বিশ্লেষণ",
+            "কোড অ্যানালাইস",
+            "প্রজেক্ট বিশ্লেষণ",
+            "প্রজেক্ট অ্যানালাইস",
+        )):
+            if "project" in text or "প্রজেক্ট" in text:
+                return "analyze_project"
+            return "analyze_code"
+        
+
+        if any(
+            marker in text
+            for marker in (
+                "documentation",
+                "documentation for",
+                "api docs",
+                "api documentation",
+                "ডকুমেন্টেশন",
+                "ডকুমেন্টেশন তৈরি",
+                "এপিআই ডকুমেন্টেশন",
+            )
+        ):
+            return "documentation"
+        if any(
+            marker in text
+            for marker in (
+                "version",
+                "compatible",
+                "compatibility",
+                "ভার্সন",
+                "কম্প্যাটিবল",
+                "সামঞ্জস্যপূর্ণ",
+            )
+        ):
+            return "check_version"
+        return "generate_code"
     def generate(
         self,
         message: str,
@@ -1334,11 +1444,137 @@ class AIEngine:
             medical_prompt = self.medical_response.build_llm_prompt(message)
             return self.llm_router.generate(medical_prompt)
 
+        # ================================
+        # PROGRAMMING INTELLIGENCE ROUTER
+        # ================================
+        if route == "programming":
+            programming_action = self._detect_programming_action(message)
+            programming_text = (message or "").strip().lower()
+            language = ""
+            language_markers = (
+                ("python", "Python"),
+                ("py ", "python"),
+                ("javascript", "javascript"),
+                ("typescript", "typescript"),
+                ("java", "java"),
+                ("c++", "cpp"),
+                ("cpp", "cpp"),
+                ("c#", "csharp"),
+                ("csharp", "csharp"),
+                ("golang", "go"),
+                (" go ", "go"),
+                ("rust", "rust"),
+                ("php", "php"),
+                ("ruby", "ruby"),
+                ("kotlin", "kotlin"),
+                ("swift", "swift"),
+                ("dart", "dart"),
+                ("sql", "sql"),
+                ("html", "html"),
+                ("css", "css"),
+                ("bash", "bash"),
+                ("powershell", "powershell"),
+            )
+            for marker, detected_language in language_markers:
+                if marker in programming_text:
+                    language = detected_language
+                    break
+            if not language and file_context:
+                code_lower = file_context.lower()
+                if "def " in code_lower or "import " in code_lower:
+                    language = "python"
+                elif "function " in code_lower or "const " in code_lower:
+                    language = "javascript"
+            command = []
+            if programming_action in ("execute", "run_tests"):
+                if "pytest" in programming_text:
+                    command = ["python", "-m", "pytest"]
+                elif "npm test" in programming_text:
+                    command = ["npm", "test"]
+                elif "python " in programming_text:
+                    command = ["python"]
+                elif "node " in programming_text:
+                    command = ["node"]
+            error_message = ""
+            if programming_action == "debug_code":
+                error_message = message
+            programming_code = file_context
+
+            if not programming_code:
+                programming_code = message
+
+            if "analyze this python code:" in programming_code.lower():
+                programming_code = programming_code.split(":", 1)[1].strip()
+            programming_context = conversation_context
+
+            if programming_action == "documentation":
+                documentation_match = re.search(
+                    r"(?i)\b(python|javascript|typescript|code|function|class|api|programming)\b.*?\b(documentation|api docs|api documentation)\b(?:\s+for\s+|\s*:\s*)?(.*)$",
+                    message.strip(),
+                )
+
+                if documentation_match:
+                    technology = documentation_match.group(1).strip()
+                    entry_name = documentation_match.group(3).strip()
+                    if entry_name:
+                        programming_context = f"{technology}|{entry_name}"
+                    else:
+                        programming_context = f"{technology}|documentation"
+
+            elif programming_action == "check_version":
+                version_match = re.search(
+                    r"(?i)\b(?:required|requires?)\s*(?:version)?\s*[=:]?\s*v?([0-9]+(?:\.[0-9]+)*)\s*.*?\b(?:current|installed)\s*(?:version)?\s*[=:]?\s*v?([0-9]+(?:\.[0-9]+)*)",
+                    message.strip(),
+                )
+
+                if not version_match:
+                    version_match = re.search(
+                        r"(?i)\bv?([0-9]+(?:\.[0-9]+)*)\b\s+(?:is\s+)?(?:compatible|compatibility)\s+(?:with\s+)?\bv?([0-9]+(?:\.[0-9]+)*)\b",
+                        message.strip(),
+                    )
+
+                if not version_match:
+                    version_match = re.search(
+                        r"(?i)\bv?([0-9]+(?:\.[0-9]+)*)\b.*?\b(?:compatible\s+with|compatibility\s+with|compatible|compatibility)\b.*?\bv?([0-9]+(?:\.[0-9]+)*)\b",
+                        message.strip(),
+                    )
+
+                if version_match:
+                    programming_context = (
+                        f"{version_match.group(1)}|{version_match.group(2)}"
+                    )
+
+            programming_request = ProgrammingRequest(
+                action=programming_action,
+                language=language,
+                requirement=message,
+                
+                code=programming_code,
+                project_path="",
+                command=command,
+                error_message=error_message,
+                context=programming_context,
+                timeout_seconds=10,
+            )
+            programming_result = self.programming_intelligence.handle(
+                programming_request
+            )
+            return json.dumps(
+                {
+                    "type": "programming",
+                    "action": programming_result.action,
+                    "success": programming_result.success,
+                    "result": programming_result.result,
+                    "reason": programming_result.reason,
+                },
+                ensure_ascii=False,
+                default=str,
+            )
         # Stable knowledge: use a non-expired stored answer first.
         if route == "knowledge" and not file_context:
             stored = self.knowledge_base.get(message)
             if stored is not None:
-                return stored["answer"]
+                context=programming_context,
 
         # Live questions must be researched before final answer generation.
         evidence = []
@@ -1457,10 +1693,41 @@ class AIEngine:
         )
 
         if (route == "live" or obvious_live) and not file_context:
+            # ---------------------------------------------------------
+            # Task 4 Answer Synthesis Layer.
+            # Reuse the synthesis result prepared by WebResearch.
+            # Answer points are synthesis hints only; factual claims
+            # must still be supported by the grounded evidence.
+            # ---------------------------------------------------------
+            task4_result = getattr(
+                self.web_research,
+                "last_task4_result",
+                None,
+            )
+
             prompt = self._build_grounded_prompt(
                 message,
                 evidence
             )
+
+            if task4_result is not None:
+                answer_points = getattr(
+                    task4_result,
+                    "answer_points",
+                    [],
+                )
+
+                if answer_points:
+                    prompt += (
+                        "\n\nTASK 4 ANSWER SYNTHESIS GUIDANCE:\n"
+                        "Use these supported answer points to organize "
+                        "the response.\n"
+                        "Do not add facts that are not supported by the "
+                        "grounded evidence above.\n"
+                    )
+
+                    for point in answer_points:
+                        prompt += f"- {point}\n"
 
             if conversation_context:
                 prompt += (
@@ -1496,4 +1763,13 @@ class AIEngine:
             return self.llm_router.generate(prompt)
 
         return "ISMAIL AI engine provider is not configured."
+
+
+
+
+
+
+
+
+
 

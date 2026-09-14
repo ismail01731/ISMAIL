@@ -15,7 +15,6 @@ from datetime import datetime, timezone, timedelta
 from .task1_evidence import Task1EvidenceLayer
 from .task2_reliability import Task2ReliabilityLayer
 from .task3_evidence_intelligence import Task3EvidenceIntelligenceLayer
-from .task4_answer_synthesis import Task4AnswerSynthesisLayer
 
 
 from .live_intelligence.news_filter import (
@@ -486,7 +485,6 @@ class WebResearch:
         self.task1_evidence = Task1EvidenceLayer()
         self.task2_reliability = Task2ReliabilityLayer()
         self.task3_evidence_intelligence = Task3EvidenceIntelligenceLayer()
-        self.task4_answer_synthesis = Task4AnswerSynthesisLayer()
 
 
 
@@ -1891,46 +1889,6 @@ class WebResearch:
         else:
             verified = reliability_result.evidence
 
-        # ---------------------------------------------------------
-        # Task 3 Evidence Intelligence Layer.
-        # Analyze reliable evidence after the Task 2 gate.
-        # Duplicate evidence is removed while independent sources
-        # are preserved. Original evidence objects are not mutated.
-        # ---------------------------------------------------------
-        task3_result = self.task3_evidence_intelligence.analyze(
-            verified
-        )
-
-        verified = task3_result.evidence
-        # ---------------------------------------------------------
-        # Task 4 Answer Synthesis Layer.
-        # Prepare evidence and Task 3 claims for final answer
-        # generation while keeping research() return unchanged.
-        # ---------------------------------------------------------
-        task4_result = self.task4_answer_synthesis.synthesize(
-            evidence=verified,
-            claims=task3_result.claims,
-        )
-        self.last_task4_result = task4_result
-        verified = task4_result.evidence
-        print("=" * 80)
-        print("TASK 4 ANSWER SYNTHESIS")
-        print("Evidence:", len(task4_result.evidence))
-        print("Claims:", len(task4_result.claims))
-        print("Answer points:", len(task4_result.answer_points))
-        print("Sources:", task4_result.source_count)
-        print("=" * 80)
-
-
-        print("=" * 80)
-        print("TASK 3 EVIDENCE INTELLIGENCE")
-        print("Evidence:", len(task3_result.evidence))
-        print("Claims:", len(task3_result.claims))
-        print("Duplicates removed:", task3_result.duplicate_count)
-        print("Sources:", task3_result.source_count)
-        print("=" * 80)
-
-
 
         print("=" * 80)
         print("FINAL VERIFIED EVIDENCE")
@@ -3126,9 +3084,6 @@ if __name__ == "__main__":
         print(item.url)
         print(item.snippet)
         print("-" * 80)
-
-
-
 
 
 

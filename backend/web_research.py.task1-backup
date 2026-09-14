@@ -12,11 +12,6 @@ from dataclasses import dataclass
 from html.parser import HTMLParser
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
-from .task1_evidence import Task1EvidenceLayer
-from .task2_reliability import Task2ReliabilityLayer
-from .task3_evidence_intelligence import Task3EvidenceIntelligenceLayer
-from .task4_answer_synthesis import Task4AnswerSynthesisLayer
-
 
 from .live_intelligence.news_filter import (
     is_bad_broad_current_event_result,
@@ -482,11 +477,9 @@ class WebResearch:
     MAX_SNIPPET_LENGTH = 500
     MAX_FETCH_BYTES = 2_000_000
 
+    
     def __init__(self):
-        self.task1_evidence = Task1EvidenceLayer()
-        self.task2_reliability = Task2ReliabilityLayer()
-        self.task3_evidence_intelligence = Task3EvidenceIntelligenceLayer()
-        self.task4_answer_synthesis = Task4AnswerSynthesisLayer()
+        pass
 
 
 
@@ -1856,81 +1849,9 @@ class WebResearch:
                         break
 
         # ---------------------------------------------------------
-        # Task 1 source-quality layer.
-        # Apply source quality BEFORE the existing verification
-        # algorithm so corroboration can use the improved scores.
-        # ---------------------------------------------------------
-        collected = self.task1_evidence.improve_source_quality(collected)
-        # ---------------------------------------------------------
         # Final verification.
         # ---------------------------------------------------------
         verified = _verify_evidence_agreement(collected)
-        # Task 1 claim-level verification.
-        # Live claims require independent-source agreement.
-        verified = self.task1_evidence.enforce_claim_verification(
-            question,
-            verified,
-        )
-        verified = self.task1_evidence.prepare(verified)
-
-        # ---------------------------------------------------------
-        # Task 2 reliability gate.
-        # Weak, insufficient, or contradictory evidence must not
-        # reach the answer layer as trusted research evidence.
-        # ---------------------------------------------------------
-        reliability_result = self.task2_reliability.evaluate(verified)
-
-        if not reliability_result.reliable:
-            print("=" * 80)
-            print("RELIABILITY GATE: REJECTED")
-            print("Reason:", reliability_result.reason)
-            print("Confidence:", reliability_result.confidence)
-            print("Contradiction:", reliability_result.contradiction_detected)
-            print("=" * 80)
-            verified = []
-        else:
-            verified = reliability_result.evidence
-
-        # ---------------------------------------------------------
-        # Task 3 Evidence Intelligence Layer.
-        # Analyze reliable evidence after the Task 2 gate.
-        # Duplicate evidence is removed while independent sources
-        # are preserved. Original evidence objects are not mutated.
-        # ---------------------------------------------------------
-        task3_result = self.task3_evidence_intelligence.analyze(
-            verified
-        )
-
-        verified = task3_result.evidence
-        # ---------------------------------------------------------
-        # Task 4 Answer Synthesis Layer.
-        # Prepare evidence and Task 3 claims for final answer
-        # generation while keeping research() return unchanged.
-        # ---------------------------------------------------------
-        task4_result = self.task4_answer_synthesis.synthesize(
-            evidence=verified,
-            claims=task3_result.claims,
-        )
-        self.last_task4_result = task4_result
-        verified = task4_result.evidence
-        print("=" * 80)
-        print("TASK 4 ANSWER SYNTHESIS")
-        print("Evidence:", len(task4_result.evidence))
-        print("Claims:", len(task4_result.claims))
-        print("Answer points:", len(task4_result.answer_points))
-        print("Sources:", task4_result.source_count)
-        print("=" * 80)
-
-
-        print("=" * 80)
-        print("TASK 3 EVIDENCE INTELLIGENCE")
-        print("Evidence:", len(task3_result.evidence))
-        print("Claims:", len(task3_result.claims))
-        print("Duplicates removed:", task3_result.duplicate_count)
-        print("Sources:", task3_result.source_count)
-        print("=" * 80)
-
-
 
         print("=" * 80)
         print("FINAL VERIFIED EVIDENCE")
@@ -3126,14 +3047,6 @@ if __name__ == "__main__":
         print(item.url)
         print(item.snippet)
         print("-" * 80)
-
-
-
-
-
-
-
-
 
 
 

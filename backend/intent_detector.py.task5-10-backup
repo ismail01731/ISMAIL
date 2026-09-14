@@ -114,30 +114,6 @@ class IntentDetector:
         r"^(thank you|thanks|ধন্যবাদ)",
     )
 
-    PROGRAMMING_PATTERNS = (
-        r"\b(write|create|generate|build|implement)\b.*\b(code|function|class|api|application|app|script|program|project)\b",
-        r"\b(code|coding)\b.*\b(write|create|generate|build|function|class|api|script|program)\b",
-        r"\b(debug|fix|repair|solve)\b.*\b(code|error|bug|exception|traceback|script|program)\b",
-        r"\b(run|execute|compile|test)\b.*\b(code|script|program|test|project)\b",
-        r"\b(analyze|analyse|review|inspect)\b.*\b(code|script|project|repository|repo)\b",
-        r"\b(refactor|optimize|improve)\b.*\b(code|function|class|project|script)\b",
-        r"(কোড লিখে|কোড লেখ|কোড বানাও|কোড বানিয়ে|কোড তৈরি|কোড জেনারেট)",
-        r"(কোড ঠিক|কোড ফিক্স|কোড ডিবাগ|বাগ ঠিক|এরর ঠিক|এরর সমাধান|ডিবাগ কর)",
-        r"(কোড চালাও|কোড রান|কোড কম্পাইল|কোড টেস্ট|কোড পরীক্ষা)",
-        r"(কোড বিশ্লেষণ|কোড অ্যানালাইস|প্রজেক্ট বিশ্লেষণ|প্রজেক্ট অ্যানালাইস)",
-        r"(API লিখে|API লেখ|এপিআই লিখে|এপিআই লেখ|API বানাও|API তৈরি|এপিআই বানাও|এপিআই তৈরি)",
-        r"(ফাংশন বানাও|ফাংশন তৈরি|ক্লাস বানাও|ক্লাস তৈরি|এপিআই বানাও|এপিআই তৈরি)",
-        r"(প্রোগ্রাম লিখে|প্রোগ্রাম বানাও|স্ক্রিপ্ট লিখে|স্ক্রিপ্ট বানাও)",
-        r"\b(documentation|api docs|api documentation)\b.*\b(python|javascript|typescript|code|function|class|api|programming)\b",
-        r"\b(python|javascript|typescript|code|function|class|api|programming)\b.*\b(documentation|api docs|api documentation)\b",
-        r"\b(?:python|javascript|typescript|java|node(?:\.js)?|go|rust|php|ruby|kotlin|swift|dart|c\+\+|c#)\s+v?\d+(?:\.\d+){1,2}\s+(?:compatible with|works with|compatible with version)\s+(?:python|javascript|typescript|java|node(?:\.js)?|go|rust|php|ruby|kotlin|swift|dart|c\+\+|c#)?\s*v?\d+(?:\.\d+){1,2}\b",
-        r"\b(?:is|are)\s+(?:python|javascript|typescript|java|node(?:\.js)?|go|rust|php|ruby|kotlin|swift|dart|c\+\+|c#)\s+v?\d+(?:\.\d+){1,2}\s+(?:compatible with|works with)\s+(?:python|javascript|typescript|java|node(?:\.js)?|go|rust|php|ruby|kotlin|swift|dart|c\+\+|c#)\s+v?\d+(?:\.\d+){1,2}\b",
-        r"\b(version compatibility|compatible version|version check|compatibility check)\b",
-
-        r"(ডকুমেন্টেশন|এপিআই ডকুমেন্টেশন|এপিআই ডকস).*(পাইথন|জাভাস্ক্রিপ্ট|টাইপস্ক্রিপ্ট|কোড|ফাংশন|ক্লাস|এপিআই|প্রোগ্রামিং)",
-        r"(পাইথন|জাভাস্ক্রিপ্ট|টাইপস্ক্রিপ্ট|কোড|ফাংশন|ক্লাস|এপিআই|প্রোগ্রামিং).*(ডকুমেন্টেশন|এপিআই ডকুমেন্টেশন|এপিআই ডকস)",
-        r"(ভার্সন সামঞ্জস্য|ভার্সন চেক|কম্প্যাটিবিলিটি চেক|সামঞ্জস্যপূর্ণ ভার্সন).*(পাইথন|জাভাস্ক্রিপ্ট|টাইপস্ক্রিপ্ট|নোড|প্যাকেজ|লাইব্রেরি)",
-    )
 
     CONTEXT_PATTERNS = (
         r"^(এটা|এটির|এটার|ওটা|ওটির|ওটার|সেটা|সেটার|আগেরটা|আগেরটির|আগেরটার)",
@@ -151,7 +127,6 @@ class IntentDetector:
         r"(kivabe korbo|kibhabe korbo|kivabe korbo)",
         r"(তারপর কি|তারপর কী|এরপর কি|এরপর কী|then what|what next)",
     )
-
 
 
 
@@ -194,11 +169,6 @@ class IntentDetector:
         )
 
 
-        programming_matches = self._find_pattern_matches(
-            normalized,
-            self.PROGRAMMING_PATTERNS,
-        )
-
         live_matches = self._find_keyword_matches(
             normalized,
             self.LIVE_KEYWORDS,
@@ -209,17 +179,6 @@ class IntentDetector:
             self.KNOWLEDGE_KEYWORDS,
         )
 
-
-        if programming_matches:
-            return self._result(
-                intent="programming",
-                route="programming",
-                confidence="high",
-                reason="The message appears to require programming or software engineering assistance.",
-                matches=programming_matches,
-                normalized=normalized,
-                input_type=input_type,
-            )
 
         if context_matches:
             return self._result(
@@ -499,5 +458,3 @@ class IntentDetector:
 
         
     
-
-

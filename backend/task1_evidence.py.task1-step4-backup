@@ -1,0 +1,117 @@
+﻿"""
+ISMAIL AI - Task 1 Evidence Layer
+This module provides a separate, non-destructive processing layer
+for evidence collected by the existing web_research system.
+Important:
+- Does NOT perform web searches.
+- Does NOT duplicate WebEvidence.
+- Does NOT replace the existing verification algorithm.
+- Does NOT modify the original evidence objects.
+"""
+from __future__ import annotations
+from typing import Any, Iterable, List
+import copy
+from urllib.parse import urlparse
+class Task1EvidenceLayer:
+    """Prepare existing evidence for the Task 1 pipeline."""
+    def prepare(
+        self,
+        evidence: Iterable[Any],
+        max_items: int = 15,
+    ) -> List[Any]:
+        """
+        Return a clean, bounded evidence list.
+        The original evidence objects are preserved unchanged.
+        """
+        if evidence is None:
+            return []
+        try:
+            limit = int(max_items)
+        except (TypeError, ValueError):
+            limit = 15
+        limit = max(1, min(limit, 50))
+        prepared: List[Any] = []
+        seen_urls: set[str] = set()
+        for item in evidence:
+            if item is None:
+                continue
+            url = str(getattr(item, "url", "") or "").strip()
+            if url:
+                normalized_url = url.lower().rstrip("/")
+                if normalized_url in seen_urls:
+                    continue
+                seen_urls.add(normalized_url)
+            prepared.append(item)
+            if len(prepared) >= limit:
+                break
+        return prepared
+    def count_usable(
+        self,
+        evidence: Iterable[Any],
+    ) -> int:
+        """Count non-empty evidence objects."""
+        if evidence is None:
+            return 0
+        return sum(1 for item in evidence if item is not None)
+    def improve_source_quality(
+        self,
+        evidence: Iterable[Any],
+    ) -> List[Any]:
+        """
+        Apply Task 1 source-quality overrides without changing the
+        original evidence objects.
+        This does not verify the actual claim. It only improves the
+        source classification used by the existing verification layer.
+        """
+        if evidence is None:
+            return []
+        # Trusted/established publishers and organizations.
+        # Values are intentionally conservative.
+        trusted_domains = {
+            "dw.com": (0.85, "high"),
+            "reuters.com": (0.90, "high"),
+            "apnews.com": (0.90, "high"),
+            "bbc.com": (0.90, "high"),
+            "bbc.co.uk": (0.90, "high"),
+            "aljazeera.com": (0.85, "high"),
+            "nytimes.com": (0.85, "high"),
+            "theguardian.com": (0.85, "high"),
+            "jagonews24.com": (0.75, "medium"),
+            "bangladeshtoday.net": (0.75, "medium"),
+            "thebangladeshtoday.com": (0.75, "medium"),
+        }
+        improved: List[Any] = []
+        for item in evidence:
+            if item is None:
+                continue
+            url = str(getattr(item, "source_url", "") or "").strip()
+            if not url:
+                url = str(getattr(item, "url", "") or "").strip()
+            hostname = ""
+            if url:
+                try:
+                    hostname = urlparse(url).hostname or ""
+                except Exception:
+                    hostname = ""
+            hostname = hostname.lower().strip().removeprefix("www.")
+            match = None
+            for domain, quality in trusted_domains.items():
+                if hostname == domain or hostname.endswith("." + domain):
+                    match = quality
+                    break
+            if match is None:
+                improved.append(item)
+                continue
+            # Work on a shallow copy so the original evidence object
+            # remains untouched.
+            updated = copy.copy(item)
+            score, level = match
+            current_score = float(
+                getattr(updated, "reliability_score", 0.0) or 0.0
+            )
+            # Never reduce an already stronger source score.
+            if score > current_score:
+                updated.reliability_score = score
+                updated.reliability_level = level
+            improved.append(updated)
+        return improved
