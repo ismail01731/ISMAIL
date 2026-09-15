@@ -1,0 +1,180 @@
+﻿from __future__ import annotations
+from typing import Any
+from .detector import FutureIntentDetector
+class FutureIntegration:
+    """
+    Bridge between the existing ISMAIL AIEngine and the completed
+    Future Intelligence System.
+    The existing AI remains the main AI/LLM.
+    The Future System supplies forecast intelligence.
+    """
+    def __init__(self, ai_engine):
+        self.ai_engine = ai_engine
+        self._intelligence = None
+    def _build_intelligence(self):
+        if self._intelligence is not None:
+            return self._intelligence
+        from intelligence.adapter import ExistingAIAdapter
+        from intelligence.orchestrator import FutureIntelligence
+        # Use the existing ISMAIL LLM router as the final reasoning
+        # layer. We intentionally do NOT call AIEngine.generate()
+        # here because that would recursively re-enter this router.
+        def existing_ai_generate(prompt: str, context=None):
+            if context:
+                combined = (
+                    f"{prompt}\n\n"
+                    "FUTURE SYSTEM CONTEXT:\n"
+                    f"{context}"
+                )
+            else:
+                combined = prompt
+            return self.ai_engine.llm_router.generate(combined)
+        adapter = ExistingAIAdapter(
+            generate_function=existing_ai_generate,
+            name="ismail_existing_ai",
+        )
+        self._intelligence = FutureIntelligence(
+            ai_adapter=adapter
+        )
+        return self._intelligence
+    @staticmethod
+    def _extract_horizon(message: str) -> int:
+        import re
+        text = (message or "").lower()
+        match = re.search(
+            r"\b(\d+)\s*(?:day|days)\b",
+            text,
+        )
+        if match:
+            return max(1, min(int(match.group(1)), 365))
+        match = re.search(
+            r"\b(\d+)\s*(?:week|weeks)\b",
+            text,
+        )
+        if match:
+            return max(1, min(int(match.group(1)) * 7, 365))
+        match = re.search(
+            r"\b(\d+)\s*(?:month|months)\b",
+            text,
+        )
+        if match:
+            return max(1, min(int(match.group(1)) * 30, 365))
+        # Common Bengali forms.
+        match = re.search(
+            r"(?:আগামী|পরের|পরবর্তী)\s*(\d+)\s*দিন",
+            text,
+        )
+        if match:
+            return max(1, min(int(match.group(1)), 365))
+        match = re.search(
+            r"(?:আগামী|পরের|পরবর্তী)\s*(\d+)\s*সপ্তাহ",
+            text,
+        )
+        if match:
+            return max(1, min(int(match.group(1)) * 7, 365))
+        match = re.search(
+            r"(?:আগামী|পরের|পরবর্তী)\s*(\d+)\s*মাস",
+            text,
+        )
+        if match:
+            return max(1, min(int(match.group(1)) * 30, 365))
+        return 30
+    @staticmethod
+    def _extract_topic(message: str) -> str:
+        """
+        First-pass topic extraction.
+        If no explicit topic can be isolated safely, use the
+        complete user question as the topic. This avoids inventing
+        a topic.
+        """
+        text = (message or "").strip()
+        if not text:
+            return ""
+        # Remove common future-question framing while preserving
+        # the actual subject.
+        patterns = (
+            r"(?i)^what will happen to\s+",
+            r"(?i)^what is likely to happen to\s+",
+            r"(?i)^predict\s+",
+            r"(?i)^forecast\s+",
+            r"(?i)^future of\s+",
+            r"(?i)^where is\s+(.+?)\s+going\??$",
+        )
+        cleaned = text
+        for pattern in patterns:
+            cleaned = re.sub(pattern, "", cleaned).strip()
+        # Bengali future framing.
+        bengali_patterns = (
+            r"^আগামী\s+\d+\s+দিনে\s+",
+            r"^আগামী\s+\d+\s+সপ্তাহে\s+",
+            r"^আগামী\s+\d+\s+মাসে\s+",
+            r"^ভবিষ্যতে\s+",
+            r"^কী হবে\s+",
+            r"^কি হবে\s+",
+            r"^কী হতে পারে\s+",
+            r"^কি হতে পারে\s+",
+        )
+        for pattern in bengali_patterns:
+            cleaned = re.sub(pattern, "", cleaned).strip()
+        # If stripping produced nothing useful, retain the question.
+        if len(cleaned) < 3:
+            return text
+        return cleaned.rstrip("?!। ")
+    def analyze(
+        self,
+        message: str,
+        user_id: str = "",
+        chat_id: str = "",
+    ) -> dict[str, Any] | None:
+        if not FutureIntentDetector.detect(message):
+            return None
+        topic = self._extract_topic(message)
+        horizon_days = self._extract_horizon(message)
+        if not topic:
+            topic = message.strip()
+        intelligence = self._build_intelligence()
+        try:
+            result = intelligence.analyze(
+                question=message,
+                topic=topic,
+                horizon_days=horizon_days,
+                user_id=user_id,
+                chat_id=chat_id,
+            )
+        except TypeError:
+            # Compatibility fallback for the existing orchestrator
+            # signature.
+            try:
+                result = intelligence.analyze(
+                    question=message,
+                    values=[],
+                    horizon_days=horizon_days,
+                    evidence=[],
+                    live_data=[],
+                    metadata={
+                        "topic": topic,
+                        "user_id": user_id,
+                        "chat_id": chat_id,
+                    },
+                )
+            except Exception as exc:
+                return {
+                    "status": "error",
+                    "reason": str(exc),
+                    "question": message,
+                    "topic": topic,
+                    "horizon_days": horizon_days,
+                }
+        except Exception as exc:
+            return {
+                "status": "error",
+                "reason": str(exc),
+                "question": message,
+                "topic": topic,
+                "horizon_days": horizon_days,
+            }
+        if isinstance(result, dict):
+            result.setdefault("status", "success")
+            result.setdefault("topic", topic)
+            result.setdefault("horizon_days", horizon_days)
+        return result

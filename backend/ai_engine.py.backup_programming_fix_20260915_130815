@@ -408,7 +408,6 @@ class AIEngine:
             and item.get("capability") == "programming"
             for item in question_info["capabilities"]
         ):
-            programming_text = message.lower()
             language_domain = None
             if "android" in programming_text or "android app" in programming_text:
                 language_domain = "android"

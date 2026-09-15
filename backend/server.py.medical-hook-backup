@@ -1,17 +1,6 @@
-from typing import Optional
+﻿from typing import Optional
 import base64
 import asyncio
-
-# --- MEDICAL SYSTEM IMPORT (isolated add-on, fail-safe) ---
-try:
-    from backend.medical_system.server_hook import medical_emergency_payload
-except Exception:
-    try:
-        from medical_system.server_hook import medical_emergency_payload
-    except Exception:
-        medical_emergency_payload = None
-# --- END MEDICAL SYSTEM IMPORT ---
-
 import hashlib
 import hmac
 import json
@@ -1311,16 +1300,6 @@ async def chat(
                 detail=security.reason,
             )
 
-
-        # MEDICAL EMERGENCY HOOK (isolated add-on)
-        if medical_emergency_payload is not None:
-            try:
-                _med_reply = medical_emergency_payload(request.message)
-            except Exception:
-                _med_reply = None
-            if _med_reply is not None:
-                return _med_reply
-        # END MEDICAL EMERGENCY HOOK
 
         question = ai_engine.understand_question(
             request.message

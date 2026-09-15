@@ -11,7 +11,6 @@ from backend.browser_actions import detect_browser_action
 from backend.intent_detector import IntentDetector
 from backend.domain_detector import DomainDetector
 from backend.live_intelligence.router import LiveIntelligenceRouter
-from backend.future_integration import FutureIntegration
 load_dotenv("config/.env")
 from typing import List
 from backend.web_research import WebResearch, WebEvidence
@@ -408,7 +407,6 @@ class AIEngine:
             and item.get("capability") == "programming"
             for item in question_info["capabilities"]
         ):
-            programming_text = message.lower()
             language_domain = None
             if "android" in programming_text or "android app" in programming_text:
                 language_domain = "android"
@@ -1607,43 +1605,6 @@ class AIEngine:
         """Generate a final answer using knowledge, live evidence, or general AI."""
         message = message.strip()
 
-        # =========================================================
-        # FUTURE INTELLIGENCE ROUTER
-        # =========================================================
-        # Future questions are handled by the completed Future System.
-        # Normal ISMAIL AI questions continue through the existing flow.
-        if not hasattr(self, "_future_integration"):
-            self._future_integration = FutureIntegration(self)
-        future_result = self._future_integration.analyze(
-            message,
-            user_id=user_id,
-            chat_id=chat_id,
-        )
-        if future_result is not None:
-            if future_result.get("status") == "success":
-                natural_answer = future_result.get("natural_answer")
-                if natural_answer:
-                    return natural_answer
-                answer = future_result.get("answer")
-                if answer:
-                    return answer
-                # If the Future System returned a structured result
-                # without a natural answer, let the existing AI explain
-                # the result rather than returning raw internal data.
-                future_prompt = (
-                    "Answer the user's future-prediction question using "
-                    "the following Future Intelligence System result. "
-                    "Do not invent facts. Clearly distinguish forecast, "
-                    "probability, confidence and uncertainty. "
-                    "Do not claim certainty.\n\n"
-                    f"USER QUESTION:\n{message}\n\n"
-                    f"FUTURE SYSTEM RESULT:\n{json.dumps(future_result, ensure_ascii=False, default=str)}"
-                )
-                return self.llm_router.generate(future_prompt)
-            # A Future System failure must NOT break the existing AI.
-            # Continue with the original ISMAIL flow.
-            # =========================================================
-
         if image_bytes is not None:
             prompt = self.vision_ai.prepare_for_analysis(
                 image_bytes,
@@ -2240,4 +2201,3 @@ class AIEngine:
             return self.llm_router.generate(prompt)
 
         return "ISMAIL AI engine provider is not configured."
-

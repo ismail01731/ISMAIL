@@ -1,0 +1,271 @@
+﻿from __future__ import annotations
+from typing import List, Dict, Any
+from .features import FeatureExtractor
+from .multi_engine import MultiModelForecaster
+from .scenarios import ScenarioEngine
+from .calibrator import ConfidenceCalibrator
+from .selector import AutomaticModelSelector
+from .registry import ModelRegistry
+class ForecastEngine:
+    def __init__(self):
+        self.features = FeatureExtractor()
+        self.multi_model = (
+            MultiModelForecaster()
+        )
+        self.scenarios = (
+            ScenarioEngine()
+        )
+        self.confidence_calibrator = (
+            ConfidenceCalibrator()
+        )
+        self.selector = (
+            AutomaticModelSelector(
+                minimum_history=8,
+                validation_size=3,
+            )
+        )
+        self.registry = ModelRegistry()
+    def predict(
+        self,
+        values: List[float],
+        horizon_days: int = 30,
+        evidence=None,
+    ) -> Dict[str, Any]:
+        clean_values = [
+            float(v)
+            for v in values
+            if v is not None
+        ]
+        if not clean_values:
+            return {
+                "model": "none",
+                "selected_model": None,
+                "horizon_days": horizon_days,
+                "historical_count": 0,
+                "models": {},
+                "selection": {},
+                "baseline_forecast": [],
+                "scenarios": {},
+                "uncertainty": {},
+                "confidence": 0.0,
+                "confidence_percent": 0.0,
+                "confidence_calibration": {
+                    "score": 0.0,
+                    "percent": 0.0,
+                    "level": "very_low",
+                },
+                "data_quality": {
+                    "score": 0.0,
+                    "level": "very_low",
+                    "usable": False,
+                },
+                "latest_value": None,
+                "expected_value": None,
+                "limitations": [
+                    "Insufficient historical data."
+                ],
+            }
+        features = self.features.extract(
+            clean_values
+        )
+        model_forecasts = (
+            self.multi_model.forecast(
+                clean_values,
+                horizon_days,
+            )
+        )
+        selection = (
+            self.selector.select(
+                clean_values
+            )
+        )
+        selected_model = selection.get(
+            "selected_model"
+        )
+        if not selected_model:
+            selected_model = (
+                "damped_linear_trend_v1"
+                if
+                "damped_linear_trend_v1"
+                in model_forecasts
+                else next(
+                    (
+                        name
+                        for name, forecast
+                        in model_forecasts.items()
+                        if forecast
+                    ),
+                    None,
+                )
+            )
+            selection["fallback"] = True
+        baseline_forecast = (
+            model_forecasts.get(
+                selected_model,
+                [],
+            )
+        )
+        if not baseline_forecast:
+            baseline_forecast = (
+                self.registry.forecast(
+                    selected_model,
+                    clean_values,
+                    horizon_days,
+                )
+            )
+        recent_slope = features.get(
+            "recent_slope",
+            0.0,
+        )
+        volatility = features.get(
+            "volatility",
+            0.0,
+        )
+        if recent_slope > 0:
+            direction = "upward"
+        elif recent_slope < 0:
+            direction = "downward"
+        else:
+            direction = "stable"
+        scale = max(
+            abs(
+                features["latest"]
+            ),
+            1e-9,
+        )
+        relative_slope = (
+            abs(recent_slope)
+            / scale
+        )
+        trend_strength = min(
+            1.0,
+            relative_slope * 10.0,
+        )
+        signed_strength = (
+            trend_strength
+            if direction == "upward"
+            else -trend_strength
+            if direction == "downward"
+            else 0.0
+        )
+        scenario_result = (
+            self.scenarios.generate(
+                baseline_forecast=
+                    baseline_forecast,
+                latest=
+                    clean_values[-1],
+                volatility=
+                    volatility,
+                trend_direction=
+                    direction,
+                trend_strength=
+                    signed_strength,
+                model_forecasts=
+                    model_forecasts,
+            )
+        )
+        uncertainty = (
+            scenario_result.get(
+                "uncertainty",
+                {},
+            )
+        )
+        ranking = selection.get(
+            "ranking",
+            [],
+        )
+        # Data quality is calculated locally here
+        # so ForecastEngine can directly use it.
+        from analytics.quality import (
+            DataQualityEngine
+        )
+        quality_engine = (
+            DataQualityEngine()
+        )
+        data_quality = (
+            quality_engine.score(
+                clean_values
+            )
+        )
+        calibration = (
+            self.confidence_calibrator.calibrate(
+                data_count=
+                    len(clean_values),
+                ranking=
+                    ranking,
+                selected_model=
+                    selected_model,
+                uncertainty=
+                    uncertainty,
+                quality=
+                    data_quality,
+            )
+        )
+        expected_value = (
+            baseline_forecast[-1]
+            if baseline_forecast
+            else clean_values[-1]
+        )
+        return {
+            "model":
+                selected_model,
+            "selected_model":
+                selected_model,
+            "selection":
+                selection,
+            "horizon_days":
+                horizon_days,
+            "historical_count":
+                len(clean_values),
+            "features":
+                features,
+            "trend": {
+                "direction":
+                    direction,
+                "strength":
+                    trend_strength,
+                "slope":
+                    recent_slope,
+            },
+            "data_quality":
+                data_quality,
+            "models": {
+                name: {
+                    "forecast":
+                        forecast,
+                    "final_value":
+                        (
+                            forecast[-1]
+                            if forecast
+                            else None
+                        ),
+                }
+                for name, forecast
+                in model_forecasts.items()
+            },
+            "baseline_forecast":
+                baseline_forecast,
+            "scenarios":
+                scenario_result,
+            "uncertainty":
+                uncertainty,
+            "confidence":
+                calibration["score"],
+            "confidence_percent":
+                calibration["percent"],
+            "confidence_calibration":
+                calibration,
+            "latest_value":
+                clean_values[-1],
+            "expected_value":
+                expected_value,
+            "limitations": [
+                "Data quality affects confidence.",
+                "Confidence uses historical backtest performance.",
+                "Small datasets can produce unstable estimates.",
+                "Scenario probabilities are model-based estimates.",
+                "Longer horizons increase uncertainty.",
+                "External events may invalidate historical patterns.",
+                "This is a probabilistic forecast, not a guarantee.",
+            ],
+        }
