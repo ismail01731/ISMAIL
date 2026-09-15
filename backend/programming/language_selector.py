@@ -93,6 +93,7 @@ class LanguageSelector:
             return None
         normalized = domain.strip().lower()
         preferred = {
+    "programming": "javascript",
             "web": "javascript",
             "frontend": "javascript",
             "backend": "python",

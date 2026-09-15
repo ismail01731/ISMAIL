@@ -23,8 +23,32 @@ class CapabilitySelector:
         route: str | None = None,
         domains: list[dict] | None = None,
         task_type: str | None = None,
+        source_decision: dict | None = None,
     ) -> list[CapabilitySelection]:
         selections: list[CapabilitySelection] = []
+        selected_source = (
+            source_decision.get("source")
+            if isinstance(source_decision, dict)
+            else None
+        )
+        if selected_source == "research":
+            if self.registry.has("research"):
+                selections.append(
+                    CapabilitySelection(
+                        capability="research",
+                        reason="The source decision requires external research.",
+                        confidence="high",
+                    )
+                )
+        if selected_source == "knowledge":
+            if self.registry.has("knowledge"):
+                selections.append(
+                    CapabilitySelection(
+                        capability="knowledge",
+                        reason="The source decision selects stable domain knowledge.",
+                        confidence="medium",
+                    )
+                )
 
         if task_type in {
             "code_generation",

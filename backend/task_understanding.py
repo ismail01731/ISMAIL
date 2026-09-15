@@ -18,11 +18,19 @@ VALID_CONFIDENCE = {
 class TaskUnderstanding:
     message: str
     goal: str
-    task_type: str
+    intent: str = ""
+    domains: list[dict[str, Any]] = field(default_factory=list)
+    task_type: str = ""
     constraints: list[str] = field(default_factory=list)
     required_information: list[str] = field(
         default_factory=list
     )
+    subtasks: list[str] = field(default_factory=list)
+    freshness_required: bool = False
+    risk_level: str = "low"
+    required_tools: list[str] = field(default_factory=list)
+    required_language: str = ""
+    expected_output: str = ""
     confidence: str = "medium"
 class TaskUnderstandingBuilder:
     """
@@ -48,6 +56,9 @@ class TaskUnderstandingBuilder:
         route = str(
             question_info.get("route", "")
         ).strip().lower()
+        domains = question_info.get("domains", [])
+        if not isinstance(domains, list):
+            domains = []
         confidence = str(
             question_info.get("confidence", "medium")
         ).strip().lower()
@@ -71,14 +82,105 @@ class TaskUnderstandingBuilder:
                 question_info
             )
         )
+        subtasks = self._build_subtasks(
+            message=normalized_message,
+            task_type=task_type,
+            goal=goal,
+        )
+        freshness_required = self._extract_freshness_requirement(
+            question_info
+        )
+        risk_level = self._extract_risk_level(
+            question_info
+        )
         return TaskUnderstanding(
             message=normalized_message,
             goal=goal,
+            intent=intent,
+            domains=domains,
             task_type=task_type,
             constraints=constraints,
             required_information=required_information,
+            subtasks=subtasks,
+            freshness_required=freshness_required,
+            risk_level=risk_level,
             confidence=confidence,
         )
+    @staticmethod
+    def _build_subtasks(
+        *,
+        message: str,
+        task_type: str,
+        goal: str,
+    ) -> list[str]:
+        if not message:
+            return []
+        if task_type == "debugging":
+            return [
+                "identify_the_problem",
+                "inspect_relevant_code_or_error",
+                "determine_the_cause",
+                "propose_a_fix",
+                "verify_the_fix",
+            ]
+        if task_type == "code_generation":
+            return [
+                "understand_requirements",
+                "design_the_solution",
+                "generate_code",
+                "check_for_errors",
+            ]
+        if task_type == "troubleshooting":
+            return [
+                "identify_the_problem",
+                "collect_relevant_information",
+                "determine_the_cause",
+                "propose_a_solution",
+                "verify_the_solution",
+            ]
+        if task_type == "calculation":
+            return [
+                "identify_values_and_units",
+                "select_the_formula",
+                "perform_the_calculation",
+                "verify_the_result",
+            ]
+        if task_type == "information_retrieval":
+            return [
+                "identify_required_information",
+                "select_an_appropriate_source",
+                "retrieve_the_information",
+                "verify_relevant_details",
+            ]
+        if goal:
+            return [
+                "understand_the_request",
+                "determine_the_required_action",
+            ]
+        return []
+    @staticmethod
+    def _extract_freshness_requirement(
+        question_info: dict[str, Any],
+    ) -> bool:
+        freshness = question_info.get(
+            "research_freshness",
+            {}
+        )
+        if not isinstance(freshness, dict):
+            return False
+        return bool(
+            freshness.get("freshness_required", False)
+        )
+    @staticmethod
+    def _extract_risk_level(
+        question_info: dict[str, Any],
+    ) -> str:
+        risk_level = str(
+            question_info.get("risk_level", "low")
+        ).strip().lower()
+        if risk_level in {"low", "medium", "high"}:
+            return risk_level
+        return "low"
     @staticmethod
     def _task_type_from_existing_route(
         *,
@@ -100,13 +202,48 @@ class TaskUnderstandingBuilder:
             "javascript",
             "java",
             "typescript",
+            "c++",
+            "cpp",
+            "c#",
+            "c sharp",
+            "go",
+            "golang",
+            "rust",
+            "php",
+            "ruby",
+            "kotlin",
+            "swift",
+            "sql",
+            "bash",
+            "html",
+            "css",
             "programming",
+            "program",
             "code",
+            "coding",
             "function",
             "script",
             "class",
             "api",
-            "program",
+            "algorithm",
+            "website",
+            "web site",
+            "web development",
+            "frontend",
+            "backend",
+            "app",
+            "application",
+            "software",
+            "calculator",
+            "sorting algorithm",
+            "????????",
+            "?????????",
+            "????",
+            "?????",
+            "???",
+            "?????????",
+            "?????",
+            "????????????",
         )
 
         debugging_terms = (
@@ -199,13 +336,48 @@ class TaskUnderstandingBuilder:
             "javascript",
             "java",
             "typescript",
+            "c++",
+            "cpp",
+            "c#",
+            "c sharp",
+            "go",
+            "golang",
+            "rust",
+            "php",
+            "ruby",
+            "kotlin",
+            "swift",
+            "sql",
+            "bash",
+            "html",
+            "css",
             "programming",
+            "program",
             "code",
+            "coding",
             "function",
             "script",
             "class",
             "api",
-            "program",
+            "algorithm",
+            "website",
+            "web site",
+            "web development",
+            "frontend",
+            "backend",
+            "app",
+            "application",
+            "software",
+            "calculator",
+            "sorting algorithm",
+            "????????",
+            "?????????",
+            "????",
+            "?????",
+            "???",
+            "?????????",
+            "?????",
+            "????????????",
         )
 
         troubleshooting_terms = (
@@ -320,3 +492,7 @@ class TaskUnderstandingBuilder:
             ])
 
         return required
+
+
+
+

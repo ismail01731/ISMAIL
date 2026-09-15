@@ -24,13 +24,51 @@ class ResearchFreshnessRouter:
         "live_information",
         "research",
     }
+    FRESHNESS_SIGNALS = {
+        "আজ",
+        "এখন",
+        "বর্তমানে",
+        "সাম্প্রতিক",
+        "সর্বশেষ",
+        "এই মুহূর্তে",
+        "today",
+        "now",
+        "current",
+        "currently",
+        "latest",
+        "recent",
+        "recently",
+        "right now",
+    }
+    RESEARCH_SIGNALS = {
+        "research",
+        "research করো",
+        "research করুন",
+        "research report",
+        "research report তৈরি",
+        "গবেষণা",
+        "গবেষণা করো",
+        "গবেষণা করুন",
+        "গবেষণা প্রতিবেদন",
+        "গবেষণা প্রতিবেদন তৈরি",
+        "বিশ্লেষণ করো",
+        "বিশ্লেষণ করুন",
+        "analyze",
+        "analysis",
+    }
     def decide(
         self,
         *,
         intent: str | None = None,
         route: str | None = None,
         domains: list[dict] | None = None,
+        message: str | None = None,
     ) -> ResearchFreshnessDecision:
+        normalized_message = (
+            message.strip().lower()
+            if isinstance(message, str)
+            else ""
+        )
         normalized_intent = (
             intent.strip().lower()
             if isinstance(intent, str)
@@ -54,6 +92,39 @@ class ResearchFreshnessRouter:
                 ),
                 confidence="high",
             )
+        matched_signals = [
+            signal
+            for signal in self.FRESHNESS_SIGNALS
+            if signal in normalized_message
+        ]
+        matched_research_signals = [
+            signal
+            for signal in self.RESEARCH_SIGNALS
+            if signal in normalized_message
+        ]
+
+        if matched_research_signals:
+            return ResearchFreshnessDecision(
+                needs_research=True,
+                freshness_required=False,
+                reason=(
+                    "The request explicitly asks for research or analysis."
+                ),
+                confidence="high",
+            )
+
+        if matched_signals:
+            return ResearchFreshnessDecision(
+                needs_research=True,
+                freshness_required=True,
+                reason=(
+                    "The request contains an explicit freshness signal: "
+                    + ", ".join(matched_signals)
+                    + "."
+                ),
+                confidence="high",
+            )
+
         for domain_info in domains or []:
             if not isinstance(domain_info, dict):
                 continue

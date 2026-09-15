@@ -29,6 +29,10 @@ from backend.programming.programming_intelligence import(
 from backend.capabilities.capability_registry import CapabilityRegistry
 from backend.capabilities.capability_selector import CapabilitySelector
 from backend.task_planner import TaskPlanner
+from backend.capability_orchestrator import (
+    CapabilityOrchestrator,
+    CapabilityExecutionContext,
+)
 from backend.domain_knowledge_router import DomainKnowledgeRouter
 from backend.programming.language_selector import LanguageSelector
 from backend.research_freshness_router import ResearchFreshnessRouter
@@ -194,6 +198,7 @@ class AIEngine:
         self.capability_registry = CapabilityRegistry()
         self.capability_selector = CapabilitySelector(self.capability_registry)
         self.task_planner = TaskPlanner()
+        self.capability_orchestrator = CapabilityOrchestrator()
         self.domain_knowledge_router = DomainKnowledgeRouter()
         self.language_selector = LanguageSelector()
         self.research_freshness_router = ResearchFreshnessRouter()
@@ -233,7 +238,6 @@ class AIEngine:
     def understand_question(self, message: str) -> dict:
         """
         Understand and classify a user message.
-
         The actual intent detection is handled by the modular
         IntentDetector system.
         """
@@ -256,7 +260,6 @@ class AIEngine:
                 emotional_context.companion_instruction
             ),
         }
-
         question_info["domains"] = [
             {
                 "domain": match.domain,
@@ -265,33 +268,132 @@ class AIEngine:
             }
             for match in domain_matches
         ]
-
+        # Step 7: determine available stable knowledge routes first.
+        knowledge_routes = self.domain_knowledge_router.route(
+            domains=question_info["domains"]
+        )
+        question_info["knowledge_routes"] = [
+            {
+                "domain": route.domain,
+                "source": route.source,
+                "reason": route.reason,
+                "confidence": route.confidence,
+            }
+            for route in knowledge_routes
+        ]
+        has_knowledge_source = any(
+            route.source == "knowledge"
+            for route in knowledge_routes
+        )
+        # Step 7: a knowledge route can come either from the
+        # domain router or directly from the intent route.
+        knowledge_route_selected = (
+            question_info.get("route") == "knowledge"
+            or has_knowledge_source
+        )
+        # Check whether the existing Knowledge Base actually
+        # contains a valid, non-expired answer.
+        stored_knowledge = None
+        if knowledge_route_selected:
+            try:
+                stored_knowledge = self.knowledge_base.get(message)
+            except Exception:
+                stored_knowledge = None
+        knowledge_sufficient = stored_knowledge is not None
+        question_info["knowledge_sufficiency"] = {
+            "available": knowledge_route_selected,
+            "sufficient": knowledge_sufficient,
+            "found": knowledge_sufficient,
+            "reason": (
+                "A valid stored knowledge answer was found."
+                if knowledge_sufficient
+                else "No valid stored knowledge answer was found."
+            ),
+        }
+        research_freshness_decision = self.research_freshness_router.decide(
+            message=message,
+            intent=question_info.get("intent"),
+            route=question_info.get("route"),
+            domains=question_info.get("domains"),
+        )
+        question_info["research_freshness"] = {
+            "needs_research": research_freshness_decision.needs_research,
+            "freshness_required": (
+                research_freshness_decision.freshness_required
+            ),
+            "reason": research_freshness_decision.reason,
+            "confidence": research_freshness_decision.confidence,
+        }
+        # Step 7 source decision:
+        # fresh/current/explicit research -> research
+        # stable knowledge route -> knowledge
+        # otherwise -> general
+        if research_freshness_decision.needs_research:
+            source_decision = "research"
+            source_reason = research_freshness_decision.reason
+            source_confidence = research_freshness_decision.confidence
+        elif knowledge_sufficient:
+            source_decision = "knowledge"
+            source_reason = (
+                "A valid existing knowledge answer is available."
+            )
+            source_confidence = "high"
+        elif knowledge_route_selected:
+            source_decision = "general"
+            source_reason = (
+                "A knowledge route exists, but no valid stored answer "
+                "was found, so the request falls back to general AI."
+            )
+            source_confidence = "medium"
+        else:
+            source_decision = "general"
+            source_reason = (
+                "No specialized knowledge or fresh research route "
+                "was selected."
+            )
+            source_confidence = "medium"
+        question_info["source_decision"] = {
+            "source": source_decision,
+            "reason": source_reason,
+            "confidence": source_confidence,
+        }
+        medical_assessment = self.medical_response.assess(message)
+        if medical_assessment.is_medical:
+            question_info["risk_level"] = (
+                "high"
+                if medical_assessment.urgency == "emergency"
+                else "medium"
+            )
+        else:
+            question_info["risk_level"] = "low"
         task_understanding = self.task_understanding_builder.build(
             message=message,
             question_info=question_info,
         )
-
         question_info["task_understanding"] = {
             "message": task_understanding.message,
             "goal": task_understanding.goal,
+            "intent": task_understanding.intent,
+            "domains": task_understanding.domains,
             "task_type": task_understanding.task_type,
             "constraints": task_understanding.constraints,
             "required_information": (
                 task_understanding.required_information
             ),
+            "subtasks": task_understanding.subtasks,
+            "freshness_required": task_understanding.freshness_required,
+            "risk_level": task_understanding.risk_level,
             "confidence": task_understanding.confidence,
         }
-
-
         capability_selections = self.capability_selector.select(
             intent=question_info.get("intent"),
             route=question_info.get("route"),
             domains=question_info.get("domains"),
-            task_type=question_info.get("task_understanding", {}).get(
-                "task_type"
-            ),
+            task_type=question_info.get(
+                "task_understanding", {}
+            ).get("task_type"),
+            source_decision=question_info.get("source_decision"),
         )
-
         question_info["capabilities"] = [
             {
                 "capability": selection.capability,
@@ -300,45 +402,40 @@ class AIEngine:
             }
             for selection in capability_selections
         ]
+        if any(
+            isinstance(item, dict)
+            and item.get("capability") == "programming"
+            for item in question_info["capabilities"]
+        ):
+            language_domain = None
+            if "android" in programming_text or "android app" in programming_text:
+                language_domain = "android"
+            elif "backend" in programming_text or "back-end" in programming_text:
+                language_domain = "backend"
+            elif "frontend" in programming_text or "front-end" in programming_text:
+                language_domain = "frontend"
+            elif "website" in programming_text or "web application" in programming_text or "web app" in programming_text:
+                language_domain = "web"
 
-        question_info["knowledge_routes"] = [
-            {
-                "domain": route.domain,
-                "source": route.source,
-                "reason": route.reason,
-                "confidence": route.confidence,
-            }
-            for route in self.domain_knowledge_router.route(
-                domains=question_info["domains"]
+            language_selection = self.language_selector.select(
+                requirement=message,
+                domain=language_domain or (
+                    question_info["domains"][0].get("domain")
+                    if question_info.get("domains")
+                    and isinstance(question_info["domains"][0], dict)
+                    else None
+                ),
             )
-        ]
-
-
-        research_freshness_decision = self.research_freshness_router.decide(
-            intent=question_info.get("intent"),
-            route=question_info.get("route"),
-            domains=question_info.get("domains"),
-        )
-
-        question_info["research_freshness"] = {
-            "needs_research": research_freshness_decision.needs_research,
-            "freshness_required": research_freshness_decision.freshness_required,
-            "reason": research_freshness_decision.reason,
-            "confidence": research_freshness_decision.confidence,
-        }
-
+            if language_selection is not None:
+                question_info["programming_language"] = {
+                    "language": language_selection.language,
+                    "reason": language_selection.reason,
+                    "confidence": language_selection.confidence,
+                }
         question_info["task_plan"] = self.task_planner.create_plan(
             capabilities=question_info["capabilities"]
         )
-
-        
-
         return question_info
-
-    
-
-
-
 
     def _format_structured_live_evidence(
         self,
@@ -1654,6 +1751,17 @@ class AIEngine:
 
         route = question_info["route"]
         task_plan = question_info.get("task_plan", [])
+        capability_context = CapabilityExecutionContext(
+            message=message,
+            intent=question_info.get("intent", ""),
+            domains=question_info.get("domains", []),
+            source_decision=question_info.get("source_decision"),
+            programming_language=question_info.get(
+                "programming_language"
+            ),
+            file_context=file_context,
+            conversation_context=conversation_emotion_context.conversation_context,
+        )
         # ================================
         # DETERMINISTIC CALCULATION ROUTER
         # ================================
@@ -1702,6 +1810,12 @@ class AIEngine:
 
             language_selection = self.language_selector.select(
                 requirement=message,
+                domain=(
+                    question_info["domains"][0].get("domain")
+                    if question_info.get("domains")
+                    and isinstance(question_info["domains"][0], dict)
+                    else None
+                ),
             )
 
             language = (
@@ -2087,9 +2201,3 @@ class AIEngine:
             return self.llm_router.generate(prompt)
 
         return "ISMAIL AI engine provider is not configured."
-
-
-
-
-
-
