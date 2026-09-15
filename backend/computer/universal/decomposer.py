@@ -23,9 +23,10 @@ def _split_request(text):
     """
     Split a request into ordered sub-requests.
     Only explicit sequential connectors are used.
-    This avoids blindly splitting normal sentences.
+    This preserves the original text of each step.
+    This module does not execute any computer action.
     """
-    parts = [text]
+    parts = [str(text or "").strip()]
     changed = True
     while changed:
         changed = False
@@ -35,10 +36,21 @@ def _split_request(text):
             for separator in SEPARATORS:
                 next_parts = []
                 for item in current:
-                    if separator.lower() in item.lower():
-                        pieces = item.lower().split(
-                            separator.lower()
-                        )
+                    lower_item = item.lower()
+                    lower_separator = separator.lower()
+                    if lower_separator in lower_item:
+                        pieces = []
+                        start = 0
+                        while True:
+                            position = lower_item.find(
+                                lower_separator,
+                                start,
+                            )
+                            if position == -1:
+                                pieces.append(item[start:])
+                                break
+                            pieces.append(item[start:position])
+                            start = position + len(separator)
                         if len(pieces) > 1:
                             next_parts.extend(pieces)
                             changed = True

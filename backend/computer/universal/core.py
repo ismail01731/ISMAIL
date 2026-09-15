@@ -62,6 +62,23 @@ def _resolve_state_references(text, state):
         "that file",
         "the file",
         "it",
+        "\u098f\u099f\u09be",
+        "\u0993\u099f\u09be",
+        "\u09b8\u09c7\u099f\u09be",
+        "\u098f\u0987 \u0985\u09cd\u09af\u09be\u09aa",
+        "\u0993\u0987 \u0985\u09cd\u09af\u09be\u09aa",
+        "\u098f\u0987 \u0985\u09cd\u09af\u09be\u09aa\u099f\u09bf",
+        "\u0993\u0987 \u0985\u09cd\u09af\u09be\u09aa\u099f\u09bf",
+        "\u098f\u0987 \u09ab\u09be\u0987\u09b2",
+        "\u0993\u0987 \u09ab\u09be\u0987\u09b2",
+        "\u098f\u0987 \u09ab\u09be\u0987\u09b2\u099f\u09bf",
+        "\u0993\u0987 \u09ab\u09be\u0987\u09b2\u099f\u09bf",
+        "\u098f\u0987 \u09ab\u09cb\u09b2\u09cd\u09a1\u09be\u09b0",
+        "\u0993\u0987 \u09ab\u09cb\u09b2\u09cd\u09a1\u09be\u09b0",
+        "\u098f\u0987 \u09ab\u09cb\u09b2\u09cd\u09a1\u09be\u09b0\u099f\u09bf",
+        "\u0993\u0987 \u09ab\u09cb\u09b2\u09cd\u09a1\u09be\u09b0\u099f\u09bf",
+        "\u098f\u0987 \u0993\u09df\u09c7\u09ac\u09b8\u09be\u0987\u099f",
+        "\u0993\u0987 \u0993\u09df\u09c7\u09ac\u09b8\u09be\u0987\u099f",
     ]
     references = []
     for candidate in candidates:
@@ -97,6 +114,8 @@ def _extract_logical_target(text, action):
             "open ",
             "launch ",
             "start ",
+            "\u0996\u09c1\u09b2\u09c7 ",
+            "\u0996\u09cb\u09b2\u09be ",
         ],
         "close_application": [
             "close ",
@@ -107,6 +126,8 @@ def _extract_logical_target(text, action):
             "open ",
             "visit ",
             "go to ",
+            "\u0996\u09c1\u09b2\u09c7 ",
+            "\u0996\u09cb\u09b2\u09be ",
         ],
         "search_web": [
             "search ",
@@ -125,9 +146,28 @@ def _extract_logical_target(text, action):
             "make a file ",
         ],
     }
+    bengali_suffixes = {
+        "open_application": [
+            " \u0996\u09c1\u09b2\u09c7 \u09a6\u09be\u0993",
+            " \u0996\u09c1\u09b2\u09c7 \u09a6\u09be\u0993\u0964",
+            " \u0996\u09cb\u09b2\u09cb",
+            " \u0996\u09cb\u09b2\u09be \u0995\u09b0\u09cb",
+        ],
+        "open_website": [
+            " \u0996\u09c1\u09b2\u09c7 \u09a6\u09be\u0993",
+            " \u0996\u09c1\u09b2\u09c7 \u09a6\u09be\u0993\u0964",
+            " \u0996\u09cb\u09b2\u09be \u0995\u09b0\u09cb",
+        ],
+    }
+    lower_value = value.lower()
     for prefix in prefixes.get(action_name, []):
-        if value.lower().startswith(prefix):
+        if lower_value.startswith(prefix):
             target = value[len(prefix):].strip()
+            if target:
+                return target
+    for suffix in bengali_suffixes.get(action_name, []):
+        if lower_value.endswith(suffix):
+            target = value[:-len(suffix)].strip()
             if target:
                 return target
     return None

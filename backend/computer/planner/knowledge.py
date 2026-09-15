@@ -458,6 +458,136 @@ def search_computer_action_plan(query):
                     item
                 )
             )
+    # Natural Bengali command fallbacks.
+    # These rules classify common Bengali computer requests
+    # without executing any real computer action.
+    bengali_patterns = [
+        ("create_folder", [
+            "??????? ????",
+            "??????? ?????",
+            "??????? ????",
+            "???? ???????",
+            "???? ??????? ????",
+            "???? ??????? ????",
+        ]),
+        ("create_file", [
+            "???? ????",
+            "???? ?????",
+            "???? ????",
+            "???? ????",
+            "???? ???? ????",
+            "???? ???? ????",
+        ]),
+        ("read_file", [
+            "???? ???",
+            "???? ??",
+            "???? ?????",
+            "???? ????",
+            "???? ???",
+            "???? ????",
+        ]),
+        ("delete_file", [
+            "???? ????",
+            "???? ???? ???",
+            "???? ?????",
+            "???? delete",
+        ]),
+        ("open_application", [
+            "????? ???",
+            "????? ????",
+            "????? ????",
+            "????????? ???",
+            "????????? ????",
+            "????? ???",
+            "????? ????",
+            "chrome ???",
+            "chrome ????",
+        ]),
+        ("close_application", [
+            "????? ????",
+            "??????? ????",
+            "??????? ????",
+            "????????? ????",
+            "????? ????",
+            "chrome ????",
+        ]),
+        ("open_website", [
+            "???????? ???",
+            "???????? ????",
+            "???????? ????",
+            "???? ???",
+            "???? ????",
+        ]),
+        ("search_web", [
+            "????? ????",
+            "????? ?????",
+            "??????? ????",
+            "????? ????",
+            "????? ?????",
+        ]),
+        ("run_command", [
+            "command ?????",
+            "command ???? ??",
+            "?????? ?????",
+            "?????? ???? ??",
+        ]),
+        ("check_system", [
+            "????????? ???????",
+            "????????? ???",
+            "??????? ???????",
+            "??????? ???",
+        ]),
+        ("check_network", [
+            "????????? ???????",
+            "????????? ???",
+            "??? ???",
+            "????????? ???????",
+            "????????? ???",
+        ]),
+        ("shutdown_computer", [
+            "????????? shutdown",
+            "????????? ???????",
+            "????????? ???? ??",
+            "????????? ???? ??? ???",
+            "???? ???? ??",
+        ]),
+        ("restart_computer", [
+            "????????? restart",
+            "????????? ?????????",
+            "????????? ???? ????",
+            "????????? ?????? ????",
+            "???? restart",
+            "???? ?????????",
+        ]),
+    ]
+    for action_name, patterns in bengali_patterns:
+        if any(pattern in normalized for pattern in patterns):
+            plan = next(
+                (
+                    item
+                    for item in COMPUTER_ACTION_PLANS
+                    if item.get("name") == action_name
+                ),
+                None
+            )
+            if plan is not None:
+                already_matched = any(
+                    item.get("name") == action_name
+                    for _, _, _, item in matches
+                )
+                if not already_matched:
+                    matches.append(
+                        (
+                            25,
+                            max(
+                                len(pattern)
+                                for pattern in patterns
+                                if pattern in normalized
+                            ),
+                            -1,
+                            plan
+                        )
+                    )
     # Targeted fallback for requests such as:
     # "close Chrome", "close Notepad", etc.
     # A bare "close" request is intentionally not matched.
@@ -484,6 +614,146 @@ def search_computer_action_plan(query):
                         close_plan
                     )
                 )
+    # Natural Bengali action matches.
+    # Unicode escapes are used here so Windows PowerShell
+    # console encoding cannot corrupt Bengali source text.
+    bengali_exact_actions = {
+        "create_folder": [
+            "\u09a8\u09a4\u09c1\u09a8 \u09ab\u09cb\u09b2\u09cd\u09a1\u09be\u09b0 \u09a4\u09c8\u09b0\u09bf",
+            "\u09ab\u09cb\u09b2\u09cd\u09a1\u09be\u09b0 \u09a4\u09c8\u09b0\u09bf",
+            "\u09ab\u09cb\u09b2\u09cd\u09a1\u09be\u09b0 \u09ac\u09be\u09a8\u09be\u0993",
+            "\u09ab\u09cb\u09b2\u09cd\u09a1\u09be\u09b0 \u09a4\u09c8\u09b0\u09c0",
+        ],
+        "create_file": [
+            "\u09a8\u09a4\u09c1\u09a8 \u09ab\u09be\u0987\u09b2 \u09a4\u09c8\u09b0\u09bf",
+            "\u09ab\u09be\u0987\u09b2 \u09a4\u09c8\u09b0\u09bf",
+            "\u09ab\u09be\u0987\u09b2 \u09ac\u09be\u09a8\u09be\u0993",
+            "\u09ab\u09be\u0987\u09b2 \u09a4\u09c8\u09b0\u09c0",
+        ],
+        "read_file": [
+            "\u09ab\u09be\u0987\u09b2 \u09aa\u09a1\u09bc",
+            "\u09ab\u09be\u0987\u09b2 \u09aa\u09a1\u09bc\u09cb",
+            "\u09ab\u09be\u0987\u09b2 \u09aa\u09a1\u09bc\u09be",
+            "\u09ab\u09be\u0987\u09b2 \u09aa\u09dc",
+            "\u09ab\u09be\u0987\u09b2 \u09a6\u09c7\u0996\u09be\u0993",
+        ],
+        "delete_file": [
+            "\u09ab\u09be\u0987\u09b2 \u09ae\u09c1\u099b\u09c7",
+            "\u09ab\u09be\u0987\u09b2 \u09ae\u09c1\u099b\u09c7 \u09ab\u09c7\u09b2",
+            "\u09ab\u09be\u0987\u09b2 \u09a1\u09bf\u09b2\u09bf\u099f",
+            "\u09ab\u09be\u0987\u09b2 delete",
+        ],
+        "open_application": [
+            "chrome \u0996\u09c1\u09b2\u09c7",
+            "chrome \u0996\u09cb\u09b2",
+            "\u0995\u09cd\u09b0\u09cb\u09ae \u0996\u09c1\u09b2\u09c7",
+            "\u0995\u09cd\u09b0\u09cb\u09ae \u0996\u09cb\u09b2",
+            "\u0985\u09cd\u09af\u09be\u09aa \u0996\u09c1\u09b2\u09c7",
+            "\u0985\u09cd\u09af\u09be\u09aa \u0996\u09cb\u09b2",
+            "\u0985\u09cd\u09af\u09be\u09aa \u0993\u09aa\u09c7\u09a8",
+            "\u09aa\u09cd\u09b0\u09cb\u0997\u09cd\u09b0\u09be\u09ae \u0996\u09c1\u09b2\u09c7",
+            "\u09aa\u09cd\u09b0\u09cb\u0997\u09cd\u09b0\u09be\u09ae \u0996\u09cb\u09b2",
+        ],
+        "close_application": [
+        "\u098f\u099f\u09be \u09ac\u09a8\u09cd\u09a7",
+        "\u0993\u099f\u09be \u09ac\u09a8\u09cd\u09a7",
+        "\u09b8\u09c7\u099f\u09be \u09ac\u09a8\u09cd\u09a7",
+        "\u098f\u099f\u09be \u09ac\u09a8\u09cd\u09a7 \u0995\u09b0\u09cb",
+        "\u0993\u099f\u09be \u09ac\u09a8\u09cd\u09a7 \u0995\u09b0\u09cb",
+        "\u09b8\u09c7\u099f\u09be \u09ac\u09a8\u09cd\u09a7 \u0995\u09b0\u09cb",
+        "\u098f\u099f\u09be \u09ac\u09a8\u09cd\u09a7 \u0995\u09b0",
+        "\u0993\u099f\u09be \u09ac\u09a8\u09cd\u09a7 \u0995\u09b0",
+        "\u09b8\u09c7\u099f\u09be \u09ac\u09a8\u09cd\u09a7 \u0995\u09b0",
+            "chrome \u09ac\u09a8\u09cd\u09a7",
+            "\u0995\u09cd\u09b0\u09cb\u09ae \u09ac\u09a8\u09cd\u09a7",
+            "\u0985\u09cd\u09af\u09be\u09aa \u09ac\u09a8\u09cd\u09a7",
+            "\u0985\u09cd\u09af\u09be\u09aa\u099f\u09bf \u09ac\u09a8\u09cd\u09a7",
+            "\u0985\u09cd\u09af\u09be\u09aa\u099f\u09be \u09ac\u09a8\u09cd\u09a7",
+            "\u09aa\u09cd\u09b0\u09cb\u0997\u09cd\u09b0\u09be\u09ae \u09ac\u09a8\u09cd\u09a7",
+        ],
+        "open_website": [
+            "\u0993\u09df\u09c7\u09ac\u09b8\u09be\u0987\u099f \u0996\u09c1\u09b2\u09c7",
+            "\u0993\u09df\u09c7\u09ac\u09b8\u09be\u0987\u099f \u0996\u09cb\u09b2",
+            "\u0993\u09df\u09c7\u09ac\u09b8\u09be\u0987\u099f \u0993\u09aa\u09c7\u09a8",
+            "\u09b8\u09be\u0987\u099f \u0996\u09c1\u09b2\u09c7",
+            "\u09b8\u09be\u0987\u099f \u0996\u09cb\u09b2",
+        ],
+        "search_web": [
+            "\u0993\u09df\u09c7\u09ac\u09c7 \u0996\u09c1\u0981\u099c",
+            "\u0993\u09df\u09c7 \u09b8\u09be\u09b0\u09cd\u099a",
+            "\u0985\u09a8\u09b2\u09be\u0987\u09a8\u09c7 \u0996\u09c1\u0981\u099c",
+            "\u0997\u09c1\u0997\u09b2\u09c7 \u0996\u09c1\u0981\u099c",
+            "\u0997\u09c1\u0997\u09b2\u09c7 \u09b8\u09be\u09b0\u09cd\u099a",
+        ],
+        "run_command": [
+            "\u0995\u09ae\u09be\u09a8\u09cd\u09a1 \u099a\u09be\u09b2\u09be\u0993",
+            "\u0995\u09ae\u09be\u09a8\u09cd\u09a1 \u099a\u09be\u09b2\u09c1 \u0995\u09b0",
+            "command \u099a\u09be\u09b2\u09be\u0993",
+            "command \u099a\u09be\u09b2\u09c1 \u0995\u09b0",
+        ],
+        "check_system": [
+            "\u0995\u09ae\u09cd\u09aa\u09bf\u0989\u099f\u09be\u09b0 \u09aa\u09b0\u09c0\u0995\u09cd\u09b7\u09be",
+            "\u0995\u09ae\u09cd\u09aa\u09bf\u0989\u099f\u09be\u09b0 \u099a\u09c7\u0995",
+            "\u09b8\u09bf\u09b8\u09cd\u099f\u09c7\u09ae \u09aa\u09b0\u09c0\u0995\u09cd\u09b7\u09be",
+            "\u09b8\u09bf\u09b8\u09cd\u099f\u09c7\u09ae \u099a\u09c7\u0995",
+        ],
+        "check_network": [
+            "\u0987\u09a8\u09cd\u099f\u09be\u09b0\u09a8\u09c7\u099f \u09aa\u09b0\u09c0\u0995\u09cd\u09b7\u09be",
+            "\u0987\u09a8\u09cd\u099f\u09be\u09b0\u09a8\u09c7\u099f \u099a\u09c7\u0995",
+            "\u09a8\u09c7\u099f\u0993\u09df\u09be\u09b0\u09cd\u0995 \u09aa\u09b0\u09c0\u0995\u09cd\u09b7\u09be",
+            "\u09a8\u09c7\u099f\u0993\u09df\u09be\u09b0\u09cd\u0995 \u099a\u09c7\u0995",
+        ],
+        "shutdown_computer": [
+            "\u0995\u09ae\u09cd\u09aa\u09bf\u0989\u099f\u09be\u09b0 shutdown",
+            "\u0995\u09ae\u09cd\u09aa\u09bf\u0989\u099f\u09be\u09b0 \u09b6\u09be\u099f\u09a1\u09be\u0989\u09a8",
+            "\u0995\u09ae\u09cd\u09aa\u09bf\u0989\u099f\u09be\u09b0 \u09ac\u09a8\u09cd\u09a7 \u0995\u09b0",
+            "\u0995\u09ae\u09cd\u09aa\u09bf\u0989\u099f\u09be\u09b0 \u09ac\u09a8\u09cd\u09a7 \u0995\u09b0\u09c7 \u09a6\u09be\u0993",
+            "\u09aa\u09bf\u09b8\u09bf \u09ac\u09a8\u09cd\u09a7 \u0995\u09b0",
+        ],
+        "restart_computer": [
+            "\u0995\u09ae\u09cd\u09aa\u09bf\u0989\u099f\u09be\u09b0 restart",
+            "\u0995\u09ae\u09cd\u09aa\u09bf\u0989\u099f\u09be\u09b0 \u09b0\u09bf\u09b8\u09cd\u099f\u09be\u09b0\u09cd\u099f",
+            "\u0995\u09ae\u09cd\u09aa\u09bf\u0989\u099f\u09be\u09b0 \u0986\u09ac\u09be\u09b0 \u099a\u09be\u09b2\u09c1",
+            "\u0995\u09ae\u09cd\u09aa\u09bf\u0989\u099f\u09be\u09b0 \u09aa\u09c1\u09a8\u09b0\u09be\u09df \u099a\u09be\u09b2\u09c1",
+            "\u09aa\u09bf\u09b8\u09bf restart",
+            "\u09aa\u09bf\u09b8\u09bf \u09b0\u09bf\u09b8\u09cd\u099f\u09be\u09b0\u09cd\u200c\u099f",
+        ],
+    }
+    for action_name, patterns in bengali_exact_actions.items():
+        matched_patterns = [
+            pattern
+            for pattern in patterns
+            if pattern in normalized
+        ]
+        if not matched_patterns:
+            continue
+        plan = next(
+            (
+                item
+                for item in COMPUTER_ACTION_PLANS
+                if item.get("name") == action_name
+            ),
+            None
+        )
+        if plan is None:
+            continue
+        matches = [
+            item
+            for item in matches
+            if item[3].get("name") != action_name
+        ]
+        strongest_pattern = max(
+            matched_patterns,
+            key=len
+        )
+        matches.append(
+            (
+                1000,
+                len(strongest_pattern),
+                -1,
+                plan
+            )
+        )
     matches.sort(
         key=lambda x: (x[0], x[1], -x[2]),
         reverse=True
