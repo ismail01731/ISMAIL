@@ -17,9 +17,7 @@ class FutureIntegration:
             return self._pipeline
         from intelligence.adapter import ExistingAIAdapter
         from intelligence.orchestrator import FutureIntelligence
-        from pipeline.live_historical import LiveHistoricalFuturePipeline
-        from pipeline.automatic_live_historical import AutomaticLiveHistoricalPipeline
-        from pipeline.live_provider_selector import LiveProviderSelector
+        from pipeline.automatic import AutomaticFuturePipeline
         # Existing ISMAIL LLM is used as the final reasoning layer.
         # We intentionally do NOT call AIEngine.generate() here because
         # that would recursively enter the Future Integration router.
@@ -40,13 +38,8 @@ class FutureIntegration:
         intelligence = FutureIntelligence(
             ai_adapter=adapter
         )
-        base_pipeline = LiveHistoricalFuturePipeline(
+        self._pipeline = AutomaticFuturePipeline(
             intelligence=intelligence
-        )
-        provider_selector = LiveProviderSelector()
-        self._pipeline = AutomaticLiveHistoricalPipeline(
-            pipeline=base_pipeline,
-            provider_selector=provider_selector,
         )
         return self._pipeline
     @staticmethod
@@ -255,6 +248,5 @@ class FutureIntegration:
                 "existing_ai_preserved": True,
                 "new_ai_created": False,
             }
-
 
 

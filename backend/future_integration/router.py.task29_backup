@@ -17,9 +17,7 @@ class FutureIntegration:
             return self._pipeline
         from intelligence.adapter import ExistingAIAdapter
         from intelligence.orchestrator import FutureIntelligence
-        from pipeline.live_historical import LiveHistoricalFuturePipeline
-        from pipeline.automatic_live_historical import AutomaticLiveHistoricalPipeline
-        from pipeline.live_provider_selector import LiveProviderSelector
+        from pipeline.automatic import AutomaticFuturePipeline
         # Existing ISMAIL LLM is used as the final reasoning layer.
         # We intentionally do NOT call AIEngine.generate() here because
         # that would recursively enter the Future Integration router.
@@ -40,13 +38,8 @@ class FutureIntegration:
         intelligence = FutureIntelligence(
             ai_adapter=adapter
         )
-        base_pipeline = LiveHistoricalFuturePipeline(
+        self._pipeline = AutomaticFuturePipeline(
             intelligence=intelligence
-        )
-        provider_selector = LiveProviderSelector()
-        self._pipeline = AutomaticLiveHistoricalPipeline(
-            pipeline=base_pipeline,
-            provider_selector=provider_selector,
         )
         return self._pipeline
     @staticmethod
@@ -148,57 +141,9 @@ class FutureIntegration:
                 "",
                 cleaned,
             ).strip()
-        # Remove trailing question punctuation BEFORE matching
-        # temporal suffixes such as "next month?".
-        cleaned = cleaned.rstrip("?!। ").strip()
-        # Remove common future-time suffixes so that
-        # "IBM next month" resolves to "IBM".
-        temporal_suffixes = (
-            r"\s+for\s+the\s+next\s+\d+\s+days?$",
-            r"\s+for\s+the\s+next\s+\d+\s+weeks?$",
-            r"\s+for\s+the\s+next\s+\d+\s+months?$",
-            r"\s+for\s+the\s+next\s+\d+\s+years?$",
-            r"\s+over\s+the\s+next\s+\d+\s+days?$",
-            r"\s+over\s+the\s+next\s+\d+\s+weeks?$",
-            r"\s+over\s+the\s+next\s+\d+\s+months?$",
-            r"\s+in\s+the\s+next\s+\d+\s+days?$",
-            r"\s+in\s+the\s+next\s+\d+\s+weeks?$",
-            r"\s+in\s+the\s+next\s+\d+\s+months?$",
-            r"\s+next\s+few\s+days?$",
-            r"\s+next\s+few\s+weeks?$",
-            r"\s+next\s+few\s+months?$",
-            r"\s+next\s+week$",
-            r"\s+next\s+month$",
-            r"\s+next\s+year$",
-            r"\s+this\s+week$",
-            r"\s+this\s+month$",
-            r"\s+this\s+year$",
-            r"\s+আগামী\s+\d+\s+দিনে$",
-            r"\s+আগামী\s+\d+\s+সপ্তাহে$",
-            r"\s+আগামী\s+\d+\s+মাসে$",
-            r"\s+আগামী\s+সপ্তাহে$",
-            r"\s+আগামী\s+মাসে$",
-            r"\s+আগামী\s+বছরে$",
-            r"\s+পরের\s+\d+\s+দিনে$",
-            r"\s+পরের\s+\d+\s+সপ্তাহে$",
-            r"\s+পরের\s+\d+\s+মাসে$",
-            r"\s+পরের\s+সপ্তাহে$",
-            r"\s+পরের\s+মাসে$",
-            r"\s+পরের\s+বছরে$",
-        )
-        for pattern in temporal_suffixes:
-            cleaned = re.sub(
-                pattern,
-                "",
-                cleaned,
-                flags=re.IGNORECASE,
-            ).strip()
-        # Also remove a trailing question mark/full stop
-        # before the final topic validation.
-        cleaned = cleaned.rstrip("?!। ").strip()
         if len(cleaned) < 3:
             return text
-        return cleaned
+        return cleaned.rstrip("?!। ")
     def analyze(
         self,
         message: str,
@@ -215,6 +160,7 @@ class FutureIntegration:
             pipeline = self._build_pipeline()
             result = pipeline.analyze(
                 question=message,
+                topic=topic,
                 horizon_days=horizon_days,
                 metadata={
                     "source": "existing_ismail_ai",
@@ -255,6 +201,3 @@ class FutureIntegration:
                 "existing_ai_preserved": True,
                 "new_ai_created": False,
             }
-
-
-

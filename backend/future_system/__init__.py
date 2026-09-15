@@ -1,2 +1,4 @@
-﻿from .system import CompleteFutureSystem
-__all__ = ["CompleteFutureSystem"]
+﻿from future_system.topic_resolver import HistoricalTopicResolver
+__all__ = [
+    "HistoricalTopicResolver",
+]

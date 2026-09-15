@@ -37,7 +37,6 @@ from backend.capability_orchestrator import (
 from backend.domain_knowledge_router import DomainKnowledgeRouter
 from backend.programming.language_selector import LanguageSelector
 from backend.research_freshness_router import ResearchFreshnessRouter
-from backend.future_integration.router import FutureIntegration
 from backend.result_verifier import ResultVerifier
 from backend.task_understanding import TaskUnderstandingBuilder
 from backend.emotion.emotion_engine import emotion_engine
@@ -181,7 +180,6 @@ class AIEngine:
         self.llm_router = LLMRouter.create(self.llm_config)
         self.openai_provider = OpenAIProvider(self.llm_config)
         self.provider = self.llm_config.provider
-        self.future_integration = FutureIntegration(self)
         self.model = self.llm_config.model
         self.ollama_url = self.llm_config.ollama_url
         self.medical_response = MedicalResponse()
@@ -2217,41 +2215,6 @@ class AIEngine:
         )
 
         if self.provider in ("openai", "openrouter", "groq"):
-            # ------------------------------------------------
-            # Future Intelligence route
-            # ------------------------------------------------
-            # Specialized existing routes above remain untouched.
-            # FutureIntegration uses the existing ISMAIL AI
-            # as the final reasoning/language layer.
-            try:
-                future_result = self.future_integration.analyze(
-                    message=message,
-                    user_id=authenticated_user_id,
-                    chat_id=chat_id,
-                )
-                if isinstance(future_result, dict):
-                    if future_result.get("status") == "success":
-                        answer = future_result.get("answer", {})
-                        if isinstance(answer, dict):
-                            ai_reasoning = answer.get(
-                                "ai_reasoning"
-                            )
-                            summary = answer.get(
-                                "summary"
-                            )
-                            if ai_reasoning:
-                                return str(ai_reasoning)
-                            if summary:
-                                return str(summary)
-                        ai_reasoning = future_result.get(
-                            "ai_reasoning"
-                        )
-                        if ai_reasoning:
-                            return str(ai_reasoning)
-            except Exception:
-                # Future intelligence must never break
-                # the existing ISMAIL AI.
-                pass
             return self.llm_router.generate(prompt)
 
         
@@ -2274,43 +2237,7 @@ class AIEngine:
                     emotion_result.emotion
                 )
 
-            # ------------------------------------------------
-            # Future Intelligence route
-            # ------------------------------------------------
-            # Specialized existing routes above remain untouched.
-            # FutureIntegration uses the existing ISMAIL AI
-            # as the final reasoning/language layer.
-            try:
-                future_result = self.future_integration.analyze(
-                    message=message,
-                    user_id=authenticated_user_id,
-                    chat_id=chat_id,
-                )
-                if isinstance(future_result, dict):
-                    if future_result.get("status") == "success":
-                        answer = future_result.get("answer", {})
-                        if isinstance(answer, dict):
-                            ai_reasoning = answer.get(
-                                "ai_reasoning"
-                            )
-                            summary = answer.get(
-                                "summary"
-                            )
-                            if ai_reasoning:
-                                return str(ai_reasoning)
-                            if summary:
-                                return str(summary)
-                        ai_reasoning = future_result.get(
-                            "ai_reasoning"
-                        )
-                        if ai_reasoning:
-                            return str(ai_reasoning)
-            except Exception:
-                # Future intelligence must never break
-                # the existing ISMAIL AI.
-                pass
             return self.llm_router.generate(prompt)
 
         return "ISMAIL AI engine provider is not configured."
-
 

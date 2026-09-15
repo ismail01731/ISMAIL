@@ -1,5 +1,5 @@
 ﻿from app.api.backtesting_routes import router as backtesting_router
-from fastapi import FastAPI
+from fastapi import FastAPI`r`nfrom app.api.historical_routes import router as historical_router
 from app.api.routes import router
 from app.api.live_data_routes import (
     router as live_data_router,
@@ -81,4 +81,8 @@ app.include_router(backtesting_router)
 
 
 
+
+
+
+app.include_router(historical_router)
 
