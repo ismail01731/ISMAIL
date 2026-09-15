@@ -17,7 +17,6 @@ import urllib.error
 import urllib.request
 from dotenv import load_dotenv
 from backend.knowledge_base import KnowledgeBase
-from backend.web_research import WebResearch
 from backend.openai_provider import OpenAIProvider
 from backend.browser_actions import detect_browser_action
 from backend.intent_detector import IntentDetector
@@ -1787,6 +1786,11 @@ class AIEngine:
         # planning/state-only. It never executes real computer actions.
         #
 
+        identity_answer = get_identity_answer(message)
+
+        if identity_answer is not None:
+            return identity_answer
+
         computer_session_key = str(chat_id or "").strip()
 
         computer_result = process_computer_request(
@@ -1797,8 +1801,8 @@ class AIEngine:
 
         if isinstance(computer_result, dict):
             computer_matched = bool(
-                computer_result.get("classification")
-                or computer_result.get("steps")
+                isinstance(computer_result.get("classification"), dict)
+                and computer_result["classification"].get("matched", False)
             )
 
             if computer_matched:
@@ -1993,10 +1997,6 @@ class AIEngine:
             computer_name = best_computer_result.get("name", "Computer")
             computer_definition = best_computer_result.get("definition", "")
             return "Computer Knowledge: " + computer_name + " - " + computer_definition
-        identity_answer = get_identity_answer(message)
-
-        if identity_answer is not None:
-            return identity_answer
 
         emotion_result = emotion_engine.detect(message)
 

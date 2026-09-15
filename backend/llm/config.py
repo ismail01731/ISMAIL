@@ -1,5 +1,11 @@
 ﻿import os
+from pathlib import Path
 from dataclasses import dataclass
+from dotenv import load_dotenv
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+ENV_FILE = PROJECT_ROOT / "config" / ".env"
+load_dotenv(ENV_FILE)
 @dataclass(frozen=True)
 class LLMConfig:
     provider: str
