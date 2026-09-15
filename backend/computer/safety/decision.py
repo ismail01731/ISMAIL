@@ -1,0 +1,196 @@
+﻿"""
+ISMAIL AI - Computer Permission Decision Engine
+Task 13B
+Combines the Computer Agent decision with the
+Permission & Safety Policy.
+IMPORTANT:
+This module does NOT execute computer actions.
+"""
+from backend.computer.agent.decision import evaluate_agent_request
+from backend.computer.safety.policy import get_permission_policy
+VALID_DECISIONS = {
+    "allow",
+    "confirm",
+    "block",
+}
+INTENT_TO_POLICY_KEY = {
+    "create a new folder.": "create_folder",
+    "create a file.": "create_file",
+    "create a new file.": "create_file",
+    "read a file.": "read_file",
+    "delete a file.": "delete_file",
+    "copy a file.": "copy_file",
+    "move a file.": "move_file",
+    "rename a file.": "rename_file",
+    "open an application.": "open_application",
+    "close an application.": "close_application",
+    "open a website.": "open_website",
+    "perform a web search.": "search_web",
+    "search the web.": "search_web",
+    "execute a command.": "run_command",
+    "check the computer.": "check_system",
+    "check the network.": "check_network",
+    "install software.": "install_software",
+    "uninstall software.": "uninstall_software",
+    "shut down the computer.": "shutdown_computer",
+    "restart the computer.": "restart_computer",
+}
+def _resolve_policy_key(intent):
+    """
+    Convert the planner's human-readable intent
+    into the canonical safety-policy key.
+    """
+    normalized = str(intent or "").strip().lower()
+    direct = INTENT_TO_POLICY_KEY.get(normalized)
+    if direct:
+        return direct
+    normalized_without_period = normalized.rstrip(".")
+    for human_intent, policy_key in INTENT_TO_POLICY_KEY.items():
+        if (
+            normalized_without_period
+            == human_intent.rstrip(".")
+        ):
+            return policy_key
+    return ""
+def evaluate_permission(
+    query,
+    user_confirmed=False,
+):
+    """
+    Evaluate a computer request against the safety policy.
+    """
+    text = str(query or "").strip()
+    if not text:
+        return {
+            "request": "",
+            "intent": "",
+            "policy_key": "",
+            "permission": "critical",
+            "decision": "block",
+            "requires_confirmation": True,
+            "user_confirmed": bool(user_confirmed),
+            "execution_allowed": False,
+            "reason": "Empty request is blocked.",
+            "agent_decision": None,
+            "policy": None,
+        }
+    agent_result = evaluate_agent_request(text)
+    plan = agent_result.get("plan")
+    if not plan:
+        return {
+            "request": text,
+            "intent": "",
+            "policy_key": "",
+            "permission": "critical",
+            "decision": "block",
+            "requires_confirmation": True,
+            "user_confirmed": bool(user_confirmed),
+            "execution_allowed": False,
+            "reason": "No supported action plan was found.",
+            "agent_decision": agent_result,
+            "policy": None,
+        }
+    intent = plan.get("intent", "")
+    policy_key = _resolve_policy_key(intent)
+    if not policy_key:
+        return {
+            "request": text,
+            "intent": intent,
+            "policy_key": "",
+            "permission": "critical",
+            "decision": "block",
+            "requires_confirmation": True,
+            "user_confirmed": bool(user_confirmed),
+            "execution_allowed": False,
+            "reason": (
+                "The planner intent could not be safely mapped "
+                "to a known permission policy. "
+                "The action is blocked by default."
+            ),
+            "agent_decision": agent_result,
+            "policy": None,
+        }
+    policy = get_permission_policy(policy_key)
+    permission = policy.get(
+        "permission",
+        "critical"
+    )
+    policy_decision = policy.get(
+        "decision",
+        "block"
+    )
+    requires_confirmation = bool(
+        policy.get(
+            "requires_confirmation",
+            True
+        )
+    )
+    if policy_decision not in VALID_DECISIONS:
+        policy_decision = "block"
+    if policy_decision == "block":
+        decision = "block"
+        reason = (
+            "The safety policy blocks this computer action. "
+            + policy.get("reason", "")
+        )
+    elif requires_confirmation:
+        if user_confirmed:
+            decision = "allow"
+            reason = (
+                "Required user confirmation was provided. "
+                "The request is permitted by the safety policy, "
+                "but actual execution remains disabled."
+            )
+        else:
+            decision = "confirm"
+            reason = (
+                "This computer action requires explicit "
+                "user confirmation. "
+                + policy.get("reason", "")
+            )
+    else:
+        decision = "allow"
+        reason = policy.get(
+            "reason",
+            "The action is allowed by the safety policy."
+        )
+    return {
+        "request": text,
+        "intent": intent,
+        "policy_key": policy_key,
+        "permission": permission,
+        "decision": decision,
+        "requires_confirmation": requires_confirmation,
+        "user_confirmed": bool(user_confirmed),
+        "execution_allowed": False,
+        "reason": reason,
+        "agent_decision": agent_result,
+        "policy": policy,
+    }
+def get_permission_decision_summary(
+    query,
+    user_confirmed=False,
+):
+    """
+    Return a human-readable permission decision.
+    """
+    result = evaluate_permission(
+        query,
+        user_confirmed=user_confirmed
+    )
+    lines = [
+        "Computer Permission Decision",
+        "Request: " + result.get("request", ""),
+        "Intent: " + result.get("intent", ""),
+        "Policy Key: " + result.get("policy_key", ""),
+        "Permission: " + result.get("permission", ""),
+        "Decision: " + result.get("decision", ""),
+        "Requires Confirmation: "
+        + str(result.get("requires_confirmation", False)),
+        "User Confirmed: "
+        + str(result.get("user_confirmed", False)),
+        "Execution Allowed: "
+        + str(result.get("execution_allowed", False)),
+        "Reason: " + result.get("reason", ""),
+    ]
+    return "\n".join(lines)

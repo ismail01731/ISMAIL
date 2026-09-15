@@ -1,0 +1,297 @@
+﻿TROUBLESHOOTING_KNOWLEDGE = [
+    {
+        "name": "computer_not_turning_on",
+        "keywords": [
+            "computer not turning on",
+            "pc not turning on",
+            "computer won't turn on",
+            "computer does not turn on",
+            "কম্পিউটার চালু হচ্ছে না"
+        ],
+        "definition": "A computer that does not power on may have a power, battery, hardware, or connection problem.",
+        "details": "Check the power cable, power adapter, wall outlet, battery condition, and power button. For a desktop, also check the PSU and internal power connections."
+    },
+    {
+        "name": "computer_not_booting",
+        "keywords": [
+            "computer not booting",
+            "pc not booting",
+            "windows not booting",
+            "computer won't boot",
+            "বুট হচ্ছে না",
+            "উইন্ডোজ বুট হচ্ছে না"
+        ],
+        "definition": "A computer that powers on but does not start the operating system may have a boot, storage, firmware, or operating system problem.",
+        "details": "Check boot order, storage detection, BIOS or UEFI settings, and operating system recovery options."
+    },
+    {
+        "name": "slow_computer",
+        "keywords": [
+            "computer slow",
+            "pc slow",
+            "system slow",
+            "slow computer",
+            "কম্পিউটার ধীর",
+            "কম্পিউটার স্লো"
+        ],
+        "definition": "A slow computer can result from high resource usage, insufficient memory, storage limitations, background software, or system issues.",
+        "details": "Check CPU, memory, and disk usage. Close unnecessary applications, review startup programs, remove unwanted software, and ensure sufficient free storage."
+    },
+    {
+        "name": "high_cpu_usage",
+        "keywords": [
+            "high cpu usage",
+            "cpu usage high",
+            "cpu at 100",
+            "cpu 100 percent",
+            "সিপিইউ বেশি ব্যবহার",
+            "সিপিইউ ১০০"
+        ],
+        "definition": "High CPU usage means one or more processes are consuming a large portion of processor capacity.",
+        "details": "Use Task Manager or another process monitor to identify the process consuming CPU. Check whether it is expected, update software if necessary, and investigate unwanted processes."
+    },
+    {
+        "name": "high_memory_usage",
+        "keywords": [
+            "high memory usage",
+            "ram usage high",
+            "memory usage high",
+            "ram full",
+            "মেমোরি বেশি ব্যবহার",
+            "র‍্যাম ফুল"
+        ],
+        "definition": "High memory usage means available RAM is being heavily consumed by applications or system processes.",
+        "details": "Check memory usage in Task Manager, close unnecessary applications, review startup programs, and investigate applications that continuously consume excessive memory."
+    },
+    {
+        "name": "low_disk_space",
+        "keywords": [
+            "low disk space",
+            "disk space low",
+            "storage full",
+            "disk full",
+            "low storage",
+            "ডিস্ক স্পেস কম",
+            "স্টোরেজ ফুল"
+        ],
+        "definition": "Low disk space occurs when a storage device has little free capacity remaining.",
+        "details": "Remove unnecessary temporary files, uninstall unused software, clean large files, and move appropriate data to another storage location."
+    },
+    {
+        "name": "internet_not_working",
+        "keywords": [
+            "internet not working",
+            "internet does not work",
+            "no internet",
+            "internet disconnected",
+            "ইন্টারনেট কাজ করছে না",
+            "ইন্টারনেট নেই"
+        ],
+        "definition": "An Internet connection problem can be caused by Wi-Fi, Ethernet, router, DNS, ISP, or device configuration issues.",
+        "details": "Check the network connection, router status, IP configuration, gateway, and DNS. Test connectivity with another device to determine whether the problem is local or network-wide."
+    },
+    {
+        "name": "wifi_not_connecting",
+        "keywords": [
+            "wifi not connecting",
+            "wifi won't connect",
+            "wifi disconnected",
+            "wifi not working",
+            "ওয়াইফাই কানেক্ট হচ্ছে না",
+            "ওয়াইফাই কাজ করছে না"
+        ],
+        "definition": "Wi-Fi connection failures can result from incorrect credentials, weak signal, adapter problems, router issues, or network configuration.",
+        "details": "Verify the Wi-Fi network and password, move closer to the router, restart the adapter or router, and check the network adapter and driver."
+    },
+    {
+        "name": "ethernet_not_working",
+        "keywords": [
+            "ethernet not working",
+            "ethernet disconnected",
+            "lan not working",
+            "wired network not working",
+            "ইথারনেট কাজ করছে না",
+            "ল্যান কাজ করছে না"
+        ],
+        "definition": "An Ethernet connection problem can be caused by cables, ports, adapters, drivers, or network configuration.",
+        "details": "Check the network cable, router or switch port, Ethernet adapter status, driver, IP configuration, and link indicators."
+    },
+    {
+        "name": "dns_problem",
+        "keywords": [
+            "dns problem",
+            "dns not working",
+            "dns error",
+            "dns failure",
+            "ডিএনএস সমস্যা",
+            "ডিএনএস কাজ করছে না"
+        ],
+        "definition": "A DNS problem can prevent domain names from being translated into IP addresses.",
+        "details": "Check DNS configuration and connectivity. Testing another DNS resolver and flushing the local DNS cache can help diagnose the issue."
+    },
+    {
+        "name": "application_not_opening",
+        "keywords": [
+            "application not opening",
+            "app not opening",
+            "program not opening",
+            "software not opening",
+            "অ্যাপ খুলছে না",
+            "সফটওয়্যার খুলছে না"
+        ],
+        "definition": "An application that does not open may have corrupted files, missing dependencies, permission issues, incompatible versions, or another process conflict.",
+        "details": "Restart the application and computer, check error messages, verify permissions, update or repair the application, and reinstall it if necessary."
+    },
+    {
+        "name": "application_crashing",
+        "keywords": [
+            "application crashing",
+            "app crashing",
+            "program crashing",
+            "software crashing",
+            "অ্যাপ ক্র্যাশ করছে",
+            "সফটওয়্যার ক্র্যাশ করছে"
+        ],
+        "definition": "Application crashes occur when a program unexpectedly stops running.",
+        "details": "Check application logs or error messages, update the application, verify dependencies, check system resources, and consider reinstalling the application."
+    },
+    {
+        "name": "driver_problem",
+        "keywords": [
+            "driver problem",
+            "driver error",
+            "driver not working",
+            "device driver problem",
+            "ড্রাইভার সমস্যা",
+            "ড্রাইভার কাজ করছে না"
+        ],
+        "definition": "A driver problem occurs when software responsible for communicating with hardware is missing, corrupted, incompatible, or malfunctioning.",
+        "details": "Check Device Manager, update or reinstall the appropriate driver, and verify compatibility with the operating system."
+    },
+    {
+        "name": "blue_screen",
+        "keywords": [
+            "blue screen",
+            "bsod",
+            "blue screen of death",
+            "ব্লু স্ক্রিন",
+            "বিএসওড"
+        ],
+        "definition": "A Windows blue screen is a serious system error that can cause Windows to stop to protect the system.",
+        "details": "Record the stop code, check recent driver or software changes, inspect system logs, run appropriate diagnostics, and investigate hardware or driver problems."
+    },
+    {
+        "name": "keyboard_not_working",
+        "keywords": [
+            "keyboard not working",
+            "keyboard does not work",
+            "keyboard problem",
+            "কীবোর্ড কাজ করছে না",
+            "কিবোর্ড কাজ করছে না"
+        ],
+        "definition": "A keyboard problem can be caused by connection, battery, driver, USB port, Bluetooth, or hardware issues.",
+        "details": "Check the cable or wireless connection, try another USB port, replace batteries if applicable, test another keyboard, and check the keyboard driver."
+    },
+    {
+        "name": "mouse_not_working",
+        "keywords": [
+            "mouse not working",
+            "mouse does not work",
+            "mouse problem",
+            "মাউস কাজ করছে না"
+        ],
+        "definition": "A mouse problem can be caused by connection, battery, driver, USB port, Bluetooth, or hardware issues.",
+        "details": "Check the connection, try another port, replace batteries if needed, test another mouse, and check the device driver."
+    },
+    {
+        "name": "printer_not_working",
+        "keywords": [
+            "printer not working",
+            "printer problem",
+            "printer does not print",
+            "প্রিন্টার কাজ করছে না",
+            "প্রিন্ট হচ্ছে না"
+        ],
+        "definition": "Printer problems can involve power, connectivity, drivers, print queues, paper, ink, or printer configuration.",
+        "details": "Check power and connectivity, verify the selected printer, clear stuck print jobs, check paper and consumables, and update the printer driver."
+    },
+    {
+        "name": "sound_not_working",
+        "keywords": [
+            "sound not working",
+            "audio not working",
+            "no sound",
+            "speaker not working",
+            "শব্দ হচ্ছে না",
+            "সাউন্ড কাজ করছে না"
+        ],
+        "definition": "Sound problems can be caused by muted output, incorrect audio device selection, drivers, connections, or application settings.",
+        "details": "Check volume and mute status, select the correct output device, verify cables or Bluetooth connections, and check the audio driver."
+    },
+    {
+        "name": "screen_not_displaying",
+        "keywords": [
+            "screen not displaying",
+            "monitor no display",
+            "no display",
+            "display not working",
+            "মনিটরে ডিসপ্লে নেই",
+            "স্ক্রিনে কিছু দেখাচ্ছে না"
+        ],
+        "definition": "A display problem can be caused by power, cables, monitor input selection, GPU, RAM, or display configuration.",
+        "details": "Check monitor power, input source, display cables, GPU connections, and test another display or cable when possible."
+    },
+    {
+        "name": "computer_overheating",
+        "keywords": [
+            "computer overheating",
+            "pc overheating",
+            "cpu overheating",
+            "laptop overheating",
+            "কম্পিউটার অতিরিক্ত গরম",
+            "ল্যাপটপ গরম হচ্ছে"
+        ],
+        "definition": "Computer overheating occurs when internal components operate at excessively high temperatures.",
+        "details": "Check airflow, cooling fans, heatsinks, ventilation, dust buildup, and workload. Avoid blocking laptop vents and investigate abnormal temperatures."
+    },
+    {
+        "name": "battery_not_charging",
+        "keywords": [
+            "battery not charging",
+            "laptop battery not charging",
+            "battery won't charge",
+            "ব্যাটারি চার্জ হচ্ছে না",
+            "ল্যাপটপ চার্জ হচ্ছে না"
+        ],
+        "definition": "A battery that does not charge may have an adapter, cable, charging port, battery, driver, or power-management problem.",
+        "details": "Check the charger and cable, power outlet, charging indicator, battery health, and charging settings. If needed, test with a compatible charger."
+    }
+]
+def get_troubleshooting_knowledge():
+    return TROUBLESHOOTING_KNOWLEDGE
+def search_troubleshooting_knowledge(query):
+    if not query:
+        return []
+    text = str(query).strip().lower()
+    matches = []
+    for item in TROUBLESHOOTING_KNOWLEDGE:
+        best_keyword = None
+        for keyword in item["keywords"]:
+            keyword_lower = keyword.lower().strip()
+            if not keyword_lower:
+                continue
+            if keyword_lower in text:
+                if (
+                    best_keyword is None
+                    or len(keyword_lower) > len(best_keyword)
+                ):
+                    best_keyword = keyword_lower
+        if best_keyword is not None:
+            matches.append(
+                (
+                    len(best_keyword),
+                    item
+                )
+            )
+    matches.sort(key=lambda x: x[0], reverse=True)
+    return [item for _, item in matches]

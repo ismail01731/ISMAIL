@@ -1,0 +1,321 @@
+﻿"""ISMAIL AI - Computer OS Knowledge Core"""
+OS_KNOWLEDGE = [
+    {
+        "topic": "operating_system",
+        "name": "Operating System",
+        "keywords": [
+            "operating system",
+            "os",
+            "অপারেটিং সিস্টেম",
+            "ওএস"
+        ],
+        "definition": (
+            "An Operating System (OS) is system software that manages computer "
+            "hardware, software resources, files, processes, memory, devices, "
+            "and provides services for applications."
+        ),
+        "details": (
+            "Common operating systems include Windows, Linux, macOS, Android, "
+            "and iOS."
+        )
+    },
+    {
+        "topic": "windows",
+        "name": "Windows",
+        "keywords": [
+            "windows",
+            "microsoft windows",
+            "উইন্ডোজ"
+        ],
+        "definition": (
+            "Windows is a graphical operating system developed by Microsoft "
+            "for personal computers and other devices."
+        ),
+        "details": (
+            "Windows provides a desktop environment, file management, "
+            "applications, device support, networking, security, and system settings."
+        )
+    },
+    {
+        "topic": "linux",
+        "name": "Linux",
+        "keywords": [
+            "linux",
+            "লিনাক্স"
+        ],
+        "definition": (
+            "Linux is a family of open-source operating systems built around "
+            "the Linux kernel."
+        ),
+        "details": (
+            "Linux distributions can provide different desktop environments, "
+            "package managers, system tools, and software ecosystems."
+        )
+    },
+    {
+        "topic": "macos",
+        "name": "macOS",
+        "keywords": [
+            "macos",
+            "mac os",
+            "apple macos",
+            "ম্যাকওএস"
+        ],
+        "definition": (
+            "macOS is Apple's desktop operating system designed for Mac computers."
+        ),
+        "details": (
+            "It provides system management, application support, file management, "
+            "security, networking, and integration with Apple hardware."
+        )
+    },
+    {
+        "topic": "android",
+        "name": "Android",
+        "keywords": [
+            "android",
+            "অ্যান্ড্রয়েড",
+            "অ্যান্ড্রয়েড"
+        ],
+        "definition": (
+            "Android is a mobile operating system based on the Linux kernel "
+            "and designed primarily for mobile and embedded devices."
+        ),
+        "details": (
+            "Android provides application management, permissions, networking, "
+            "storage, device hardware access, and a mobile user interface."
+        )
+    },
+    {
+        "topic": "ios",
+        "name": "iOS",
+        "keywords": [
+            "ios",
+            "iphone os",
+            "আইওএস"
+        ],
+        "definition": (
+            "iOS is Apple's mobile operating system used primarily on iPhone devices."
+        ),
+        "details": (
+            "It provides application execution, security, permissions, networking, "
+            "device management, and integration with Apple services."
+        )
+    },
+    {
+        "topic": "boot",
+        "name": "System Boot",
+        "keywords": [
+            "boot",
+            "booting",
+            "startup",
+            "start up",
+            "বুট",
+            "বুটিং",
+            "স্টার্টআপ"
+        ],
+        "definition": (
+            "Booting is the process of starting a computer and loading the "
+            "operating system into memory."
+        ),
+        "details": (
+            "The process can involve firmware such as BIOS or UEFI, hardware "
+            "initialization, bootloader execution, and operating-system startup."
+        )
+    },
+    {
+        "topic": "bios",
+        "name": "BIOS",
+        "keywords": [
+            "bios",
+            "বায়োস",
+            "বায়োস"
+        ],
+        "definition": (
+            "BIOS is firmware that initializes hardware and helps start the "
+            "computer's boot process."
+        ),
+        "details": (
+            "Modern computers commonly use UEFI instead of traditional BIOS, "
+            "although BIOS is still widely used as a general term."
+        )
+    },
+    {
+        "topic": "uefi",
+        "name": "UEFI",
+        "keywords": [
+            "uefi"
+        ],
+        "definition": (
+            "UEFI is modern system firmware that initializes hardware and "
+            "provides the environment used to start the operating system."
+        ),
+        "details": (
+            "UEFI supports features such as Secure Boot, modern partitioning, "
+            "and firmware configuration."
+        )
+    },
+    {
+        "topic": "driver",
+        "name": "Device Driver",
+        "keywords": [
+            "driver",
+            "device driver",
+            "ড্রাইভার",
+            "ডিভাইস ড্রাইভার"
+        ],
+        "definition": (
+            "A device driver is software that allows an operating system to "
+            "communicate with and control specific hardware."
+        ),
+        "details": (
+            "Examples include graphics, audio, network, chipset, printer, "
+            "and storage drivers."
+        )
+    },
+    {
+        "topic": "system_update",
+        "name": "System Update",
+        "keywords": [
+            "system update",
+            "os update",
+            "windows update",
+            "software update",
+            "সিস্টেম আপডেট",
+            "ওএস আপডেট",
+            "উইন্ডোজ আপডেট"
+        ],
+        "definition": (
+            "A system update is a software update that can provide security "
+            "fixes, bug fixes, compatibility improvements, and new features "
+            "for an operating system."
+        ),
+        "details": (
+            "Updates should normally be obtained from trusted official sources "
+            "and installed according to the device's supported update process."
+        )
+    },
+    {
+        "topic": "system_settings",
+        "name": "System Settings",
+        "keywords": [
+            "system settings",
+            "settings",
+            "system configuration",
+            "সিস্টেম সেটিংস",
+            "সেটিংস"
+        ],
+        "definition": (
+            "System settings are configuration controls used to manage operating "
+            "system behavior, devices, accounts, networking, security, and other options."
+        ),
+        "details": (
+            "The available settings depend on the operating system and device."
+        )
+    },
+    {
+        "topic": "user_account",
+        "name": "User Account",
+        "keywords": [
+            "user account",
+            "account",
+            "administrator account",
+            "admin account",
+            "ইউজার অ্যাকাউন্ট",
+            "অ্যাডমিন অ্যাকাউন্ট"
+        ],
+        "definition": (
+            "A user account identifies a person or service to an operating system "
+            "and determines available permissions and access."
+        ),
+        "details": (
+            "Operating systems may provide standard and administrator-level "
+            "accounts with different privileges."
+        )
+    },
+    {
+        "topic": "permissions",
+        "name": "OS Permissions",
+        "keywords": [
+            "permissions",
+            "permission",
+            "access permission",
+            "file permission",
+            "পারমিশন",
+            "অনুমতি"
+        ],
+        "definition": (
+            "Operating-system permissions control which users, applications, "
+            "or processes can access resources and perform specific actions."
+        ),
+        "details": (
+            "Permissions can apply to files, folders, devices, applications, "
+            "system settings, and other protected resources."
+        )
+    },
+    {
+        "topic": "file_system",
+        "name": "File System",
+        "keywords": [
+            "file system",
+            "filesystem",
+            "ntfs",
+            "fat32",
+            "exfat",
+            "ext4",
+            "ফাইল সিস্টেম"
+        ],
+        "definition": (
+            "A file system is the structure and set of rules an operating system "
+            "uses to organize, store, retrieve, and manage files on storage devices."
+        ),
+        "details": (
+            "Examples include NTFS, FAT32, exFAT, and ext4."
+        )
+    },
+    {
+        "topic": "kernel",
+        "name": "Kernel",
+        "keywords": [
+            "kernel",
+            "কার্নেল"
+        ],
+        "definition": (
+            "The kernel is the core part of an operating system that manages "
+            "hardware resources and provides fundamental services to software."
+        ),
+        "details": (
+            "Kernel responsibilities can include process management, memory "
+            "management, device interaction, and system-call handling."
+        )
+    }
+]
+def get_os_knowledge():
+    """Return the complete OS knowledge base."""
+    return OS_KNOWLEDGE
+def search_os_knowledge(query):
+    """Search OS knowledge using keyword matching and simple scoring."""
+    if not query:
+        return []
+    text = str(query).strip().lower()
+    if not text:
+        return []
+    results = []
+    for item in OS_KNOWLEDGE:
+        score = 0
+        topic = item.get("topic", "").lower()
+        name = item.get("name", "").lower()
+        if topic and topic in text:
+            score += 10
+        if name and name in text:
+            score += 10
+        for keyword in item.get("keywords", []):
+            keyword_lower = keyword.lower()
+            if keyword_lower in text:
+                score += max(2, len(keyword_lower))
+        if score > 0:
+            result = dict(item)
+            result["score"] = score
+            results.append(result)
+    results.sort(key=lambda x: x.get("score", 0), reverse=True)
+    return results
