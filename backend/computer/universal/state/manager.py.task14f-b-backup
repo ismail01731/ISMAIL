@@ -1,0 +1,156 @@
+﻿"""
+ISMAIL AI - Computer State Manager
+Task 14E-B
+This module manages logical ComputerState objects.
+IMPORTANT:
+This module does NOT inspect or modify the real computer.
+It only manages logical context/state.
+Real computer execution remains disabled.
+"""
+from typing import Dict, Optional
+from backend.computer.universal.state.model import (
+    ComputerState,
+)
+class ComputerStateManager:
+    """
+    Manage logical computer states by session/user key.
+    Each session receives an independent ComputerState.
+    """
+    def __init__(self):
+        self._states: Dict[str, ComputerState] = {}
+    @staticmethod
+    def _normalize_key(key: Optional[str]) -> str:
+        """
+        Normalize a session/user key.
+        Empty keys use a safe default session.
+        """
+        value = str(key or "").strip()
+        if not value:
+            return "default"
+        return value
+    def get_state(
+        self,
+        session_key: Optional[str] = None,
+    ) -> ComputerState:
+        """
+        Get an existing state or create a new one.
+        """
+        key = self._normalize_key(session_key)
+        if key not in self._states:
+            self._states[key] = ComputerState()
+        return self._states[key]
+    def has_state(
+        self,
+        session_key: Optional[str] = None,
+    ) -> bool:
+        """
+        Check whether a state already exists.
+        """
+        key = self._normalize_key(session_key)
+        return key in self._states
+    def update_state(
+        self,
+        session_key: Optional[str] = None,
+        **updates,
+    ) -> ComputerState:
+        """
+        Update known logical state fields.
+        Unknown fields are ignored.
+        execution_allowed can never be enabled.
+        """
+        state = self.get_state(session_key)
+        allowed_fields = {
+            "active_application",
+            "active_website",
+            "current_folder",
+            "active_file",
+            "known_files",
+            "known_folders",
+            "last_action",
+            "last_request",
+            "last_step",
+            "references",
+        }
+        for field_name, value in updates.items():
+            if field_name not in allowed_fields:
+                continue
+            setattr(
+                state,
+                field_name,
+                value,
+            )
+        state.execution_allowed = False
+        return state
+    def reset_state(
+        self,
+        session_key: Optional[str] = None,
+    ) -> ComputerState:
+        """
+        Reset one logical computer state.
+        """
+        state = self.get_state(session_key)
+        state.reset()
+        state.execution_allowed = False
+        return state
+    def remove_state(
+        self,
+        session_key: Optional[str] = None,
+    ) -> bool:
+        """
+        Remove one session state completely.
+        """
+        key = self._normalize_key(session_key)
+        if key not in self._states:
+            return False
+        del self._states[key]
+        return True
+    def clear_all(self) -> None:
+        """
+        Remove all logical computer states.
+        """
+        self._states.clear()
+    def state_count(self) -> int:
+        """
+        Return the number of active logical states.
+        """
+        return len(self._states)
+    def get_state_dict(
+        self,
+        session_key: Optional[str] = None,
+    ):
+        """
+        Return a serializable state dictionary.
+        """
+        state = self.get_state(session_key)
+        return state.to_dict()
+_default_manager = ComputerStateManager()
+def get_computer_state_manager() -> ComputerStateManager:
+    """
+    Return the shared logical state manager.
+    """
+    return _default_manager
+def get_computer_state(
+    session_key: Optional[str] = None,
+) -> ComputerState:
+    """
+    Get the logical computer state for a session.
+    """
+    return _default_manager.get_state(session_key)
+def update_computer_state(
+    session_key: Optional[str] = None,
+    **updates,
+) -> ComputerState:
+    """
+    Update the logical computer state for a session.
+    """
+    return _default_manager.update_state(
+        session_key,
+        **updates,
+    )
+def reset_computer_state(
+    session_key: Optional[str] = None,
+) -> ComputerState:
+    """
+    Reset the logical computer state for a session.
+    """
+    return _default_manager.reset_state(session_key)

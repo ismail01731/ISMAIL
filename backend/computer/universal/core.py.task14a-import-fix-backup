@@ -1,0 +1,113 @@
+﻿"""
+ISMAIL AI - Universal Computer Intelligence
+Task 14A
+"""
+from backend.computer.context import understand_computer_context
+from backend.computer.planner.generator import generate_action_plan
+from backend.computer.agent.decision import evaluate_agent_request
+from backend.computer.safety.decision import evaluate_permission
+from backend.computer.safety.guard import apply_safety_guard
+from backend.computer.agent.execution_gate import check_execution_gate
+from backend.computer.agent.dry_run import dry_run_action
+from backend.computer.agent.verification import verify_agent_result
+def process_computer_request(query, user_confirmed=False):
+    """
+    Run a computer request through the complete intelligence pipeline.
+    IMPORTANT:
+    This function does NOT execute real computer actions.
+    """
+    text = str(query or "").strip()
+    if not text:
+        return {
+            "request": "",
+            "status": "blocked",
+            "stage": "input",
+            "execution_allowed": False,
+            "reason": "Computer request cannot be empty.",
+        }
+    context = understand_computer_context(text)
+    plan = generate_action_plan(text)
+    agent_decision = evaluate_agent_request(text)
+    permission = evaluate_permission(
+        text,
+        user_confirmed=user_confirmed
+    )
+    safety = apply_safety_guard(
+        text,
+        user_confirmed=user_confirmed
+    )
+    if safety.get("decision") == "block":
+        return {
+            "request": text,
+            "status": "blocked",
+            "stage": "safety",
+            "context": context,
+            "plan": plan,
+            "agent_decision": agent_decision,
+            "permission": permission,
+            "safety": safety,
+            "execution_gate": None,
+            "dry_run": None,
+            "verification": None,
+            "execution_allowed": False,
+            "reason": safety.get(
+                "reason",
+                "Request blocked by safety guard."
+            ),
+        }
+    gate = check_execution_gate(
+        text,
+        user_confirmed=user_confirmed
+    )
+    dry_run = dry_run_action(
+        text,
+        user_confirmed=user_confirmed
+    )
+    verification = verify_agent_result(
+        text,
+        user_confirmed=user_confirmed
+    )
+    return {
+        "request": text,
+        "status": "reviewed",
+        "stage": "complete",
+        "context": context,
+        "plan": plan,
+        "agent_decision": agent_decision,
+        "permission": permission,
+        "safety": safety,
+        "execution_gate": gate,
+        "dry_run": dry_run,
+        "verification": verification,
+        "execution_allowed": False,
+        "reason": (
+            "Computer request was processed through the "
+            "Universal Computer Intelligence pipeline."
+        ),
+    }
+def get_universal_computer_summary(
+    query,
+    user_confirmed=False
+):
+    result = process_computer_request(
+        query,
+        user_confirmed=user_confirmed
+    )
+    return {
+        "request": result.get("request", ""),
+        "status": result.get("status", ""),
+        "stage": result.get("stage", ""),
+        "decision": result.get("safety", {}).get(
+            "decision",
+            result.get("permission", {}).get(
+                "decision",
+                "block"
+            )
+        ),
+        "permission": result.get("permission", {}).get(
+            "permission",
+            "critical"
+        ),
+        "execution_allowed": False,
+        "reason": result.get("reason", ""),
+    }

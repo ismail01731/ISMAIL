@@ -1,0 +1,196 @@
+﻿"""
+ISMAIL AI - Computer State Manager
+Task 14E-B
+This module manages logical ComputerState objects.
+IMPORTANT:
+This module does NOT inspect or modify the real computer.
+It only manages logical context/state.
+Real computer execution remains disabled.
+"""
+from typing import Dict, Optional
+from backend.computer.universal.state.model import (
+    ComputerState,
+)
+from backend.computer.universal.state.persistence import (
+    ComputerStatePersistence,
+)
+class ComputerStateManager:
+    """
+    Manage logical computer states by session/user key.
+    Each session receives an independent ComputerState.
+    """
+    def __init__(
+        self,
+        persistence=None,
+    ):
+        self._states: Dict[str, ComputerState] = {}
+        self._persistence = (
+            persistence
+            if persistence is not None
+            else ComputerStatePersistence()
+        )
+    @staticmethod
+    def _normalize_key(key: Optional[str]) -> str:
+        """
+        Normalize a session/user key.
+        Empty keys use a safe default session.
+        """
+        value = str(key or "").strip()
+        if not value:
+            return "default"
+        return value
+    def get_state(
+        self,
+        session_key: Optional[str] = None,
+    ) -> ComputerState:
+        """
+        Get an existing state, loading it from persistent
+        storage when necessary.
+        """
+        key = self._normalize_key(session_key)
+        if key not in self._states:
+            self._states[key] = (
+                self._persistence.load_state(key)
+            )
+        state = self._states[key]
+        state.execution_allowed = False
+        return state
+    def has_state(
+        self,
+        session_key: Optional[str] = None,
+    ) -> bool:
+        """
+        Check whether a state already exists.
+        """
+        key = self._normalize_key(session_key)
+        return key in self._states
+    def update_state(
+        self,
+        session_key: Optional[str] = None,
+        **updates,
+    ) -> ComputerState:
+        """
+        Update known logical state fields.
+        Unknown fields are ignored.
+        execution_allowed can never be enabled.
+        """
+        key = self._normalize_key(session_key)
+        state = self.get_state(key)
+        allowed_fields = {
+            "active_application",
+            "active_website",
+            "current_folder",
+            "active_file",
+            "known_files",
+            "known_folders",
+            "last_action",
+            "last_request",
+            "last_step",
+            "references",
+        }
+        for field_name, value in updates.items():
+            if field_name not in allowed_fields:
+                continue
+            setattr(
+                state,
+                field_name,
+                value,
+            )
+        state.execution_allowed = False
+        self._persistence.save_state(
+            key,
+            state,
+        )
+        return state
+    def reset_state(
+        self,
+        session_key: Optional[str] = None,
+    ) -> ComputerState:
+        """
+        Reset one logical computer state.
+        """
+        key = self._normalize_key(session_key)
+        state = self.get_state(key)
+        state.reset()
+        state.execution_allowed = False
+        self._persistence.save_state(
+            key,
+            state,
+        )
+        return state
+    def remove_state(
+        self,
+        session_key: Optional[str] = None,
+    ) -> bool:
+        """
+        Remove one session state completely.
+        """
+        key = self._normalize_key(session_key)
+        existed_in_memory = (
+            key in self._states
+        )
+        existed_persisted = (
+            self._persistence.has_state(key)
+        )
+        if not existed_in_memory and not existed_persisted:
+            return False
+        self._states.pop(
+            key,
+            None,
+        )
+        self._persistence.delete_state(
+            key,
+        )
+        return True
+    def clear_all(self) -> None:
+        """
+        Remove all logical computer states from memory
+        and persistent storage.
+        """
+        self._states.clear()
+        self._persistence.clear_all()
+    def state_count(self) -> int:
+        """
+        Return the number of persisted logical states.
+        """
+        return self._persistence.state_count()
+    def get_state_dict(
+        self,
+        session_key: Optional[str] = None,
+    ):
+        """
+        Return a serializable state dictionary.
+        """
+        state = self.get_state(session_key)
+        return state.to_dict()
+_default_manager = ComputerStateManager()
+def get_computer_state_manager() -> ComputerStateManager:
+    """
+    Return the shared logical state manager.
+    """
+    return _default_manager
+def get_computer_state(
+    session_key: Optional[str] = None,
+) -> ComputerState:
+    """
+    Get the logical computer state for a session.
+    """
+    return _default_manager.get_state(session_key)
+def update_computer_state(
+    session_key: Optional[str] = None,
+    **updates,
+) -> ComputerState:
+    """
+    Update the logical computer state for a session.
+    """
+    return _default_manager.update_state(
+        session_key,
+        **updates,
+    )
+def reset_computer_state(
+    session_key: Optional[str] = None,
+) -> ComputerState:
+    """
+    Reset the logical computer state for a session.
+    """
+    return _default_manager.reset_state(session_key)

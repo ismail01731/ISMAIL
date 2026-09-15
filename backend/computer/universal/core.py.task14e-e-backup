@@ -1,0 +1,321 @@
+﻿"""
+ISMAIL AI - Universal Computer Intelligence
+Task 14C + Task 14D Integration
+"""
+from backend.computer.universal.classifier import (
+    classify_computer_request,
+)
+from backend.computer.universal.decomposer import (
+    decompose_computer_request,
+)
+from backend.computer.context.knowledge import (
+    search_computer_context,
+)
+from backend.computer.planner.generator import (
+    generate_action_plan,
+)
+from backend.computer.agent.decision import (
+    evaluate_agent_request,
+)
+from backend.computer.safety.decision import (
+    evaluate_permission,
+)
+from backend.computer.safety.guard import (
+    apply_safety_guard,
+)
+from backend.computer.agent.execution_gate import (
+    check_execution_gate,
+)
+from backend.computer.agent.dry_run import (
+    dry_run_action,
+)
+from backend.computer.agent.verification import (
+    verify_agent_result,
+)
+def _process_single_computer_request(
+    text,
+    user_confirmed=False,
+):
+    """
+    Process exactly one computer request through
+    the existing Task 14C pipeline.
+    This function does NOT execute real computer actions.
+    """
+    classification = classify_computer_request(text)
+    context = search_computer_context(text)
+    plan = generate_action_plan(text)
+    agent_decision = evaluate_agent_request(text)
+    permission = evaluate_permission(
+        text,
+        user_confirmed=user_confirmed,
+    )
+    safety = apply_safety_guard(
+        text,
+        user_confirmed=user_confirmed,
+    )
+    if safety.get("decision") == "block":
+        return {
+            "request": text,
+            "status": "blocked",
+            "stage": "safety",
+            "classification": classification,
+            "context": context,
+            "plan": plan,
+            "agent_decision": agent_decision,
+            "permission": permission,
+            "safety": safety,
+            "execution_gate": None,
+            "dry_run": None,
+            "verification": None,
+            "execution_allowed": False,
+            "reason": safety.get(
+                "reason",
+                "Request blocked by safety guard.",
+            ),
+        }
+    gate = check_execution_gate(
+        text,
+        user_confirmed=user_confirmed,
+    )
+    dry_run = dry_run_action(
+        text,
+        user_confirmed=user_confirmed,
+    )
+    verification = verify_agent_result(
+        text,
+        user_confirmed=user_confirmed,
+    )
+    return {
+        "request": text,
+        "status": "reviewed",
+        "stage": "complete",
+        "classification": classification,
+        "context": context,
+        "plan": plan,
+        "agent_decision": agent_decision,
+        "permission": permission,
+        "safety": safety,
+        "execution_gate": gate,
+        "dry_run": dry_run,
+        "verification": verification,
+        "execution_allowed": False,
+        "reason": (
+            "Computer request was processed through the "
+            "Universal Computer Intelligence pipeline."
+        ),
+    }
+def process_computer_request(
+    query,
+    user_confirmed=False,
+):
+    """
+    Process a computer request through Task 14D
+    decomposition and the existing Task 14C pipeline.
+    IMPORTANT:
+    This function does NOT execute real computer actions.
+    """
+    text = str(query or "").strip()
+    if not text:
+        return {
+            "request": "",
+            "status": "blocked",
+            "stage": "input",
+            "classification": {
+                "request": "",
+                "category": "unknown",
+                "plan_name": None,
+                "matched": False,
+                "execution_allowed": False,
+            },
+            "decomposition": {
+                "request": "",
+                "decomposed": False,
+                "step_count": 0,
+                "steps": [],
+                "execution_allowed": False,
+            },
+            "execution_allowed": False,
+            "reason": "Computer request cannot be empty.",
+        }
+    decomposition = decompose_computer_request(text)
+    steps = decomposition.get("steps", [])
+    if not steps:
+        return {
+            "request": text,
+            "status": "blocked",
+            "stage": "decomposition",
+            "classification": {
+                "request": text,
+                "category": "unknown",
+                "plan_name": None,
+                "matched": False,
+                "execution_allowed": False,
+            },
+            "decomposition": decomposition,
+            "steps": [],
+            "execution_allowed": False,
+            "reason": "No valid computer request steps found.",
+        }
+    # Single-step request:
+    # preserve the existing Task 14C behavior.
+    if len(steps) == 1:
+        single_result = _process_single_computer_request(
+            text,
+            user_confirmed=user_confirmed,
+        )
+        single_result["decomposition"] = decomposition
+        single_result["steps"] = [
+            single_result.copy()
+        ]
+        single_result["execution_allowed"] = False
+        return single_result
+    # Multi-step request:
+    # process every decomposed step through the
+    # existing Task 14C pipeline.
+    processed_steps = []
+    overall_status = "reviewed"
+    overall_stage = "complete"
+    overall_reason = (
+        "All decomposed computer request steps were "
+        "processed through the Universal Computer "
+        "Intelligence pipeline."
+    )
+    for step in steps:
+        step_request = step.get("request", "").strip()
+        step_result = _process_single_computer_request(
+            step_request,
+            user_confirmed=user_confirmed,
+        )
+        processed_steps.append({
+            "step": step.get("step"),
+            "request": step_request,
+            "classification": step_result.get(
+                "classification",
+                {},
+            ),
+            "context": step_result.get(
+                "context",
+                [],
+            ),
+            "plan": step_result.get(
+                "plan",
+            ),
+            "agent_decision": step_result.get(
+                "agent_decision",
+            ),
+            "permission": step_result.get(
+                "permission",
+            ),
+            "safety": step_result.get(
+                "safety",
+            ),
+            "execution_gate": step_result.get(
+                "execution_gate",
+            ),
+            "dry_run": step_result.get(
+                "dry_run",
+            ),
+            "verification": step_result.get(
+                "verification",
+            ),
+            "status": step_result.get(
+                "status",
+                "blocked",
+            ),
+            "stage": step_result.get(
+                "stage",
+                "",
+            ),
+            "execution_allowed": False,
+            "reason": step_result.get(
+                "reason",
+                "",
+            ),
+        })
+        if step_result.get("status") == "blocked":
+            overall_status = "blocked"
+            overall_stage = "step"
+            overall_reason = (
+                "One or more decomposed computer "
+                "request steps were blocked."
+            )
+    return {
+        "request": text,
+        "status": overall_status,
+        "stage": overall_stage,
+        "classification": {
+            "request": text,
+            "category": "computer_control",
+            "plan_name": None,
+            "matched": True,
+            "execution_allowed": False,
+        },
+        "decomposition": decomposition,
+        "steps": processed_steps,
+        "execution_allowed": False,
+        "reason": overall_reason,
+    }
+def get_universal_computer_summary(
+    query,
+    user_confirmed=False,
+):
+    result = process_computer_request(
+        query,
+        user_confirmed=user_confirmed,
+    )
+    return {
+        "request": result.get(
+            "request",
+            "",
+        ),
+        "status": result.get(
+            "status",
+            "",
+        ),
+        "stage": result.get(
+            "stage",
+            "",
+        ),
+        "decision": result.get(
+            "safety",
+            {},
+        ).get(
+            "decision",
+            result.get(
+                "steps",
+                [{}],
+            )[0].get(
+                "safety",
+                {},
+            ).get(
+                "decision",
+                result.get(
+                    "classification",
+                    {},
+                ).get(
+                    "category",
+                    "unknown",
+                ),
+            )
+            if result.get("steps")
+            else result.get(
+                "classification",
+                {},
+            ).get(
+                "category",
+                "unknown",
+            ),
+        ),
+        "permission": result.get(
+            "permission",
+            {},
+        ).get(
+            "permission",
+            "critical",
+        ),
+        "execution_allowed": False,
+        "reason": result.get(
+            "reason",
+            "",
+        ),
+    }

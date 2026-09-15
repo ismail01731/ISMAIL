@@ -1,4 +1,16 @@
-﻿import json
+﻿from backend.computer.planner.generator import generate_action_plan, get_action_plan_summary
+from backend.computer.knowledge import search_computer_knowledge
+from backend.computer.hardware.knowledge import search_hardware_knowledge
+from backend.computer.os.knowledge import search_os_knowledge
+from backend.computer.files.knowledge import search_file_folder_knowledge
+from backend.computer.software.knowledge import search_software_knowledge
+from backend.computer.commandline.knowledge import search_command_line_knowledge
+from backend.computer.process.knowledge import search_process_system_knowledge
+from backend.computer.context.knowledge import search_computer_context
+from backend.computer.universal.core import process_computer_request
+from backend.computer.troubleshooting.knowledge import search_troubleshooting_knowledge
+from backend.computer.network.knowledge import search_network_knowledge
+import json
 import os
 import re
 import urllib.error
@@ -1691,6 +1703,296 @@ class AIEngine:
                     f"বার: {live_result['day']}।"
                 )
 
+
+        # =========================================================
+        # =========================================================
+        # =========================================================
+
+        # =========================================================
+        # =========================================================
+        # =========================================================
+        # =========================================================
+        # =========================================================
+
+        # =========================================================
+
+        # =========================================================
+
+        # =========================================================
+        # =========================================================
+        # TASK 11D EARLY TROUBLESHOOTING ROUTER
+        # =========================================================
+        #
+        # Troubleshooting requests must be resolved before
+        # generic computer/context/LLM routing.
+        #
+        early_troubleshooting_text = str(message).strip().lower()
+        early_troubleshooting_is_context = any(
+            phrase in early_troubleshooting_text
+            for phrase in [
+                "why is my cpu usage high",
+                "why is my computer slow",
+                "why is my memory usage high",
+                "cpu usage high",
+                "computer slow",
+                "memory usage high"
+            ]
+        )
+        early_troubleshooting_results = []
+        if not early_troubleshooting_is_context:
+            early_troubleshooting_results = search_troubleshooting_knowledge(message)
+        if early_troubleshooting_results:
+            early_troubleshooting_result = early_troubleshooting_results[0]
+            early_troubleshooting_name = early_troubleshooting_result.get(
+                "name",
+                "Troubleshooting"
+            )
+            early_troubleshooting_definition = early_troubleshooting_result.get(
+                "definition",
+                ""
+            )
+            early_troubleshooting_details = early_troubleshooting_result.get(
+                "details",
+                ""
+            )
+            if early_troubleshooting_details:
+                return (
+                    "Troubleshooting Knowledge: "
+                    + early_troubleshooting_name
+                    + " - "
+                    + early_troubleshooting_definition
+                    + " "
+                    + early_troubleshooting_details
+                )
+            return (
+                "Troubleshooting Knowledge: "
+                + early_troubleshooting_name
+                + " - "
+                + early_troubleshooting_definition
+            )
+        # COMPUTER INTELLIGENCE - TASK 11C
+        # AIENGINE ACTION PLANNER INTEGRATION
+        # =========================================================
+        #
+        # This router generates a structured action plan only.
+        # It does NOT execute computer actions.
+        #
+
+        # COMPUTER INTELLIGENCE - TASK 14F-D
+        # AIENGINE / CHAT SESSION -> PERSISTENT COMPUTER CONTEXT
+        # =========================================================
+        #
+        # chat_id is used as the Computer Intelligence session key.
+        # The Universal Computer Intelligence pipeline remains
+        # planning/state-only. It never executes real computer actions.
+        #
+
+        computer_session_key = str(chat_id or "").strip()
+
+        computer_result = process_computer_request(
+            message,
+            user_confirmed=False,
+            session_key=computer_session_key,
+        )
+
+        if isinstance(computer_result, dict):
+            computer_matched = bool(
+                computer_result.get("classification")
+                or computer_result.get("steps")
+            )
+
+            if computer_matched:
+                return str(
+                    computer_result.get(
+                        "reason",
+                        "Computer request processed safely.",
+                    )
+                )
+
+        action_plan_result = generate_action_plan(message)
+
+        if action_plan_result:
+            return get_action_plan_summary(message)
+
+        # COMPUTER INTELLIGENCE - TASK 10
+        # COMPUTER CONTEXT UNDERSTANDING ROUTER
+        # =========================================================
+        #
+        # Context is for situational/state questions.
+        # Explicit knowledge/definition questions and
+        # troubleshooting problems must continue to their
+        # dedicated intelligence routers below.
+        #
+        context_text = str(message).strip().lower()
+        context_is_definition = (
+            context_text.startswith("what is ")
+            or context_text.startswith("what are ")
+            or context_text.startswith("define ")
+            or context_text.startswith("explain ")
+        )
+        context_is_troubleshooting = any(
+            phrase in context_text
+            for phrase in [
+                "not turning on",
+                "not booting",
+                "not working",
+                "blue screen",
+                "overheating",
+                "not charging",
+                "crashing",
+                "internet not working",
+                "wifi not working",
+                "ethernet not working",
+                "dns problem",
+                "cannot connect",
+                "can't connect",
+                "won't start",
+                "does not start",
+                "doesn't start"
+            ]
+        )
+        context_results = []
+        if not context_is_definition and not context_is_troubleshooting:
+            context_results = search_computer_context(message)
+        if context_results:
+            best_context_result = context_results[0]
+            context_name = best_context_result.get(
+                "name",
+                "Computer Context"
+            )
+            context_definition = best_context_result.get(
+                "definition",
+                ""
+            )
+            context_domains = best_context_result.get(
+                "domains",
+                []
+            )
+            context_domain_text = ", ".join(
+                context_domains
+            )
+            if context_domain_text:
+                return (
+                    "Computer Context: "
+                    + context_name
+                    + " - "
+                    + context_definition
+                    + " Related areas: "
+                    + context_domain_text
+                )
+            return (
+                "Computer Context: "
+                + context_name
+                + " - "
+                + context_definition
+            )
+        # COMPUTER INTELLIGENCE - TASK 9
+        # TROUBLESHOOTING INTELLIGENCE ROUTER
+        # =========================================================
+        troubleshooting_results = search_troubleshooting_knowledge(message)
+        if troubleshooting_results:
+            best_troubleshooting_result = troubleshooting_results[0]
+            troubleshooting_name = best_troubleshooting_result.get("name", "Troubleshooting")
+            troubleshooting_definition = best_troubleshooting_result.get("definition", "")
+            troubleshooting_details = best_troubleshooting_result.get("details", "")
+            if troubleshooting_details:
+                return "Troubleshooting Knowledge: " + troubleshooting_name + " - " + troubleshooting_definition + " " + troubleshooting_details
+            return "Troubleshooting Knowledge: " + troubleshooting_name + " - " + troubleshooting_definition
+
+        # COMPUTER INTELLIGENCE - TASK 8
+        # NETWORK INTELLIGENCE ROUTER
+        # =========================================================
+        network_results = search_network_knowledge(message)
+        if network_results:
+            best_network_result = network_results[0]
+            network_name = best_network_result.get("name", "Network")
+            network_definition = best_network_result.get("definition", "")
+            network_details = best_network_result.get("details", "")
+            if network_details:
+                return "Network Knowledge: " + network_name + " - " + network_definition + " " + network_details
+            return "Network Knowledge: " + network_name + " - " + network_definition
+        # COMPUTER INTELLIGENCE - TASK 7
+        # PROCESS & SYSTEM INTELLIGENCE ROUTER
+        # =========================================================
+        process_system_results = search_process_system_knowledge(message)
+        if process_system_results:
+            best_process_system_result = process_system_results[0]
+            process_system_name = best_process_system_result.get("name", "Process/System")
+            process_system_definition = best_process_system_result.get("definition", "")
+            process_system_details = best_process_system_result.get("details", "")
+            if process_system_details:
+                return "Process & System Knowledge: " + process_system_name + " - " + process_system_definition + " " + process_system_details
+            return "Process & System Knowledge: " + process_system_name + " - " + process_system_definition
+        # COMPUTER INTELLIGENCE - TASK 6
+        # COMMAND LINE INTELLIGENCE ROUTER
+        # =========================================================
+        command_line_results = search_command_line_knowledge(message)
+        if command_line_results:
+            best_command_line_result = command_line_results[0]
+            command_line_name = best_command_line_result.get("name", "Command Line")
+            command_line_definition = best_command_line_result.get("definition", "")
+            command_line_details = best_command_line_result.get("details", "")
+            if command_line_details:
+                return "Command Line Knowledge: " + command_line_name + " - " + command_line_definition + " " + command_line_details
+            return "Command Line Knowledge: " + command_line_name + " - " + command_line_definition
+        # COMPUTER INTELLIGENCE - TASK 5
+        # SOFTWARE / APPLICATION INTELLIGENCE ROUTER
+        # =========================================================
+        software_results = search_software_knowledge(message)
+        if software_results:
+            best_software_result = software_results[0]
+            software_name = best_software_result.get("name", "Software")
+            software_definition = best_software_result.get("definition", "")
+            software_details = best_software_result.get("details", "")
+            if software_details:
+                return "Software Knowledge: " + software_name + " - " + software_definition + " " + software_details
+            return "Software Knowledge: " + software_name + " - " + software_definition
+        # COMPUTER INTELLIGENCE - TASK 4
+        # FILE & FOLDER INTELLIGENCE ROUTER
+        # =========================================================
+        file_folder_results = search_file_folder_knowledge(message)
+        if file_folder_results:
+            best_file_folder_result = file_folder_results[0]
+            file_folder_name = best_file_folder_result.get("name", "File/Folder")
+            file_folder_definition = best_file_folder_result.get("definition", "")
+            file_folder_details = best_file_folder_result.get("details", "")
+            if file_folder_details:
+                return "File & Folder Knowledge: " + file_folder_name + " - " + file_folder_definition + " " + file_folder_details
+            return "File & Folder Knowledge: " + file_folder_name + " - " + file_folder_definition
+        # COMPUTER INTELLIGENCE - TASK 3
+        # OS INTELLIGENCE ROUTER
+        # =========================================================
+        os_results = search_os_knowledge(message)
+        if os_results:
+            best_os_result = os_results[0]
+            os_name = best_os_result.get("name", "Operating System")
+            os_definition = best_os_result.get("definition", "")
+            os_details = best_os_result.get("details", "")
+            if os_details:
+                return "OS Knowledge: " + os_name + " - " + os_definition + " " + os_details
+            return "OS Knowledge: " + os_name + " - " + os_definition
+
+        # COMPUTER INTELLIGENCE - TASK 2
+        # HARDWARE KNOWLEDGE ROUTER
+        # =========================================================
+        hardware_results = search_hardware_knowledge(message)
+        if hardware_results:
+            best_hardware_result = hardware_results[0]
+            hardware_name = best_hardware_result.get("name", "Hardware")
+            hardware_definition = best_hardware_result.get("definition", "")
+            hardware_details = best_hardware_result.get("details", "")
+            if hardware_details:
+                return "Hardware Knowledge: " + hardware_name + " - " + hardware_definition + " " + hardware_details
+            return "Hardware Knowledge: " + hardware_name + " - " + hardware_definition
+
+        # COMPUTER INTELLIGENCE - TASK 1
+        # =========================================================
+        computer_results = search_computer_knowledge(message)
+        if computer_results:
+            best_computer_result = computer_results[0]
+            computer_name = best_computer_result.get("name", "Computer")
+            computer_definition = best_computer_result.get("definition", "")
+            return "Computer Knowledge: " + computer_name + " - " + computer_definition
         identity_answer = get_identity_answer(message)
 
         if identity_answer is not None:
@@ -2312,5 +2614,6 @@ class AIEngine:
             return self.llm_router.generate(prompt)
 
         return "ISMAIL AI engine provider is not configured."
+
 
 
