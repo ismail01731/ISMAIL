@@ -2009,7 +2009,9 @@ class AIEngine:
 
         software_results = []
         if not is_learning_or_planning:
-            software_results = search_software_knowledge(message)
+            early_route = self.understand_question(message).get("route")
+            if early_route != "programming":
+                software_results = search_software_knowledge(message)
         if software_results:
             best_software_result = software_results[0]
             software_name = best_software_result.get("name", "Software")
@@ -2018,8 +2020,6 @@ class AIEngine:
             if software_details:
                 return "Software Knowledge: " + software_name + " - " + software_definition + " " + software_details
             return "Software Knowledge: " + software_name + " - " + software_definition
-        # COMPUTER INTELLIGENCE - TASK 4
-        # FILE & FOLDER INTELLIGENCE ROUTER
         # =========================================================
         file_folder_results = search_file_folder_knowledge(message)
         if file_folder_results:
@@ -2255,6 +2255,22 @@ class AIEngine:
 
                 elif "npm test" in programming_text:
                     command = ["npm", "test"]
+
+                elif programming_action == "run_tests" and language.lower() == "python":
+                    execution_code = programming_code
+
+                    prefixes = (
+                        "test this python code:",
+                        "test the python code:",
+                        "test python code:",
+                    )
+
+                    for prefix in prefixes:
+                        if execution_code.lower().startswith(prefix):
+                            execution_code = execution_code[len(prefix):].strip()
+                            break
+
+                    command = ["python", "-c", execution_code]
 
                 elif programming_action == "execute" and language.lower() == "python":
                     execution_code = programming_code
