@@ -239,21 +239,24 @@ def search_computer_context(query):
             )
             keyword_words = keyword_normalized.split()
             score = 0
-            # Exact phrase match gets highest priority.
-            if keyword_normalized in normalized:
-                score = len(keyword_words) * 10
-            # Allow reversed/common word-order variations.
-            elif len(keyword_words) > 1:
-                matched_words = sum(
-                    1
-                    for word in keyword_words
-                    if word in words
-                )
-                if matched_words == len(keyword_words):
-                    score = len(keyword_words) * 7
-            # Single-word match.
-            elif keyword_normalized in words:
-                score = 5
+            # Single-word keywords must match a complete
+            # token. This prevents "system" from matching
+            # "System32".
+            if len(keyword_words) == 1:
+                if keyword_normalized in words:
+                    score = 5
+            else:
+                # Multi-word keywords may match as a phrase.
+                if keyword_normalized in normalized:
+                    score = len(keyword_words) * 10
+                else:
+                    matched_words = sum(
+                        1
+                        for word in keyword_words
+                        if word in words
+                    )
+                    if matched_words == len(keyword_words):
+                        score = len(keyword_words) * 7
             if score > best_score:
                 best_score = score
                 best_keyword = keyword_lower

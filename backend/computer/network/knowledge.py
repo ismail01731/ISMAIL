@@ -145,7 +145,12 @@ def search_network_knowledge(query):
             keyword_lower = keyword.lower().strip()
             if not keyword_lower:
                 continue
-            if keyword_lower in text:
+            keyword_words = keyword_lower.split()
+            if len(keyword_words) == 1:
+                matched = keyword_lower in text.split()
+            else:
+                matched = keyword_lower in text
+            if matched:
                 if (
                     best_keyword is None
                     or len(keyword_lower) > len(best_keyword)

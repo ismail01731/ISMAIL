@@ -1791,6 +1791,49 @@ class AIEngine:
         if identity_answer is not None:
             return identity_answer
 
+        # ==========================================
+        # DANGEROUS REQUEST HARD BLOCK
+        # ==========================================
+        dangerous_request_patterns = [
+            "system32",
+            "delete system32",
+            "remove system32",
+            "system32 ????",
+            "system32 delete",
+            "system32 remove",
+            "delete windows",
+            "remove windows",
+            "windows ????",
+            "disable firewall",
+            "turn off firewall",
+            "disable antivirus",
+            "turn off antivirus",
+            "disable security",
+            "bypass security",
+            "bypass permission",
+            "bypass administrator",
+            "steal password",
+            "steal passwords",
+            "dump passwords",
+            "delete boot",
+            "destroy boot",
+            "format disk",
+            "format drive",
+        ]
+
+        dangerous_text = str(message or "").strip().lower()
+        is_dangerous_request = any(
+            pattern in dangerous_text
+            for pattern in dangerous_request_patterns
+        )
+
+        if is_dangerous_request:
+            return (
+                "?????????? ????? ?? ???????? ???? ??? ??????? "
+                "System32, Windows system files, security controls "
+                "?? boot components ???? ?? ???? ???? ????????? ?????? ???? ???"
+            )
+
         computer_session_key = str(chat_id or "").strip()
 
         computer_result = process_computer_request(
@@ -1942,7 +1985,31 @@ class AIEngine:
         # COMPUTER INTELLIGENCE - TASK 5
         # SOFTWARE / APPLICATION INTELLIGENCE ROUTER
         # =========================================================
-        software_results = search_software_knowledge(message)
+        # ==========================================
+        # LEARNING / PLANNING GUARD
+        # ==========================================
+        planning_text = str(message or "").strip().lower()
+        planning_markers = [
+            "plan",
+            "planning",
+            "roadmap",
+            "learn",
+            "learning",
+            "study plan",
+            "শেখার",
+            "শিখতে",
+            "শেখাও",
+            "পরিকল্পনা",
+            "রোডম্যাপ",
+        ]
+        is_learning_or_planning = any(
+            marker in planning_text
+            for marker in planning_markers
+        )
+
+        software_results = []
+        if not is_learning_or_planning:
+            software_results = search_software_knowledge(message)
         if software_results:
             best_software_result = software_results[0]
             software_name = best_software_result.get("name", "Software")
