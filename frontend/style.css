@@ -2993,3 +2993,186 @@ html.voice-window-mode #voiceScreen .voice-content {
     box-sizing: border-box !important;
     color: #fff !important;
 }
+/* =========================================================
+   ISMAIL AI IMAGE CREATION SCREEN
+   Task 3: Image generation UI
+   ========================================================= */
+.image-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+    color: #fff;
+    min-height: 100dvh;
+    overflow: hidden;
+}
+.image-screen[hidden] {
+    display: none !important;
+}
+.image-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 64px;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    background: #000;
+}
+.image-close-button {
+    width: 42px;
+    height: 42px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    background: #000;
+    color: #fff;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+}
+.image-close-button:hover {
+    background: #1a1a1a;
+}
+.image-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+    font-weight: 600;
+}
+.image-brand-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    font-size: 16px;
+}
+.image-brand-name {
+    font-size: 15px;
+    letter-spacing: 0.4px;
+}
+.image-brand-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #fff;
+}
+.image-topbar-spacer {
+    width: 42px;
+    height: 42px;
+}
+.image-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 18px 28px;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+.image-status {
+    margin-bottom: 18px;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 14px;
+    text-align: center;
+}
+.image-preview-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 280px;
+    margin-bottom: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 18px;
+    background: #050505;
+    overflow: hidden;
+}
+.image-preview-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 90px;
+    height: 90px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 34px;
+}
+.image-prompt-area {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 12px;
+}
+.image-prompt-label {
+    color: #fff;
+    font-size: 15px;
+    font-weight: 500;
+}
+.image-prompt {
+    width: 100%;
+    min-height: 110px;
+    padding: 14px 16px;
+    box-sizing: border-box;
+    resize: vertical;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    outline: none;
+    background: #0a0a0a;
+    color: #fff;
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1.5;
+}
+.image-prompt::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+.image-prompt:focus {
+    border-color: rgba(255, 255, 255, 0.55);
+}
+.generate-image-button {
+    width: 100%;
+    min-height: 50px;
+    padding: 12px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 14px;
+    background: #fff;
+    color: #000;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.generate-image-button:hover {
+    background: #e8e8e8;
+}
+.generate-image-button:active {
+    transform: scale(0.99);
+}
+.generate-image-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+@media (max-width: 600px) {
+    .image-topbar {
+        min-height: 58px;
+        padding: 10px 12px;
+    }
+    .image-content {
+        padding: 18px 14px 22px;
+    }
+    .image-preview-area {
+        min-height: 240px;
+        border-radius: 16px;
+    }
+    .image-prompt {
+        min-height: 100px;
+    }
+}

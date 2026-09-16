@@ -2091,7 +2091,115 @@ const attachMenuElement =
     document.getElementById("attachMenu");
 
 const fileOptionElement =
-    document.getElementById("fileOption");
+    document.getElementById("fileOption");/* =========================================================
+   CREATE IMAGE OPTION
+   Task 3: Open image creation screen
+   ========================================================= */
+const createImageOption =
+    document.getElementById("createImageOption");
+const imageScreen =
+    document.getElementById("imageScreen");
+const imageCloseButton =
+    document.getElementById("imageCloseButton");
+const imagePrompt =
+    document.getElementById("imagePrompt");
+function openImageScreen() {
+    const imageUrl =
+        `${window.location.origin}${window.location.pathname}#image`;
+    const imageWindow = window.open(
+        imageUrl,
+        "ISMAIL_AI_IMAGE",
+        "width=520,height=900,resizable=yes,scrollbars=no"
+    );
+    if (imageWindow) {
+        imageWindow.focus();
+    } else {
+        console.warn(
+            "[ISMAIL AI] Image window was blocked by the browser."
+        );
+    }
+}
+/* =========================================================
+   ISMAIL AI IMAGE HASH HANDLER
+   Task 3: Show image screen when #image window opens
+   ========================================================= */
+function handleImageHash() {
+    if (window.location.hash !== "#image") {
+        return;
+    }
+    if (!imageScreen) {
+        return;
+    }
+    imageScreen.removeAttribute("hidden");
+    imageScreen.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+    document.body.classList.add(
+        "image-screen-open"
+    );
+    if (imagePrompt) {
+        setTimeout(function () {
+            imagePrompt.focus();
+        }, 100);
+    }
+}
+if (document.readyState === "loading") {
+    document.addEventListener(
+        "DOMContentLoaded",
+        handleImageHash,
+        { once: true }
+    );
+} else {
+    handleImageHash();
+}
+window.addEventListener(
+    "hashchange",
+    handleImageHash
+);
+
+function closeImageScreen() {
+    if (window.location.hash === "#image") {
+        window.close();
+        return;
+    }
+    if (!imageScreen) return;
+    imageScreen.setAttribute(
+        "hidden",
+        ""
+    );
+    imageScreen.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+    document.body.classList.remove(
+        "image-screen-open"
+    );
+}
+if (createImageOption) {
+    createImageOption.addEventListener(
+        "click",
+        function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (attachMenuElement) {
+                attachMenuElement.setAttribute(
+                    "hidden",
+                    ""
+                );
+            }
+            openImageScreen();
+        }
+    );
+}
+if (imageCloseButton) {
+    imageCloseButton.addEventListener(
+        "click",
+        function () {
+            closeImageScreen();
+        }
+    );
+}
 
 
 
@@ -3588,5 +3696,13 @@ window.receiveNativeVoice = function (text) {
 
 // IMAGE PICKER DEBUG
 document.getElementById('imageOption')?.addEventListener('click', function () { console.log('IMAGE LABEL CLICKED'); });
+
+
+
+
+
+
+
+
 
 
