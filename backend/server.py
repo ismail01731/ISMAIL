@@ -1,3 +1,4 @@
+﻿from backend.action_router import action_router
 from typing import Optional
 import base64
 import asyncio
@@ -355,7 +356,19 @@ class LoginRequest(BaseModel):
 
 
 
-
+@app.post("/api/action")
+async def api_action(payload: dict):
+    text = str(payload.get("text", "")).strip()
+    if not text:
+        return {
+            "ok": False,
+            "error": "text_required"
+        }
+    result = action_router.route(text)
+    return {
+        "ok": True,
+        "action": result
+    }
 @app.post("/api/auth/register")
 def register_account(
     request: RegisterRequest,
@@ -1720,5 +1733,6 @@ if __name__ == "__main__":
         port=8000,
         reload=True
     )
+
 
 
