@@ -46,3 +46,6 @@ local.properties
 __pycache__/
 *.pyc
 *.log
+
+# ISMAIL task safety backups
+backend/action_router.py.task8-safety-backup
