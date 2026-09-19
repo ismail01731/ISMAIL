@@ -7,7 +7,141 @@ def _connect():
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    _ensure_youtube_schema(conn)
     return conn
+
+def _ensure_youtube_schema(conn):
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS youtube_channels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            channel_id TEXT UNIQUE,
+            channel_name TEXT NOT NULL,
+            handle TEXT,
+            niche TEXT,
+            language TEXT,
+            country TEXT,
+            subscriber_count INTEGER DEFAULT 0,
+            video_count INTEGER DEFAULT 0,
+            view_count INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS youtube_videos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            channel_id INTEGER NOT NULL,
+            youtube_video_id TEXT UNIQUE,
+            title TEXT NOT NULL,
+            description TEXT,
+            topic TEXT,
+            format TEXT,
+            duration_seconds REAL,
+            published_at TEXT,
+            views INTEGER DEFAULT 0,
+            likes INTEGER DEFAULT 0,
+            comments INTEGER DEFAULT 0,
+            shares INTEGER DEFAULT 0,
+            subscribers_gained INTEGER DEFAULT 0,
+            impressions INTEGER DEFAULT 0,
+            ctr REAL,
+            average_view_duration_seconds REAL,
+            average_percentage_viewed REAL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(channel_id) REFERENCES youtube_channels(id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS youtube_topics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            topic TEXT NOT NULL,
+            category TEXT,
+            source TEXT,
+            trend_score REAL,
+            opportunity_score REAL,
+            competition_score REAL,
+            collected_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS youtube_competitors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            channel_id TEXT NOT NULL UNIQUE,
+            channel_name TEXT NOT NULL,
+            handle TEXT,
+            niche TEXT,
+            language TEXT,
+            country TEXT,
+            subscriber_count INTEGER DEFAULT 0,
+            video_count INTEGER DEFAULT 0,
+            view_count INTEGER DEFAULT 0,
+            notes TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS youtube_experiments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            video_id INTEGER,
+            experiment_type TEXT NOT NULL,
+            variant_name TEXT NOT NULL,
+            title TEXT,
+            thumbnail_concept TEXT,
+            hook TEXT,
+            result_metric TEXT,
+            result_value REAL,
+            status TEXT DEFAULT 'planned',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(video_id) REFERENCES youtube_videos(id) ON DELETE SET NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS youtube_learning (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            feature TEXT NOT NULL,
+            pattern TEXT NOT NULL,
+            evidence_count INTEGER DEFAULT 0,
+            average_performance REAL,
+            confidence REAL DEFAULT 0.0,
+            metadata TEXT,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS youtube_video_snapshots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            video_id INTEGER NOT NULL,
+            views INTEGER DEFAULT 0,
+            likes INTEGER DEFAULT 0,
+            comments INTEGER DEFAULT 0,
+            shares INTEGER DEFAULT 0,
+            subscribers_gained INTEGER DEFAULT 0,
+            impressions INTEGER DEFAULT 0,
+            ctr REAL,
+            average_view_duration_seconds REAL,
+            average_percentage_viewed REAL,
+            traffic_source TEXT,
+            captured_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(video_id) REFERENCES youtube_videos(id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.commit()
 def _avg(values):
     values = [float(v) for v in values if v is not None]
     return round(sum(values) / len(values), 2) if values else 0.0
