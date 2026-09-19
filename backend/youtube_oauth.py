@@ -243,37 +243,60 @@ class YouTubeOAuthManager:
             "client_secret": self.client_secret,
             "refresh_token": refresh_token,
             "grant_type": "refresh_token",
-        }).encode("utf-8")
-        request = urllib.request.Request(
-            GOOGLE_TOKEN_URL,
-            data=payload,
-            method="POST",
-            headers={
-                "Content-Type": (
-                    "application/x-www-form-urlencoded"
-                ),
-                "Accept": "application/json",
-                "User-Agent": (
-                    "ISMAIL-AI-YouTube-OAuth/1.0"
-                ),
-            },
-        )
+        })
         try:
-            with urllib.request.urlopen(
-                request,
-                timeout=60,
-            ) as response:
-                raw = response.read().decode(
-                    "utf-8",
-                    errors="replace",
-                )
+            import subprocess
+            result = subprocess.run(
+                [
+                    ("curl.exe" if os.name == "nt" else "curl"),
+                    *(["-4", "--http1.1"] if os.name == "nt" else ["--http1.1"]),
+                    "-sS",
+                    "--retry",
+                    "4",
+                    "--retry-delay",
+                    "2",
+                    "--retry-all-errors",
+                    "--max-time",
+                    "30",
+                    "-X",
+                    "POST",
+                    "-H",
+                    "Content-Type: application/x-www-form-urlencoded",
+                    "--data",
+                    payload,
+                    GOOGLE_TOKEN_URL,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=35,
+            )
+            if result.returncode != 0:
+                return {
+                    "success": False,
+                    "error": (
+                        "OAuth refresh failed: "
+                        + (
+                            result.stderr.strip()
+                            or f"curl exit {result.returncode}"
+                        )
+                    ),
+                }
+            raw = result.stdout.strip()
+            if not raw:
+                return {
+                    "success": False,
+                    "error": (
+                        "OAuth refresh returned "
+                        "an empty response."
+                    ),
+                }
             data = json.loads(raw)
         except Exception as exc:
             return {
                 "success": False,
                 "error": (
                     "OAuth refresh failed: "
-                    f"{type(exc).__name__}"
+                    f"{type(exc).__name__}: {exc}"
                 ),
             }
         access_token = str(
@@ -286,28 +309,37 @@ class YouTubeOAuthManager:
                     "error_description",
                     data.get(
                         "error",
-                        "Google did not return "
-                        "a refreshed access token.",
+                        "OAuth refresh did not return an access token.",
                     ),
                 ),
             }
         self.access_token = access_token
-        self.token_type = (
-            str(
-                data.get(
-                    "token_type",
-                    "",
-                )
-            ).strip()
-            or self.token_type
-            or None
-        )
+        self.token_type = str(
+            data.get(
+                "token_type",
+                "Bearer",
+            )
+        ).strip() or "Bearer"
+        new_refresh_token = str(
+            data.get(
+                "refresh_token",
+                "",
+            )
+        ).strip()
+        if new_refresh_token:
+            self.refresh_token = new_refresh_token
+            self._save_refresh_token(
+                new_refresh_token
+            )
         return {
             "success": True,
-            "authenticated": True,
-            "channel_id": self.channel_id,
-            "refresh_token_used": True,
+            "authorized": True,
             "access_token_refreshed": True,
+            "refresh_token_used": True,
+            "token_type": self.token_type,
+            "expires_in": data.get(
+                "expires_in"
+            ),
         }
     def authentication_status(self) -> dict[str, Any]:
         return {

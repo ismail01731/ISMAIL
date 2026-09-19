@@ -6,6 +6,8 @@ from __future__ import annotations
 import json
 import urllib.parse
 import urllib.request
+import subprocess
+import os
 from datetime import date
 from typing import Any, Optional
 DEFAULT_CHANNEL_ID = "UCP75FPRq4DaMoe88G9R3heg"
@@ -116,76 +118,83 @@ class YouTubeAnalytics:
             + "?"
             + urllib.parse.urlencode(params)
         )
-        request = urllib.request.Request(
-            url,
-            method="GET",
-            headers={
-                "Authorization": (
-                    "Bearer "
-                    + self.access_token
-                ),
-                "Accept": "application/json",
-                "User-Agent": (
-                    "ISMAIL-AI-YouTube-Analytics/1.0"
-                ),
-            },
-        )
         try:
-            with urllib.request.urlopen(
-                request,
-                timeout=60,
-            ) as response:
-                raw = response.read().decode(
-                    "utf-8",
-                    errors="replace",
+            payload = None
+            curl_command = [
+                ("curl.exe" if os.name == "nt" else "curl"),
+                *(["-4", "--http1.1"] if os.name == "nt" else ["--http1.1"]),
+                "-sS",
+                "--max-time",
+                "60",
+                "-X",
+                "GET",
+                "-H",
+                "Authorization: Bearer " + self.access_token,
+                "-H",
+                "Accept: application/json",
+                "-H",
+                "User-Agent: ISMAIL-AI-YouTube-Analytics/1.0",
+                url,
+            ]
+            result = subprocess.run(
+                curl_command,
+                capture_output=True,
+                text=True,
+                timeout=65,
+            )
+            raw = result.stdout.strip()
+            if result.returncode != 0:
+                error_text = (
+                    "YouTube Analytics API request failed: "
+                    + (
+                        result.stderr.strip()
+                        or f"curl exit {result.returncode}"
+                    )
                 )
+                return {
+                    "success": False,
+                    "authorized": True,
+                    "channel_id": self.channel_id,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "metrics": {},
+                    "error": error_text,
+                }
+            if not raw:
+                return {
+                    "success": False,
+                    "authorized": True,
+                    "channel_id": self.channel_id,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "metrics": {},
+                    "error": (
+                        "YouTube Analytics API returned "
+                        "an empty response."
+                    ),
+                }
             data = json.loads(raw)
-        except Exception as exc:
-            status_code = getattr(
-                exc,
-                "code",
-                None,
-            )
-            reason = getattr(
-                exc,
-                "reason",
-                None,
-            )
-            google_reason = None
-            try:
-                error_body = exc.read().decode(
-                    "utf-8",
-                    errors="replace",
-                )
-                error_json = json.loads(
-                    error_body
-                )
-                google_error = error_json.get(
-                    "error",
-                    {},
-                )
+            if isinstance(data, dict) and data.get("error"):
+                google_error = data.get("error", {})
                 google_reason = (
                     google_error.get("message")
                     or google_error.get("status")
+                    or "Unknown Google API error."
                 )
-            except Exception:
-                pass
-            error_text = (
-                "YouTube Analytics API request failed: "
-                f"{type(exc).__name__}"
-            )
-            if status_code is not None:
-                error_text += (
-                    f" (HTTP {status_code})"
-                )
-            if reason:
-                error_text += (
-                    f": {reason}"
-                )
-            if google_reason:
-                error_text += (
-                    f" | Google: {google_reason}"
-                )
+                return {
+                    "success": False,
+                    "authorized": True,
+                    "channel_id": self.channel_id,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "metrics": {},
+                    "error": (
+                        "YouTube Analytics API request failed"
+                        " | Google: "
+                        + str(google_reason)
+                    ),
+                }
+        except Exception as exc:
             return {
                 "success": False,
                 "authorized": True,
@@ -193,7 +202,10 @@ class YouTubeAnalytics:
                 "start_date": start_date,
                 "end_date": end_date,
                 "metrics": {},
-                "error": error_text,
+                "error": (
+                    "YouTube Analytics API request failed: "
+                    f"{type(exc).__name__}: {exc}"
+                ),
             }
         column_headers = data.get(
             "columnHeaders",

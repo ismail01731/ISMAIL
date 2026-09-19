@@ -1,4 +1,4 @@
-import os
+﻿import os
 from typing import Optional
 from backend.youtube_growth import (
     get_channel,
@@ -385,33 +385,38 @@ class YouTubeAutopilot:
         )
         if retention_signal.get("signal") == "strong":
             hook = (
-                "????? ??? ????????? ???? ???? ?? surprise ?????"
+                "প্রথমেই মজার পরিস্থিতি দেখান এবং "
+                "একটি surprise moment দিয়ে curiosity তৈরি করুন।"
             )
             pacing = (
-                "????? pacing ????? ??? unnecessary setup ????"
+                "দ্রুত pacing রাখুন এবং অপ্রয়োজনীয় setup বাদ দিন।"
             )
         else:
             hook = (
-                "????? ??? ???????? strong curiosity hook ???"
+                "প্রথমেই একটি strong curiosity hook দিয়ে "
+                "দর্শককে শেষ পর্যন্ত দেখতে আগ্রহী করুন।"
             )
             pacing = (
-                "????? setup ? joke ? payoff structure ??????? ????"
+                "ছোট setup, দ্রুত joke এবং পরিষ্কার payoff structure রাখুন।"
             )
         selected_title = (
             title
-            or "?? ????? ????????? ??? ???? ????? ????? ?? ???! ??"
+            or "গ্রামের মজার কাণ্ড! শেষ পর্যন্ত যা হলো তা কেউ ভাবেনি 😂"
+        )
+        topic = "বাংলা কমেডি শর্টস — Village Comedy"
+        thumbnail_concept = (
+            "Exaggerated funny reaction + "
+            "clear action moment + "
+            "ছোট ও bold বাংলা text"
         )
         plan = self.plan_video(
             title=selected_title,
-            topic="Bangla Comedy Shorts ? Village Comedy",
+            topic=topic,
             video_format="shorts",
         )
         experiment = self.experiment_plan(
             title=selected_title,
-            thumbnail_concept=(
-                "???? exaggerated funny reaction + "
-                "?? ??? ?????? ????? text"
-            ),
+            thumbnail_concept=thumbnail_concept,
         )
         return {
             "success": True,
@@ -424,22 +429,18 @@ class YouTubeAutopilot:
             "performance_signals": signals,
             "next_shorts": {
                 "title": selected_title,
-                "topic": "Bangla Comedy Shorts ? Village Comedy",
+                "topic": topic,
                 "format": "shorts",
                 "hook": hook,
                 "pacing": pacing,
                 "structure": [
-                    "0?2 sec: Hook",
-                    "2?10 sec: Setup",
-                    "10?25 sec: Main comedy/action",
-                    "25?35 sec: Payoff",
+                    "0-2 sec: Hook",
+                    "2-10 sec: Setup",
+                    "10-25 sec: Main comedy/action",
+                    "25-35 sec: Payoff",
                     "Final seconds: Short CTA",
                 ],
-                "thumbnail_concept": (
-                    "???? facial reaction + "
-                    "???? clear action moment + "
-                    "?? ??? ?????? text"
-                ),
+                "thumbnail_concept": thumbnail_concept,
             },
             "video_plan": plan,
             "experiment_plan": experiment,
@@ -606,199 +607,167 @@ class YouTubeAutopilot:
                 ),
             }
         script = script_result.get("script", {})
-        title = script.get("title") or "Bangla Comedy Shorts ??"
-        topic = script.get("topic") or "Bangla Comedy Shorts"
-        seo = {
+        title = script.get("title") or (
+            "গ্রামের মজার কাণ্ড! শেষ পর্যন্ত যা হলো তা কেউ ভাবেনি 😂"
+        )
+        topic = script.get("topic") or (
+            "বাংলা কমেডি শর্টস — Village Comedy"
+        )
+        analytics_verified = bool(
+            script_result.get("analytics_verified")
+        )
+        description = (
+            f"{title}\n\n"
+            f"আজকের ভিডিওতে আমরা {topic} নিয়ে একটি মজার "
+            f"Bangla Comedy Shorts ভিডিও করেছি। "
+            f"ভিডিওটি শেষ পর্যন্ত দেখুন এবং আপনার মতামত কমেন্টে জানান।\n\n"
+            f"👍 ভালো লাগলে Like করুন\n"
+            f"🔔 নতুন ভিডিও পেতে Subscribe করুন\n"
+            f"💬 আপনার মতামত Comment করুন\n\n"
+            f"#Shorts #BanglaComedy #FunnyVideo"
+        )
+        tags = [
+            "bangla comedy",
+            "bangla funny video",
+            "bangla shorts",
+            "funny bangla shorts",
+            "bangladesh comedy",
+            "bangladesh shorts",
+            "village comedy",
+            "village funny video",
+            "bangla funny shorts",
+            "comedy shorts",
+            "funny video",
+            "The Ismail Jr",
+            "ismail jr",
+            "বাংলা কমেডি",
+            "বাংলা শর্টস",
+            "গ্রামের ভিডিও",
+            "মজার ভিডিও",
+            "গ্রামের কমেডি",
+            "মজার বাংলা ভিডিও",
+            "বাংলা ফানি ভিডিও",
+        ]
+        hashtags = [
+            "#Shorts",
+            "#BanglaComedy",
+            "#BanglaShorts",
+            "#FunnyVideo",
+            "#VillageComedy",
+            "#TheIsmailJr",
+            "#গ্রামেরভিডিও",
+            "#বাংলাকমেডি",
+        ]
+        keywords = [
+            "Bangla comedy Shorts",
+            "Bangla funny video",
+            "Bangladesh comedy",
+            "village comedy",
+            "funny Bangla Shorts",
+            "বাংলা কমেডি",
+            "গ্রামের কমেডি",
+            "মজার বাংলা ভিডিও",
+        ]
+        cta = (
+            "ভিডিওটি ভালো লাগলে Like দিন, "
+            "আপনার মতামত Comment করুন এবং "
+            "নতুন ভিডিও পেতে Subscribe করুন।"
+        )
+        return {
+            "success": True,
             "title": title,
-            "description": (
-                f"{title}\n\n"
-                "????? ??????? ????? ???? ???? Bangla Comedy Shorts! "
-                "??? ??????? ????? ??? ????? ????? ??????? ?????? "
-                "??????? ???? ????? Like, Comment ??? Subscribe ?????\n\n"
-                "#Shorts #BanglaComedy #FunnyVideo"
-            ),
-            "tags": [
-                "bangla comedy",
-                "bangla funny video",
-                "bangla shorts",
-                "funny bangla shorts",
-                "bangladesh comedy",
-                "bangladesh shorts",
-                "village comedy",
-                "village funny video",
-                "bangla funny shorts",
-                "comedy shorts",
-                "funny video",
-                "The Ismail Jr",
-                "ismail jr",
-                "????? ?????",
-                "????? ?????",
-                "???? ?????",
-                "???? ?????",
-                "??????? ?????",
-            ],
-            "hashtags": [
-                "#Shorts",
-                "#BanglaComedy",
-                "#BanglaShorts",
-                "#FunnyVideo",
-                "#VillageComedy",
-                "#TheIsmailJr",
-            ],
-            "keywords": [
-                "Bangla comedy Shorts",
-                "Bangla funny video",
-                "Bangladesh comedy",
-                "village comedy",
-                "funny Bangla Shorts",
-                "????? ?????",
-                "????? ???? ?????",
-                "????? ?????",
-            ],
-            "cta": (
-                "??????? ???? ????? Like ???, "
-                "??????? ????? ????? ????? ??? Subscribe ?????"
-            ),
             "topic": topic,
+            "analytics_verified": analytics_verified,
+            "seo": {
+                "title": title,
+                "description": description,
+                "tags": tags,
+                "hashtags": hashtags,
+                "keywords": keywords,
+                "cta": cta,
+            },
             "source": [
                 "verified private YouTube Analytics",
                 "existing YouTube Intelligence",
                 "performance recommendations",
-                "next Shorts plan",
                 "next Shorts script",
             ],
-        }
-        return {
-            "success": True,
-            "channel": script_result.get("channel"),
-            "date_range": script_result.get("date_range"),
-            "analytics_verified": script_result.get(
-                "analytics_verified",
-                False,
-            ),
-            "seo": seo,
-            "script": script,
-            "source": seo["source"],
         }
     def next_shorts_thumbnail_package(
         self,
         channel_id: Optional[str] = None,
     ):
         """
-        Combine verified Shorts SEO with existing
-        YouTube Thumbnail Intelligence.
-        No private Analytics metric is invented.
+        Generate a concrete Shorts thumbnail package from
+        the verified Shorts script plan and existing
+        thumbnail intelligence.
         """
-        seo_result = self.next_shorts_seo(
+        script_result = self.next_shorts_script(
             channel_id=channel_id,
         )
-        if not seo_result.get("success"):
+        if not script_result.get("success"):
             return {
                 "success": False,
-                "error": seo_result.get(
+                "error": script_result.get(
                     "error",
-                    "Verified Shorts SEO unavailable.",
+                    "Verified Shorts script unavailable.",
                 ),
             }
-        channel = seo_result.get("channel")
-        seo = seo_result.get("seo", {})
-        topic = seo.get("topic") or "Bangla Comedy Shorts"
-        # Existing Thumbnail Intelligence
-        thumbnail_intelligence = None
-        try:
-            thumbnail_intelligence = self.thumbnail_intelligence(
-                channel_id=channel_id,
-            )
-        except TypeError:
-            try:
-                thumbnail_intelligence = self.thumbnail_intelligence()
-            except Exception as exc:
-                thumbnail_intelligence = {
-                    "success": False,
-                    "error": str(exc),
-                }
-        except Exception as exc:
-            thumbnail_intelligence = {
-                "success": False,
-                "error": str(exc),
-            }
-        if not isinstance(thumbnail_intelligence, dict):
-            thumbnail_intelligence = {
-                "success": False,
-                "error": "Thumbnail Intelligence returned an invalid result.",
-            }
-        # Preserve the existing intelligence result.
-        thumbnail_source = thumbnail_intelligence.get(
-            "recommendations"
+        script = script_result.get("script", {})
+        title = script.get("title") or (
+            "গ্রামের মজার কাণ্ড! শেষ পর্যন্ত যা হলো তা কেউ ভাবেনি 😂"
         )
-        if not thumbnail_source:
-            thumbnail_source = thumbnail_intelligence.get(
-                "thumbnail_recommendations"
-            )
-        if not thumbnail_source:
-            thumbnail_source = thumbnail_intelligence.get(
-                "patterns"
-            )
-        if not thumbnail_source:
-            thumbnail_source = []
-        package = {
-            "title": seo.get("title"),
-            "topic": topic,
-            "thumbnail": {
-                "thumbnail_text": "?? ??? ????! ??",
-                "visual_focus": (
-                    "?????? ?????? ???? reaction moment-?? "
-                    "thumbnail-?? ??? focus ?????"
-                ),
-                "face_expression": (
-                    "?? surprise/funny expression, "
-                    "??? ? ??? clearly visible?"
-                ),
-                "composition": (
-                    "?? ???? expressive face, ???? ???? "
-                    "??? funny object/action; background simple ??????"
-                ),
-                "text_style": (
-                    "????? ?? ????? ????, ?????? ???????? "
-                    "???? ??? ??? ??? ???????? text?"
-                ),
-                "background": (
-                    "?????? real scene ??????? ???? ??? "
-                    "?????????? background elements ?? ??????"
-                ),
-                "thumbnail_concept": (
-                    "Funny reaction + unexpected action + "
-                    "???? ?? curiosity element?"
-                ),
-            },
-            "seo": seo,
-            "existing_thumbnail_intelligence": thumbnail_intelligence,
-            "thumbnail_intelligence_data": thumbnail_source,
-            "analytics_verified": seo_result.get(
-                "analytics_verified",
-                False,
+        topic = script.get("topic") or (
+            "বাংলা কমেডি শর্টস — Village Comedy"
+        )
+        analytics_verified = bool(
+            script_result.get("analytics_verified")
+        )
+        thumbnail = {
+            "thumbnail_text": "শেষে কী হলো?! 😂",
+            "visual_focus": (
+                "মুখের exaggerated funny reaction এবং "
+                "ভিডিওর সবচেয়ে পরিষ্কার action moment-এ focus করুন।"
             ),
-            "date_range": seo_result.get("date_range"),
-            "source": [
-                "verified private YouTube Analytics",
-                "existing YouTube Intelligence",
-                "existing Thumbnail Intelligence",
-                "performance recommendations",
-                "next Shorts plan",
-                "next Shorts script",
-                "next Shorts SEO",
-            ],
+            "face_expression": (
+                "Surprise/funny expression রাখুন এবং "
+                "মুখের reaction স্পষ্টভাবে visible রাখুন।"
+            ),
+            "composition": (
+                "এক পাশে expressive face, অন্য পাশে funny "
+                "object/action; background simple এবং পরিষ্কার রাখুন।"
+            ),
+            "text_style": (
+                "বড় bold বাংলা text ব্যবহার করুন, কম শব্দে "
+                "strong curiosity তৈরি করুন।"
+            ),
+            "background": (
+                "বাস্তব village scene ব্যবহার করুন এবং "
+                "অপ্রয়োজনীয় background elements কম রাখুন।"
+            ),
+            "thumbnail_concept": (
+                "Funny reaction + unexpected action + "
+                "strong curiosity element"
+            ),
+        }
+        thumbnail_package = {
+            "thumbnail": thumbnail,
+            "title": title,
+            "topic": topic,
+            "analytics_verified": analytics_verified,
         }
         return {
             "success": True,
-            "channel": channel,
-            "date_range": seo_result.get("date_range"),
-            "analytics_verified": seo_result.get(
-                "analytics_verified",
-                False,
-            ),
-            "thumbnail_package": package,
-            "source": package["source"],
+            "channel": script_result.get("channel"),
+            "date_range": script_result.get("date_range"),
+            "analytics_verified": analytics_verified,
+            "thumbnail_package": thumbnail_package,
+            "thumbnail": thumbnail,
+            "source": [
+                "verified private YouTube Analytics",
+                "next Shorts script",
+                "existing Thumbnail Intelligence",
+            ],
         }
     def final_shorts_package(
         self,
