@@ -1471,6 +1471,11 @@ async def chat(
         )
 
     except Exception as exc:
+        print(
+            f"[ISMAIL AI] /api/chat generation error: "
+            f"{type(exc).__name__}: {exc}",
+            flush=True,
+        )
         raise HTTPException(
             status_code=500,
             detail="AI generation failed. Please try again later."
