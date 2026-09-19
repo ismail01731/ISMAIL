@@ -1,4 +1,4 @@
-﻿from backend.action_router import action_router
+from backend.action_router import action_router
 from typing import Optional
 import base64
 import asyncio
@@ -64,6 +64,9 @@ from backend.input_security import InputSecurity
 from backend.web_research import WebResearch
 from backend.knowledge_base import KnowledgeBase
 from backend.voice.speech_to_text import speech_to_text
+# ImageGenerator is imported lazily inside image-generation code.
+from backend.youtube_growth import save_channel, get_channel, list_channels
+from pydantic import BaseModel, Field
 
 
 
@@ -98,6 +101,11 @@ app.add_middleware(
 
 
 ai_engine = AIEngine()
+try:
+    from backend.image_generator import ImageGenerator
+    image_generator = ImageGenerator()
+except ModuleNotFoundError:
+    image_generator = None
 web_research = WebResearch()
 knowledge_base = KnowledgeBase()
 input_security = InputSecurity()
@@ -826,6 +834,14 @@ class ChatRequest(BaseModel):
     image_type: str = Field("", max_length=100)
 
 
+class ImageGenerateRequest(BaseModel):
+    prompt: str = Field(
+        ...,
+        min_length=1,
+        max_length=4000,
+    )
+
+
 class ChatHistoryMessage(BaseModel):
     chat_id: str = Field(..., min_length=1, max_length=200)
     role: str = Field(..., pattern=r"^(user|assistant)$")
@@ -1287,6 +1303,69 @@ def clear_chat_history(http_request: Request):
     
 
     
+    # =========================================================
+    # ISMAIL AI IMAGE GENERATION
+    # Task 4: Authenticated image generation endpoint
+    # =========================================================
+@app.post("/api/image/generate")
+async def generate_image(
+        request: ImageGenerateRequest,
+        http_request: Request,
+        credentials: HTTPAuthorizationCredentials = Depends(security),
+    ):
+        try:
+            identity_token = credentials.credentials
+            try:
+                authenticated_user_id = _verify_identity(identity_token)
+            except ValueError:
+                raise HTTPException(
+                    status_code=401,
+                    detail="Invalid or expired identity token.",
+                )
+            client_ip = (
+                http_request.client.host
+                if http_request.client
+                else "unknown"
+            )
+            if not chat_rate_limiter.check(client_ip):
+                raise HTTPException(
+                    status_code=429,
+                    detail="Too many requests. Please try again later.",
+                )
+            prompt = request.prompt.strip()
+            security_result = input_security.scan(prompt)
+            if not security_result.allowed:
+                raise HTTPException(
+                    status_code=400,
+                    detail=security_result.reason,
+                )
+            try:
+                image_base64 = await asyncio.to_thread(
+                    image_generator.generate,
+                    prompt,
+                )
+            except Exception as exc:
+                print(
+                    f"[ISMAIL AI] Image provider error: {type(exc).__name__}: {exc}"
+                )
+                raise HTTPException(
+                    status_code=502,
+                    detail="Image generation service is temporarily unavailable.",
+                )
+            return {
+                "success": True,
+                "user_id": authenticated_user_id,
+                "model": image_generator.model,
+                "image_data": image_base64,
+                "image_type": "image/png",
+            }
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(
+                status_code=500,
+                detail="Image generation failed. Please try again later.",
+            )
 @app.post("/api/chat")
 async def chat(
     request: ChatRequest,
@@ -1399,6 +1478,110 @@ async def chat(
 
 
 
+
+# ============================================================
+# TASK 1 YOUTUBE CHANNEL API
+# ============================================================
+class YouTubeChannelRequest(BaseModel):
+    channel_id: Optional[str] = None
+    channel_name: str
+    handle: Optional[str] = None
+    niche: Optional[str] = None
+    language: Optional[str] = None
+    country: Optional[str] = None
+    subscriber_count: int = 0
+    video_count: int = 0
+    view_count: int = 0
+@app.post("/api/youtube/channel")
+async def api_youtube_save_channel(
+    payload: YouTubeChannelRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    try:
+        _verify_identity(credentials.credentials)
+    except ValueError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired identity token."
+        )
+    try:
+        channel = save_channel(
+            channel_id=payload.channel_id,
+            channel_name=payload.channel_name,
+            handle=payload.handle,
+            niche=payload.niche,
+            language=payload.language,
+            country=payload.country,
+            subscriber_count=payload.subscriber_count,
+            video_count=payload.video_count,
+            view_count=payload.view_count,
+        )
+        return {
+            "success": True,
+            "channel": channel,
+        }
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc)
+        )
+    except Exception:
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to save YouTube channel."
+        )
+@app.get("/api/youtube/channel")
+async def api_youtube_get_channel(
+    channel_id: Optional[str] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    try:
+        _verify_identity(credentials.credentials)
+    except ValueError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired identity token."
+        )
+    try:
+        channel = get_channel(channel_id)
+        return {
+            "success": True,
+            "channel": channel,
+        }
+    except Exception:
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to load YouTube channel."
+        )
+@app.get("/api/youtube/channels")
+async def api_youtube_list_channels(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    try:
+        _verify_identity(credentials.credentials)
+    except ValueError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired identity token."
+        )
+    try:
+        channels = list_channels()
+        return {
+            "success": True,
+            "count": len(channels),
+            "channels": channels,
+        }
+    except Exception:
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to load YouTube channels."
+        )
+# ============================================================
+# END TASK 1 YOUTUBE CHANNEL API
+# ============================================================
 
 @app.websocket("/ws/voice")
 async def voice_websocket(websocket: WebSocket):
@@ -1724,6 +1907,163 @@ async def voice_websocket(websocket: WebSocket):
         except Exception:
             pass
 
+# ============================================================
+# TASK 18.7 - YOUTUBE ANALYTICS OAUTH
+# ============================================================
+_YOUTUBE_OAUTH_STATES = {}
+@app.get("/api/youtube/oauth/start")
+def youtube_oauth_start(
+    http_request: Request,
+):
+    from backend.youtube_oauth import (
+        youtube_oauth,
+    )
+    status = youtube_oauth.configuration_status()
+    if not status["oauth_ready"]:
+        raise HTTPException(
+            status_code=503,
+            detail="YouTube OAuth configuration is incomplete.",
+        )
+    state = secrets.token_urlsafe(32)
+    redirect_uri = (
+        str(http_request.base_url).rstrip("/")
+        + "/api/youtube/oauth/callback"
+    )
+    _YOUTUBE_OAUTH_STATES[state] = redirect_uri
+    authorization_url = (
+        youtube_oauth.create_authorization_url(
+            redirect_uri=redirect_uri,
+            state=state,
+        )
+    )
+    return {
+        "success": True,
+        "authorization_url": authorization_url,
+        "channel_id": youtube_oauth.channel_id,
+        "scope": youtube_oauth.scopes,
+    }
+@app.get("/api/youtube/oauth/callback")
+def youtube_oauth_callback(
+    http_request: Request,
+):
+    from backend.youtube_oauth import (
+        youtube_oauth,
+    )
+    code = (
+        http_request.query_params.get("code")
+        or ""
+    ).strip()
+    state = (
+        http_request.query_params.get("state")
+        or ""
+    ).strip()
+    oauth_error = (
+        http_request.query_params.get("error")
+        or ""
+    ).strip()
+    if oauth_error:
+        return {
+            "success": False,
+            "oauth_error": oauth_error,
+            "message": "YouTube OAuth authorization was not completed.",
+        }
+    if not code or not state:
+        raise HTTPException(
+            status_code=400,
+            detail="OAuth code or state is missing.",
+        )
+    redirect_uri = _YOUTUBE_OAUTH_STATES.pop(
+        state,
+        None,
+    )
+    if not redirect_uri:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired OAuth state.",
+        )
+    result = youtube_oauth.exchange_code(
+        code=code,
+        redirect_uri=redirect_uri,
+    )
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=400,
+            detail=result.get(
+                "error",
+                "YouTube OAuth authorization failed.",
+            ),
+        )
+    return {
+        "success": True,
+        "authenticated": True,
+        "channel_id": youtube_oauth.channel_id,
+        "refresh_token_received": result.get(
+            "refresh_token_received",
+            False,
+        ),
+        "message": (
+            "YouTube Analytics authorization successful."
+        ),
+    }
+@app.get("/api/youtube/oauth/status")
+def youtube_oauth_auth_status():
+    from backend.youtube_oauth import (
+        youtube_oauth,
+    )
+    return youtube_oauth.authentication_status()
+# ============================================================
+# TASK 18.8 - REAL YOUTUBE ANALYTICS API
+# ============================================================
+@app.get("/api/youtube/analytics")
+def youtube_analytics_report(
+    start_date: str,
+    end_date: str,
+):
+    from backend.youtube_analytics import (
+        youtube_analytics,
+    )
+    from backend.youtube_oauth import (
+        youtube_oauth,
+    )
+    access_token = getattr(
+        youtube_oauth,
+        "access_token",
+        None,
+    )
+    # After backend restart, access_token is empty.
+    # Use the persisted refresh token to obtain a new one.
+    if not access_token:
+        refresh_result = (
+            youtube_oauth.refresh_access_token()
+        )
+        if refresh_result.get("success"):
+            access_token = getattr(
+                youtube_oauth,
+                "access_token",
+                None,
+            )
+    if access_token:
+        youtube_analytics.configure_access_token(
+            access_token
+        )
+    result = youtube_analytics.get_channel_metrics(
+        start_date=start_date,
+        end_date=end_date,
+    )
+    return result
+
+@app.get("/api/youtube/final-shorts-package")
+def youtube_final_shorts_package():
+    """
+    Return the verified final YouTube Shorts content package.
+    Existing YouTube Autopilot functionality is preserved.
+    """
+    from backend.youtube_autopilot import youtube_autopilot
+    result = youtube_autopilot.command(
+        "final_shorts_package"
+    )
+    return result
+
 if __name__ == "__main__":
     import uvicorn
 
@@ -1733,6 +2073,17 @@ if __name__ == "__main__":
         port=8000,
         reload=True
     )
+
+
+
+
+
+
+
+
+
+
+
 
 
 

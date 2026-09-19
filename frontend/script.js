@@ -1,4 +1,4 @@
-﻿const chatContainer = document.getElementById("chatContainer");
+const chatContainer = document.getElementById("chatContainer");
 const messageInput = document.getElementById("messageInput");
 const sendButton = document.getElementById("sendButton");
 const attachButton =
@@ -177,6 +177,7 @@ const API_URL = `${BACKEND_BASE_URL}/api/chat`;
 const SESSION_KEY = "ismail_ai_session";
 
 const HISTORY_KEY = "ismail_ai_chat_history";
+const IMAGE_HISTORY_KEY = "ismail_ai_image_history";
 
 let USER_ID = "";
 
@@ -2103,6 +2104,511 @@ const imageCloseButton =
     document.getElementById("imageCloseButton");
 const imagePrompt =
     document.getElementById("imagePrompt");
+const generateImageButton =
+    document.getElementById("generateImageButton");
+
+const imagePreviewArea =
+    document.getElementById("imagePreviewArea");
+
+const imageStatus =
+    document.getElementById("imageStatus");
+
+const saveImageButton =
+    document.getElementById("saveImageButton");
+
+const shareImageButton =
+    document.getElementById("shareImageButton");const regenerateImageButton =
+    document.getElementById("regenerateImageButton");
+
+function saveImageToHistory(prompt, imageData, imageType) {
+    try {
+        const history = JSON.parse(
+            localStorage.getItem(IMAGE_HISTORY_KEY) || "[]"
+        );
+        const item = {
+            id: Date.now(),
+            prompt: String(prompt || ""),
+            imageData: String(imageData || ""),
+            imageType: String(imageType || "image/png"),
+            createdAt: new Date().toISOString()
+        };
+        history.unshift(item);
+        const limitedHistory = history.slice(0, 5);
+        localStorage.setItem(
+            IMAGE_HISTORY_KEY,
+            JSON.stringify(limitedHistory)
+        );
+        return true;
+    } catch (error) {
+        console.error(
+            "[ISMAIL AI] Image history save error:",
+            error
+        );
+        return false;
+    }
+}function renderImageHistory() {
+    const historyList =
+        document.getElementById("imageHistoryList");
+    if (!historyList) {
+        return;
+    }
+    historyList.innerHTML = "";
+    try {
+        const history = JSON.parse(
+            localStorage.getItem(IMAGE_HISTORY_KEY) || "[]"
+        );
+        if (!Array.isArray(history) || history.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "image-history-empty";
+            empty.textContent = "No generated images yet.";
+            historyList.appendChild(empty);
+            return;
+        }
+        history.slice(0, 5).forEach((item) => {
+            if (!item || !item.imageData) {
+                return;
+            }
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "image-history-item";
+            button.title = item.prompt || "Generated image";
+            const saveButton = document.createElement("button");
+            saveButton.type = "button";
+            saveButton.className = "image-history-save";
+            saveButton.title = "Save image";
+            saveButton.textContent = "💾";
+            saveButton.addEventListener("click", (event) => {
+                event.stopPropagation();
+                saveHistoryImage(item);
+            });
+            const shareButton = document.createElement("button");
+            shareButton.type = "button";
+            shareButton.className = "image-history-share";
+            shareButton.title = "Share image";
+            shareButton.textContent = "↗️";
+            shareButton.addEventListener("click", (event) => {
+                event.stopPropagation();
+                shareHistoryImage(item);
+            });
+            const regenerateButton = document.createElement("button");
+            regenerateButton.type = "button";
+            regenerateButton.className = "image-history-regenerate";
+            regenerateButton.title = "Regenerate image";
+            regenerateButton.textContent = "🔄";
+            regenerateButton.addEventListener("click", (event) => {
+                event.stopPropagation();
+                imagePrompt.value = item.prompt || "";
+                imageStatus.textContent = "Regenerating...";
+                regenerateButton.disabled = true;
+                generateImage()
+                    .finally(() => {
+                        regenerateButton.disabled = false;
+                    });
+            });
+            const deleteButton = document.createElement("button");
+            deleteButton.type = "button";
+            deleteButton.className = "image-history-delete";
+            deleteButton.title = "Delete image";
+            deleteButton.textContent = "×";
+            deleteButton.addEventListener("click", (event) => {
+                event.stopPropagation();
+                deleteImageFromHistory(item.id);
+            });
+            button.appendChild(saveButton);
+            button.appendChild(regenerateButton);
+            button.appendChild(shareButton);
+            button.appendChild(deleteButton);
+            const image = document.createElement("img");
+            image.className = "image-history-thumbnail";
+            image.alt = item.prompt || "Generated image";
+            image.src =
+                `data:${item.imageType || "image/png"};base64,${item.imageData}`;
+            const info = document.createElement("div");
+            info.className = "image-history-info";
+            const promptText = document.createElement("div");
+            promptText.className = "image-history-prompt";
+            promptText.textContent =
+                item.prompt || "Generated image";
+            const dateText = document.createElement("div");
+            dateText.className = "image-history-date";
+            if (item.createdAt) {
+                const date = new Date(item.createdAt);
+                dateText.textContent =
+                    Number.isNaN(date.getTime())
+                        ? ""
+                        : date.toLocaleString();
+            }
+            info.appendChild(promptText);
+            info.appendChild(dateText);
+            button.appendChild(image);
+            button.appendChild(info);
+            image.addEventListener("click", (event) => {
+                event.stopPropagation();
+                openImageLightbox(
+                    image.src,
+                    item.prompt || "Generated image"
+                );
+            });
+            button.addEventListener("click", () => {
+                imagePrompt.value = item.prompt || "";
+                imagePreviewArea.innerHTML = "";
+                const restoredImage =
+                    document.createElement("img");
+                restoredImage.src =
+                    `data:${item.imageType || "image/png"};base64,${item.imageData}`;
+                restoredImage.alt =
+                    item.prompt || "Generated image";
+                restoredImage.className =
+                    "generated-image-preview";
+                imagePreviewArea.appendChild(restoredImage);
+                saveImageButton.disabled = false;
+                shareImageButton.disabled = false;
+                regenerateImageButton.disabled = false;
+                imageStatus.textContent =
+                    "Image restored from history";
+            });
+            historyList.appendChild(button);
+        });
+    } catch (error) {
+        console.error(
+            "[ISMAIL AI] Image history render error:",
+            error
+        );
+    }
+}
+function openImageLightbox(imageSrc, altText) {
+    const lightbox =
+        document.getElementById("imageLightbox");
+    const lightboxImage =
+        document.getElementById("imageLightboxImage");
+    if (!lightbox || !lightboxImage || !imageSrc) {
+        return;
+    }
+    lightboxImage.src = imageSrc;
+    lightboxImage.alt = altText || "Image preview";
+    lightbox.hidden = false;
+    lightbox.setAttribute("aria-hidden", "false");
+}
+function closeImageLightbox() {
+    const lightbox =
+        document.getElementById("imageLightbox");
+    const lightboxImage =
+        document.getElementById("imageLightboxImage");
+    if (!lightbox) {
+        return;
+    }
+    lightbox.hidden = true;
+    lightbox.setAttribute("aria-hidden", "true");
+    if (lightboxImage) {
+        lightboxImage.src = "";
+    }
+}function saveHistoryImage(item) {
+    if (!item || !item.imageData) {
+        return;
+    }
+    try {
+        const imageType =
+            item.imageType || "image/png";
+        const binaryString =
+            atob(item.imageData);
+        const bytes =
+            new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        const blob =
+            new Blob([bytes], {
+                type: imageType
+            });
+        const url =
+            URL.createObjectURL(blob);
+        const link =
+            document.createElement("a");
+        link.href = url;
+        link.download = "ismail-ai-image.png";
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => {
+            URL.revokeObjectURL(url);
+        }, 1000);
+    } catch (error) {
+        console.error(
+            "[ISMAIL AI] History image save error:",
+            error
+        );
+        alert("Image save failed. Please try again.");
+    }
+}
+async function shareHistoryImage(item) {
+    if (!item || !item.imageData) {
+        return;
+    }
+    if (!navigator.share) {
+        alert("Sharing is not supported on this device.");
+        return;
+    }
+    try {
+        const imageType =
+            item.imageType || "image/png";
+        const binaryString =
+            atob(item.imageData);
+        const bytes =
+            new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        const blob =
+            new Blob([bytes], {
+                type: imageType
+            });
+        const file =
+            new File(
+                [blob],
+                "ismail-ai-image.png",
+                {
+                    type: imageType
+                }
+            );
+        await navigator.share({
+            title: "ISMAIL AI Image",
+            text: item.prompt || "Created with ISMAIL AI",
+            files: [file]
+        });
+    } catch (error) {
+        if (error?.name !== "AbortError") {
+            console.error(
+                "[ISMAIL AI] History image share error:",
+                error
+            );
+        }
+    }
+}
+function deleteImageFromHistory(imageId) {
+    try {
+        const history = JSON.parse(
+            localStorage.getItem(IMAGE_HISTORY_KEY) || "[]"
+        );
+        const updatedHistory = history.filter(
+            (item) => String(item.id) !== String(imageId)
+        );
+        localStorage.setItem(
+            IMAGE_HISTORY_KEY,
+            JSON.stringify(updatedHistory)
+        );
+        renderImageHistory();
+        imageStatus.textContent = "Image removed from history";
+    } catch (error) {
+        console.error(
+            "[ISMAIL AI] Image history delete error:",
+            error
+        );
+    }
+}function clearImageHistory() {
+    try {
+        localStorage.removeItem(IMAGE_HISTORY_KEY);
+        renderImageHistory();
+        imageStatus.textContent = "Image history cleared";
+    } catch (error) {
+        console.error(
+            "[ISMAIL AI] Image history clear error:",
+            error
+        );
+    }
+}function saveGeneratedImage() {
+    const image = imagePreviewArea?.querySelector("img");
+
+    if (!image || !image.src) {
+        return;
+    }
+
+    const link = document.createElement("a");
+    link.href = image.src;
+    link.download = "ismail-ai-image.png";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+}
+
+async function shareGeneratedImage() {
+    const image = imagePreviewArea?.querySelector("img");
+
+    if (!image || !image.src) {
+        return;
+    }
+
+    if (!navigator.share) {
+        alert("Sharing is not supported on this device.");
+        return;
+    }
+
+    try {
+        const response = await fetch(image.src);
+        const blob = await response.blob();
+        const file = new File([blob], "ismail-ai-image.png", {
+            type: blob.type || "image/png"
+        });
+
+        await navigator.share({
+            title: "ISMAIL AI Image",
+            text: "Created with ISMAIL AI",
+            files: [file]
+        });
+    } catch (error) {
+        if (error?.name !== "AbortError") {
+            console.error("Image share failed:", error);
+        }
+    }
+}
+
+async function regenerateImage() {
+    if (!imagePrompt || !imagePrompt.value.trim()) {
+        return;
+    }
+    imageStatus.textContent = "Regenerating...";
+    regenerateImageButton.disabled = true;
+    try {
+        await generateImage();
+    } finally {
+        regenerateImageButton.disabled = false;
+    }
+}async function generateImage() {
+
+
+    if (!generateImageButton || !imagePrompt || !imagePreviewArea || !imageStatus) {
+        return;
+    }
+
+    const prompt = imagePrompt.value.trim();
+
+    if (!prompt) {
+        imageStatus.textContent = "Please describe the image you want.";
+        imagePrompt.focus();
+        return;
+    }
+
+    generateImageButton.disabled = true;
+    imageStatus.textContent = "Creating image...";
+
+    try {
+        const session = await getSession();
+
+        if (!session || !session.token) {
+            throw new Error("Please sign in first.");
+        }
+
+        const response = await requestBackend(
+            `${BACKEND_BASE_URL}/api/image/generate`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session.token}`
+                },
+                body: JSON.stringify({
+                    prompt: prompt
+                })
+            }
+        );
+
+        if (!response || !response.ok) {
+            let errorMessage = `Server error: ${response?.status || "unknown"}`;
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.detail || errorMessage;
+            } catch (error) {
+                // Keep the generic server error message.
+            }
+            throw new Error(errorMessage);
+        }
+        const data = await response.json();
+        if (!data || !data.success || !data.image_data) {
+            throw new Error("Image generation failed.");
+        }
+
+        imagePreviewArea.innerHTML = "";
+
+        const image = document.createElement("img");
+        image.src = `data:${data.image_type || "image/png"};base64,${data.image_data}`;
+        image.alt = prompt;
+        image.className = "generated-image-preview";
+
+        imagePreviewArea.appendChild(image);
+
+        saveImageToHistory(
+            prompt,
+            data.image_data,
+            data.image_type || "image/png"
+        );
+
+        saveImageButton.disabled = false;
+        shareImageButton.disabled = false;regenerateImageButton.disabled = false;
+        imageStatus.textContent = "Image created";
+
+    } catch (error) {
+        console.error("[ISMAIL AI] Image generation error:", error);
+        imageStatus.textContent = error.message || "Image generation failed.";
+    } finally {
+        generateImageButton.disabled = false;
+    }
+}
+
+const imageLightboxClose =
+    document.getElementById("imageLightboxClose");
+if (imageLightboxClose) {
+    imageLightboxClose.onclick = null;
+}
+document.addEventListener(
+    "click",
+    (event) => {
+        const closeButton = event.target.closest(
+            "#imageLightboxClose"
+        );
+        if (!closeButton) {
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        closeImageLightbox();
+    },
+    true
+);
+const imageLightbox =
+    document.getElementById("imageLightbox");
+imageLightbox?.addEventListener(
+    "click",
+    (event) => {
+        if (event.target === imageLightbox) {
+            closeImageLightbox();
+        }
+    }
+);
+document.addEventListener(
+    "keydown",
+    (event) => {
+        if (event.key === "Escape") {
+            closeImageLightbox();
+        }
+    }
+);const clearImageHistoryButton =
+    document.getElementById("clearImageHistoryButton");
+clearImageHistoryButton?.addEventListener(
+    "click",
+    clearImageHistory
+);
+renderImageHistory();if (generateImageButton) {
+    saveImageButton?.addEventListener("click", saveGeneratedImage);
+    shareImageButton?.addEventListener("click", shareGeneratedImage);    regenerateImageButton?.addEventListener(
+        "click",
+        regenerateImage
+    );
+    generateImageButton.addEventListener(
+        "click",
+        generateImage
+    );
+}
+
 function openImageScreen() {
     const imageUrl =
         `${window.location.origin}${window.location.pathname}#image`;
@@ -3698,11 +4204,129 @@ window.receiveNativeVoice = function (text) {
 document.getElementById('imageOption')?.addEventListener('click', function () { console.log('IMAGE LABEL CLICKED'); });
 
 
+/* ISMAIL_YOUTUBE_FINAL_PACKAGE_START */
+async function getYouTubeFinalShortsPackage() {
+    const base =
+        (typeof API_BASE_URL !== "undefined" && API_BASE_URL) ||
+        (typeof API_BASE !== "undefined" && API_BASE) ||
+        "";
+    const response = await fetch(
+        `${base}/api/youtube/final-shorts-package`,
+        {
+            method: "GET",
+            credentials: "include",
+            headers: {
+                "Accept": "application/json"
+            }
+        }
+    );
+    if (!response.ok) {
+        throw new Error(
+            `YouTube final package API failed: ${response.status}`
+        );
+    }
+    const data = await response.json();
+    if (!data.success) {
+        throw new Error(
+            data.error || "YouTube final package unavailable."
+        );
+    }
+    return data;
+}
+/* ISMAIL_YOUTUBE_FINAL_PACKAGE_END */
 
 
-
-
-
-
-
+/* ISMAIL_YOUTUBE_FINAL_PACKAGE_UI_START */
+function renderYouTubeFinalShortsPackage(data, targetElement) {
+    if (!data || !data.success) {
+        throw new Error(
+            (data && data.error) ||
+            "YouTube final Shorts package unavailable."
+        );
+    }
+    const pkg = data.final_shorts_package || {};
+    const seo = pkg.seo || {};
+    const thumbnail = pkg.thumbnail || {};
+    const structure = pkg.structure || [];
+    const target =
+        targetElement ||
+        document.getElementById("youtube-final-shorts-package");
+    if (!target) {
+        throw new Error(
+            "YouTube final Shorts package target element not found."
+        );
+    }
+    const escapeHtml = (value) =>
+        String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    const structureHtml = Array.isArray(structure)
+        ? structure.map((item) => `
+            <div class="ismail-youtube-structure-item">
+                <strong>${escapeHtml(item.part || "")}</strong>
+                <span>${escapeHtml(item.time || "")}</span>
+                <p>${escapeHtml(item.action || item.description || "")}</p>
+            </div>
+        `).join("")
+        : "";
+    const tags = Array.isArray(seo.tags)
+        ? seo.tags.map(escapeHtml).join(", ")
+        : escapeHtml(seo.tags || "");
+    const hashtags = Array.isArray(seo.hashtags)
+        ? seo.hashtags.map(escapeHtml).join(" ")
+        : escapeHtml(seo.hashtags || "");
+    const keywords = Array.isArray(seo.keywords)
+        ? seo.keywords.map(escapeHtml).join(", ")
+        : escapeHtml(seo.keywords || "");
+    target.innerHTML = `
+        <section class="ismail-youtube-final-package">
+            <h2>${escapeHtml(pkg.title || "YouTube Shorts Package")}</h2>
+            <div class="ismail-youtube-package-section">
+                <h3>?? Script</h3>
+                <p>${escapeHtml(pkg.script || "")}</p>
+            </div>
+            <div class="ismail-youtube-package-section">
+                <h3>?? SEO Description</h3>
+                <p>${escapeHtml(seo.description || "")}</p>
+            </div>
+            <div class="ismail-youtube-package-section">
+                <h3>??? Tags</h3>
+                <p>${tags}</p>
+            </div>
+            <div class="ismail-youtube-package-section">
+                <h3>#?? Hashtags</h3>
+                <p>${hashtags}</p>
+            </div>
+            <div class="ismail-youtube-package-section">
+                <h3>?? Keywords</h3>
+                <p>${keywords}</p>
+            </div>
+            <div class="ismail-youtube-package-section">
+                <h3>??? Thumbnail</h3>
+                <p><strong>Text:</strong> ${escapeHtml(thumbnail.thumbnail_text || "")}</p>
+                <p><strong>Visual:</strong> ${escapeHtml(thumbnail.visual_focus || "")}</p>
+                <p><strong>Expression:</strong> ${escapeHtml(thumbnail.face_expression || "")}</p>
+                <p><strong>Composition:</strong> ${escapeHtml(thumbnail.composition || "")}</p>
+                <p><strong>Concept:</strong> ${escapeHtml(thumbnail.thumbnail_concept || "")}</p>
+            </div>
+            <div class="ismail-youtube-package-section">
+                <h3>?? Structure</h3>
+                ${structureHtml}
+            </div>
+            <div class="ismail-youtube-package-section">
+                <h3>?? CTA</h3>
+                <p>${escapeHtml(seo.cta || "")}</p>
+            </div>
+        </section>
+    `;
+    return target;
+}
+async function loadYouTubeFinalShortsPackage(targetElement) {
+    const data = await getYouTubeFinalShortsPackage();
+    return renderYouTubeFinalShortsPackage(data, targetElement);
+}
+/* ISMAIL_YOUTUBE_FINAL_PACKAGE_UI_END */
 

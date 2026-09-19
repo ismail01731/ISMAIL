@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -571,6 +571,53 @@
             >
                 🎨 Generate Image
             </button>
+            <div class="image-action-buttons">
+                <button
+                    id="saveImageButton"
+                    class="image-action-button"
+                    type="button"
+                    disabled
+                >
+                    💾 Save Image
+                </button>
+                <button
+                    id="shareImageButton"
+                    class="image-action-button"
+                    type="button"
+                    disabled
+                >
+                    ↗️ Share Image
+                </button><button
+  id="regenerateImageButton"
+  class="image-action-button"
+  type="button"
+  disabled
+                >
+  🔄 Regenerate
+</button>
+            </div>
+            <section
+                id="imageHistorySection"
+                class="image-history-section"
+                aria-label="Image history"
+            >
+                <div class="image-history-header">
+                    <h2 class="image-history-title">
+                        🖼️ Image History
+                    </h2>
+                    <button
+                        id="clearImageHistoryButton"
+                        class="clear-image-history-button"
+                        type="button"
+                    >
+                        Clear
+                    </button>
+                </div>
+                <div
+                    id="imageHistoryList"
+                    class="image-history-list"
+                ></div>
+            </section>
         </div>
     </main>
 </div><!-- =========================================================
@@ -683,8 +730,102 @@
 
 
 
+<!-- =========================================================
+    ISMAIL AI IMAGE HISTORY LIGHTBOX
+    Task 5.10: Large image preview
+    ========================================================= -->
+<div
+    id="imageLightbox"
+    class="image-lightbox"
+    hidden
+    aria-hidden="true"
+>
+    <button
+        id="imageLightboxClose"
+        class="image-lightbox-close"
+        type="button"
+        aria-label="Close image preview"
+    >
+        ×
+    </button>
+    <img
+        id="imageLightboxImage"
+        class="image-lightbox-image"
+        alt="Image preview"
+    >
+</div>
+
+<!-- ISMAIL_YOUTUBE_FINAL_PACKAGE_UI_START -->
+<section
+    id="ismail-youtube-tools"
+    class="ismail-youtube-tools"
+    aria-label="YouTube Shorts Package"
+>
+    <button
+        id="ismail-youtube-package-button"
+        type="button"
+    >
+        ?? YouTube Shorts Package
+    </button>
+    <div
+        id="youtube-final-shorts-package"
+        class="ismail-youtube-final-package-container"
+        hidden
+    ></div>
+</section>
+<script>
+(function () {
+    const button = document.getElementById(
+        "ismail-youtube-package-button"
+    );
+    const target = document.getElementById(
+        "youtube-final-shorts-package"
+    );
+    if (!button || !target) {
+        return;
+    }
+    button.addEventListener("click", async function () {
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = "? Loading...";
+        try {
+            target.hidden = false;
+            if (
+                typeof loadYouTubeFinalShortsPackage !==
+                "function"
+            ) {
+                throw new Error(
+                    "YouTube Shorts package loader is unavailable."
+                );
+            }
+            await loadYouTubeFinalShortsPackage(target);
+        } catch (error) {
+            target.hidden = false;
+            target.innerHTML = `
+                <div class="ismail-youtube-package-error">
+                    ? ${String(
+                        error && error.message
+                            ? error.message
+                            : error
+                    )}
+                </div>
+            `;
+        } finally {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    });
+})();
+</script>
+<!-- ISMAIL_YOUTUBE_FINAL_PACKAGE_UI_END -->
+
 </body>
 </html>
+
+
+
+
+
 
 
 

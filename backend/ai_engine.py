@@ -1,4 +1,5 @@
-﻿from backend.computer.planner.generator import generate_action_plan, get_action_plan_summary
+from backend.youtube_autopilot import youtube_autopilot
+from backend.computer.planner.generator import generate_action_plan, get_action_plan_summary
 from backend.computer.knowledge import search_computer_knowledge
 from backend.computer.hardware.knowledge import search_hardware_knowledge
 from backend.computer.os.knowledge import search_os_knowledge
@@ -1606,6 +1607,511 @@ class AIEngine:
                 ):
                     return expression
         return text
+
+    def _is_youtube_request(self, message: str) -> bool:
+        text = (message or "").strip().lower()
+        keywords = (
+            "youtube",
+            "youtube channel",
+            "youtube video",
+            "youtube shorts",
+            "youtube seo",
+            "youtube title",
+            "youtube thumbnail",
+            "youtube analytics",
+            "youtube views",
+            "youtube growth",
+            "youtube competitor",
+            "youtube trend",
+            "ইউটিউব",
+            "ইউটিউব চ্যানেল",
+            "ইউটিউব ভিডিও",
+            "ইউটিউব শর্টস",
+            "ইউটিউব এসইও",
+            "ইউটিউব টাইটেল",
+            "ইউটিউব থাম্বনেইল",
+            "ইউটিউব ভিউ",
+            "ইউটিউব গ্রোথ",
+        )
+        return any(keyword in text for keyword in keywords)
+    def _format_youtube_plan_response(
+        self,
+        user_message: str,
+        plan_result: dict,
+        channel_result: dict,
+        experiment_result: dict,
+    ) -> str:
+        video_plan = (plan_result or {}).get("video_plan") or {}
+        channel = (channel_result or {}).get("channel") or {}
+        title = video_plan.get("title") or user_message
+        topic = video_plan.get("topic") or "Bangla Comedy Shorts"
+        video_format = video_plan.get("format") or "shorts"
+        title_analysis = video_plan.get("title_analysis") or {}
+        thumbnail_analysis = video_plan.get("thumbnail_analysis") or {}
+        script_structure = video_plan.get("script_structure") or {}
+        seo_package = video_plan.get("seo_package") or {}
+        title_score = title_analysis.get("title_score")
+        thumbnail_score = thumbnail_analysis.get("thumbnail_score")
+        seo_score = seo_package.get("seo_score")
+        hook = ""
+        setup = ""
+        development = ""
+        payoff = ""
+        cta = ""
+        for section in script_structure.get("sections") or []:
+            name = str(section.get("section", "")).upper()
+            example = section.get("example", "")
+            if name == "HOOK":
+                hook = example
+            elif name == "SETUP":
+                setup = example
+            elif name == "DEVELOPMENT":
+                development = example
+            elif name == "PAYOFF":
+                payoff = example
+            elif name == "CTA":
+                cta = example
+        hook = hook or "প্রথম ২–৩ সেকেন্ডেই দর্শকের attention নেওয়ার মতো মজার লাইন দিন।"
+        setup = setup or "বিষয়টি দ্রুত শুরু করুন এবং অপ্রয়োজনীয় ভূমিকা বাদ দিন।"
+        development = development or "Comedy escalation রাখুন যাতে দর্শক শেষ পর্যন্ত দেখে।"
+        payoff = payoff or "শেষে পরিষ্কার punchline বা unexpected reaction দিন।"
+        cta = cta or "ভালো লাগলে Like, Comment ও Subscribe করতে বলুন।"
+        tags = seo_package.get("tag_string") or ", ".join(
+            str(x) for x in (seo_package.get("tags") or [])
+        )
+        hashtags = seo_package.get("hashtag_string") or " ".join(
+            str(x) for x in (seo_package.get("hashtags") or [])
+        )
+        description = seo_package.get("description") or (
+            f"{title}\n\n"
+            f"আজকের Bangla Comedy Shorts: {topic}।\n"
+            f"ভিডিওটি শেষ পর্যন্ত দেখুন এবং আপনার মতামত কমেন্টে জানান।"
+        )
+        title_ideas = [
+            title,
+            f"{title} 😱😂",
+            f"{title} | Bangla Comedy Shorts",
+        ]
+        thumbnail_concept = (
+            f"মূল চরিত্রের exaggerated funny facial expression + "
+            f"বিষয়ের clear visual + বড় ২–৪ শব্দের text: "
+            f"“{title}”"
+        )
+        experiment_result = experiment_result or {}
+        experiment_plan = experiment_result.get("experiment_plan") or {}
+        variants = (
+            experiment_plan.get("variants")
+            or experiment_plan.get("variant_set")
+            or experiment_plan.get("experiments")
+            or []
+        )
+        experiment_lines = []
+        if isinstance(variants, list):
+            for item in variants[:5]:
+                if isinstance(item, dict):
+                    name = (
+                        item.get("variant_name")
+                        or item.get("name")
+                        or item.get("title")
+                    )
+                    if name:
+                        experiment_lines.append(str(name))
+                elif item:
+                    experiment_lines.append(str(item))
+        if not experiment_lines:
+            experiment_lines = [
+                "Title A: মূল title",
+                "Title B: title + curiosity/emotion",
+                "Thumbnail A: reaction face + বড় text",
+                "Thumbnail B: reaction face + কম text",
+            ]
+        channel_name = channel.get("channel_name") or "The Ismail Jr"
+        niche = channel.get("niche") or "Village Vlogs, Comedy, Family & Challenges"
+        language = channel.get("language") or "bn"
+        video_count = channel.get("video_count", 0) or 0
+        subscriber_count = channel.get("subscriber_count", 0) or 0
+        view_count = channel.get("view_count", 0) or 0
+        if video_count:
+            reason = (
+                f"এই planটি {channel_name}-এর stored historical video data, "
+                f"channel niche ({niche}) এবং YouTube intelligence signals "
+                f"একসাথে ব্যবহার করে তৈরি করা হয়েছে। বর্তমানে {video_count}টি "
+                f"stored video data পাওয়া গেছে।"
+            )
+        else:
+            reason = (
+                f"এই planটি {channel_name}-এর niche ({niche}) এবং stored "
+                f"YouTube intelligence ব্যবহার করে তৈরি করা হয়েছে। বর্তমানে "
+                f"historical video data import করা হয়নি, তাই performance-based "
+                f"learning আরও শক্তিশালী করতে real video analytics প্রয়োজন।"
+            )
+        score_text = []
+        if title_score is not None:
+            score_text.append(f"- Title score: {title_score}")
+        if thumbnail_score is not None:
+            score_text.append(f"- Thumbnail score: {thumbnail_score}")
+        if seo_score is not None:
+            score_text.append(f"- SEO score: {seo_score}")
+        scores = "\n".join(score_text)
+        return (
+            f"🎬 **আজকের YouTube Shorts Plan — {channel_name}**\n\n"
+            f"**Topic:** {topic}\n"
+            f"**Format:** {video_format}\n\n"
+            f"🪝 **Hook**\n"
+            f"{hook}\n\n"
+            f"📝 **Script Structure**\n"
+            f"1. HOOK — {hook}\n"
+            f"2. SETUP — {setup}\n"
+            f"3. DEVELOPMENT — {development}\n"
+            f"4. PAYOFF — {payoff}\n"
+            f"5. CTA — {cta}\n\n"
+            f"🔥 **Title Ideas**\n"
+            f"1. {title_ideas[0]}\n"
+            f"2. {title_ideas[1]}\n"
+            f"3. {title_ideas[2]}\n\n"
+            f"🖼️ **Thumbnail Concept**\n"
+            f"{thumbnail_concept}\n\n"
+            f"🔍 **SEO Package**\n"
+            f"**SEO Title:** {seo_package.get('title') or title}\n"
+            f"**Tags:** {tags}\n"
+            f"**Hashtags:** {hashtags}\n\n"
+            f"**Description:**\n{description}\n\n"
+            f"🧪 **Experiment Ideas**\n"
+            + "\n".join(f"- {x}" for x in experiment_lines)
+            + "\n\n"
+            f"📊 **Stored Channel Context**\n"
+            f"- Channel: {channel_name}\n"
+            f"- Niche: {niche}\n"
+            f"- Language: {language}\n"
+            f"- Stored videos: {video_count}\n"
+            f"- Stored subscribers: {subscriber_count}\n"
+            f"- Stored channel views: {view_count}\n"
+            + (f"{scores}\n\n" if scores else "\n")
+            + f"📈 **কেন এই Plan নেওয়া হচ্ছে**\n"
+            + reason
+        )
+    def _handle_youtube_autopilot(self, message: str) -> str:
+        text = (message or "").strip().lower()
+        channel_id = "UCP75FPRq4DaMoe88G9R3heg"
+        analytics_words = (
+            "youtube analytics",
+            "analytics",
+            "performance",
+            "watch time",
+            "average view duration",
+            "average percentage",
+            "subscribers gained",
+            "views",
+            "???? ?????????????",
+            "?????????????",
+            "????????????",
+            "???? ????",
+            "????? ????",
+            "???",
+            "?????????????",
+        )
+        final_shorts_package_words = (
+            "final shorts package",
+            "complete shorts package",
+            "full shorts package",
+            "complete youtube package",
+            "youtube shorts package",
+            "everything for my shorts",
+            "full package for my shorts",
+            "?????? ????? ???????",
+            "???????? ????? ???????",
+            "???? ????? ???????",
+            "??????? ???????? ???????",
+            "??????? ??????",
+            "?????? ????? ???????",
+        )
+        if any(
+            word in text
+            for word in final_shorts_package_words
+        ):
+            final_result = youtube_autopilot.command(
+                "final_shorts_package",
+                channel_id=channel_id,
+            )
+            prompt = (
+                "You are ISMAIL AI's final YouTube Shorts content "
+                "assistant. Create a complete ready-to-use Bengali "
+                "Shorts package from ONLY the verified result below. "
+                "Combine the verified script, SEO and thumbnail "
+                "intelligence. "
+                "Do not invent Analytics metrics. "
+                "Do not claim guaranteed views, CTR, ranking, or growth. "
+                "Keep the verified title concept and channel context. "
+                "Return a practical final package containing: "
+                "title, complete Bengali script, description, "
+                "comma-separated tags, hashtags, keywords, CTA, "
+                "thumbnail text, thumbnail concept, visual direction, "
+                "pacing and structure. "
+                "Keep the output natural and ready to copy/use.\n\n"
+                f"USER REQUEST:\n{message}\n\n"
+                "VERIFIED FINAL SHORTS PACKAGE:\n"
+                f"{json.dumps(final_result, ensure_ascii=False, default=str)}"
+            )
+            return self.llm_router.generate(prompt)
+        shorts_thumbnail_package_words = (
+            "thumbnail package",
+            "shorts thumbnail",
+            "youtube thumbnail",
+            "thumbnail idea",
+            "thumbnail concept",
+            "thumbnail text",
+            "thumbnail design",
+            "?????????",
+            "????????? ?????",
+            "????????? ??????",
+            "??????? ?????????",
+            "?????? ?????????",
+            "????????? ???????",
+        )
+        if any(
+            word in text
+            for word in shorts_thumbnail_package_words
+        ):
+            thumbnail_result = youtube_autopilot.command(
+                "next_shorts_thumbnail_package",
+                channel_id=channel_id,
+            )
+            prompt = (
+                "You are ISMAIL AI's YouTube Thumbnail Intelligence "
+                "assistant. Create a ready-to-use Shorts thumbnail "
+                "package from ONLY the verified result below. "
+                "Use the existing Thumbnail Intelligence when present. "
+                "Preserve the verified title and channel context. "
+                "Do not invent Analytics metrics. "
+                "Do not claim guaranteed CTR, views, ranking, or growth. "
+                "Return practical thumbnail text, visual focus, "
+                "face expression, composition, background, and "
+                "thumbnail concept. "
+                "Answer naturally in the user's language.\n\n"
+                f"USER REQUEST:\n{message}\n\n"
+                "VERIFIED THUMBNAIL PACKAGE:\n"
+                f"{json.dumps(thumbnail_result, ensure_ascii=False, default=str)}"
+            )
+            return self.llm_router.generate(prompt)
+        shorts_seo_words = (
+            "shorts seo",
+            "youtube seo",
+            "seo package",
+            "seo for shorts",
+            "seo for my video",
+            "title description tags",
+            "tags and hashtags",
+            "?????? ????",
+            "??????? ????",
+            "????? seo",
+            "???? ???????",
+            "?????? ?????????? ?????",
+            "????? ??? ??????????",
+        )
+        if any(word in text for word in shorts_seo_words):
+            seo_result = youtube_autopilot.command(
+                "next_shorts_seo",
+                channel_id=channel_id,
+            )
+            prompt = (
+                "You are ISMAIL AI's YouTube SEO Intelligence assistant. "
+                "Create a ready-to-use SEO package from ONLY the verified "
+                "SEO result below. "
+                "Do not invent Analytics metrics. "
+                "Do not claim guaranteed ranking or views. "
+                "Preserve the verified title concept and channel context. "
+                "Return a practical package containing title, description, "
+                "comma-separated tags, hashtags, keywords and CTA. "
+                "Answer naturally in the user's language.\n\n"
+                f"USER REQUEST:\n{message}\n\n"
+                "VERIFIED YOUTUBE SEO RESULT:\n"
+                f"{json.dumps(seo_result, ensure_ascii=False, default=str)}"
+            )
+            return self.llm_router.generate(prompt)
+        shorts_script_words = (
+            "shorts script",
+            "make a shorts script",
+            "write a shorts script",
+            "generate shorts script",
+            "make script for my shorts",
+            "write script for my next video",
+            "???? ??????? ?????????",
+            "????? ?????????",
+            "??????? ????????? ?????",
+            "???? ??????? ?????????",
+            "???? ?????? ?????????",
+            "????????? ?????",
+            "????????? ???? ???",
+        )
+        if any(word in text for word in shorts_script_words):
+            script_result = youtube_autopilot.command(
+                "next_shorts_script",
+                channel_id=channel_id,
+            )
+            prompt = (
+                "You are ISMAIL AI's YouTube Shorts Script Intelligence "
+                "assistant. "
+                "Create a complete, natural Bengali Shorts script using "
+                "ONLY the verified script brief below. "
+                "Do not invent private Analytics metrics. "
+                "Do not claim guaranteed performance. "
+                "Use the verified hook, topic, pacing, structure and "
+                "thumbnail concept. "
+                "Write dialogue and actions that can be directly recorded "
+                "for a Bengali comedy Shorts video. "
+                "Keep the script concise, entertaining and practical. "
+                "Include scene/action directions, spoken dialogue, "
+                "hook, escalation, payoff and a short CTA.\n\n"
+                f"USER REQUEST:\n{message}\n\n"
+                "VERIFIED SHORTS SCRIPT BRIEF:\n"
+                f"{json.dumps(script_result, ensure_ascii=False, default=str)}"
+            )
+            return self.llm_router.generate(prompt)
+        next_plan_words = (
+            "next shorts",
+            "next video",
+            "make my next video",
+            "what video should i make",
+            "what shorts should i make",
+            "???? ?????",
+            "???? ?????",
+            "???? ?????? ???????",
+            "??????? ?????",
+            "??????? ?????",
+            "?? ????? ??????",
+            "??? ????? ??????",
+        )
+        if any(word in text for word in next_plan_words):
+            next_plan_result = youtube_autopilot.command(
+                "next_shorts_plan",
+                channel_id=channel_id,
+            )
+            prompt = (
+                "You are ISMAIL AI's YouTube Shorts planning assistant. "
+                "Use only the verified next-Shorts plan below. "
+                "The plan is based on private YouTube Analytics, existing "
+                "YouTube Intelligence, and performance recommendations. "
+                "Do not invent metrics or claim guaranteed results. "
+                "Explain the title, hook, pacing, structure and thumbnail "
+                "concept clearly. Answer naturally in the user's language. "
+                "Keep the answer concise and directly usable.\n\n"
+                f"USER REQUEST:\n{message}\n\n"
+                "VERIFIED NEXT SHORTS PLAN:\n"
+                f"{json.dumps(next_plan_result, ensure_ascii=False, default=str)}"
+            )
+            return self.llm_router.generate(prompt)
+        recommendation_words = (
+            "recommendation",
+            "recommendations",
+            "recommend",
+            "what should i make",
+            "what should i post",
+            "improve performance",
+            "improve my channel",
+            "?? ??????",
+            "?? ????? ????",
+            "?? ??? ????",
+            "???????",
+            "???????????",
+            "???????????? ??????",
+        )
+        if any(word in text for word in recommendation_words):
+            recommendation_result = youtube_autopilot.command(
+                "performance_recommendations",
+                channel_id=channel_id,
+            )
+            prompt = (
+                "You are ISMAIL AI's YouTube Performance Intelligence assistant. "
+                "Use only the verified recommendation result below. "
+                "Do not invent metrics, trends, or facts. "
+                "Base recommendations on the actual private Analytics metrics "
+                "and the existing YouTube Intelligence. "
+                "Clearly mention the evidence behind each recommendation. "
+                "Do not claim that a recommendation guarantees performance. "
+                "Answer naturally in the user's language. "
+                "Keep the answer concise and actionable.\n\n"
+                f"USER REQUEST:\n{message}\n\n"
+                "VERIFIED PERFORMANCE RECOMMENDATION RESULT:\n"
+                f"{json.dumps(recommendation_result, ensure_ascii=False, default=str)}"
+            )
+            return self.llm_router.generate(prompt)
+        if any(word in text for word in analytics_words):
+            analytics_result = youtube_autopilot.command(
+                "intelligence_with_analytics",
+                channel_id=channel_id,
+            )
+            prompt = (
+                "You are ISMAIL AI's YouTube Intelligence and Analytics assistant. "
+                "Use the existing verified YouTube Intelligence together with the "
+                "verified private YouTube Analytics result below. "
+                "Do not invent, estimate, or manufacture missing metrics. "
+                "Clearly distinguish public/channel intelligence from private analytics. "
+                "Use analytics to explain current performance and use historical "
+                "intelligence to provide relevant context. "
+                "If a metric is zero or unavailable, state that directly. "
+                "Mention the exact analytics date range when discussing private metrics. "
+                "Answer naturally in the user's language. Keep the answer concise and useful.\n\n"
+                f"USER REQUEST:\n{message}\n\n"
+                "COMBINED YOUTUBE INTELLIGENCE + PRIVATE ANALYTICS RESULT:\n"
+                f"{json.dumps(analytics_result, ensure_ascii=False, default=str)}"
+            )
+            return self.llm_router.generate(prompt)
+        plan_words = (
+            "plan",
+            "script",
+            "seo",
+            "title",
+            "thumbnail",
+            "content",
+            "shorts",
+            "প্ল্যান",
+            "স্ক্রিপ্ট",
+            "এসইও",
+            "টাইটেল",
+            "থাম্বনেইল",
+            "কনটেন্ট",
+            "শর্টস",
+        )
+        if any(word in text for word in plan_words):
+            plan_title = "আজকের মজার বাংলা কমেডি Shorts 😂"
+            plan_topic = "Bangla Comedy Shorts — Village Comedy"
+            plan_result = youtube_autopilot.command(
+                "plan_video",
+                title=plan_title,
+                topic=plan_topic,
+                video_format="shorts",
+            )
+            channel_result = youtube_autopilot.command(
+                "overview",
+                channel_id=channel_id,
+            )
+            experiment_result = youtube_autopilot.command(
+                "experiment_plan",
+                title=plan_title,
+                thumbnail_concept="মজার গোসলের reaction + বড় ২–৪ শব্দের text",
+            )
+            return self._format_youtube_plan_response(
+                plan_title,
+                plan_result,
+                channel_result,
+                experiment_result,
+            )
+        result = youtube_autopilot.command(
+            "overview",
+            channel_id=channel_id,
+        )
+        prompt = (
+            "You are ISMAIL AI's YouTube Intelligence assistant. "
+            "Answer the user's request using the verified YouTube Autopilot "
+            "result below. Do not invent metrics or facts. If there are no "
+            "historical videos, say so. Answer naturally in the user's "
+            "language. Keep the answer concise and useful.\n\n"
+            f"USER REQUEST:\n{message}\n\n"
+            f"YOUTUBE AUTOPILOT RESULT:\n"
+            f"{json.dumps(result, ensure_ascii=False, default=str)}"
+        )
+        return self.llm_router.generate(prompt)
+
     def generate(
         self,
         message: str,
@@ -1673,6 +2179,12 @@ class AIEngine:
             raise ValueError("Message cannot be empty.")
 
         # ================================
+        # YOUTUBE AUTOPILOT ROUTER
+        if self._is_youtube_request(message):
+            try:
+                return self._handle_youtube_autopilot(message)
+            except Exception as youtube_error:
+                print(f"[ISMAIL AI] YouTube Autopilot fallback: {youtube_error}")
         # MEDICAL SAFETY ROUTER
         # ================================
 

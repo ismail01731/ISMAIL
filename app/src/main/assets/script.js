@@ -1,4 +1,4 @@
-const chatContainer = document.getElementById("chatContainer");
+﻿const chatContainer = document.getElementById("chatContainer");
 const messageInput = document.getElementById("messageInput");
 const sendButton = document.getElementById("sendButton");
 const attachButton =
@@ -6,6 +6,9 @@ const attachButton =
 
 const fileInput =
     document.getElementById("fileInput");
+
+const imageInput =
+    document.getElementById("imageInput");
 
 const attachmentPreview =
     document.getElementById("attachmentPreview");
@@ -22,9 +25,81 @@ const attachMenu =
 const fileOption =
     document.getElementById("fileOption");
 
+const imageOption =
+    document.getElementById("imageOption");
+
 let selectedFile = null;
 const voiceButton =
 document.getElementById("voiceButton");
+
+const voiceScreen =
+    document.getElementById("voiceScreen");
+
+const voiceCloseButton =
+    document.getElementById("voiceCloseButton");
+
+const voiceOption =
+    document.getElementById("voiceOption");
+
+const voiceStatus =
+    document.getElementById("voiceStatus");
+
+const voiceSubtitle =
+    document.getElementById("voiceSubtitle");
+
+const voiceMicButton =
+    document.getElementById("voiceMicButton");
+
+const voiceHint =
+    document.getElementById("voiceHint");
+
+
+if (
+    window.location.hash === "#voice" ||
+    window.name === "ISMAIL_AI_VOICE"
+) {
+    document.documentElement.classList.add("voice-window-mode");
+
+    const initializeVoiceWindow = () => {
+        if (!voiceScreen) return;
+
+        voiceScreen.removeAttribute("hidden");
+        voiceScreen.hidden = false;
+        voiceScreen.setAttribute("aria-hidden", "false");
+
+        voiceScreen.style.setProperty("display", "flex", "important");
+        voiceScreen.style.setProperty("position", "fixed", "important");
+        voiceScreen.style.setProperty("inset", "0", "important");
+        voiceScreen.style.setProperty("width", "100vw", "important");
+        voiceScreen.style.setProperty("height", "100vh", "important");
+        voiceScreen.style.setProperty("background", "#000", "important");
+        voiceScreen.style.setProperty("color", "#fff", "important");
+
+        document.body.classList.add("voice-screen-open");
+
+        if (voiceStatus) {
+            voiceStatus.textContent = "Voice";
+        }
+
+        if (voiceSubtitle) {
+            voiceSubtitle.textContent =
+                "Tap the microphone to start a voice conversation.";
+        }
+
+        if (voiceHint) {
+            voiceHint.textContent = "Ready when you are";
+        }
+    };
+
+    if (document.readyState === "loading") {
+        window.addEventListener(
+            "DOMContentLoaded",
+            initializeVoiceWindow
+        );
+    } else {
+        initializeVoiceWindow();
+    }
+}
 
 
 
@@ -39,21 +114,25 @@ const welcome = document.getElementById("welcome");
 const exportChatButton =
     document.getElementById("exportChatButton");
 
-
-
-
-
 /* =========================================================
    ISMAIL AI BACKEND CONFIGURATION
    Localhost → LAN → Render fallback
    ========================================================= */
-const BACKEND_URLS = [
-    "http://127.0.0.1:8000",
-    "http://192.168.0.103:8000",
-    "https://ismail-ai-api.onrender.com"
-];
+
+const BACKEND_URLS =
+    window.location.hostname ===
+        "ismail-ai-api.onrender.com"
+        ? [
+            "https://ismail-ai-api.onrender.com"
+        ]
+        : [
+            "http://127.0.0.1:8000",
+            "http://192.168.0.103:8000",
+            "https://ismail-ai-api.onrender.com"
+        ];
+
 let BACKEND_BASE_URL = BACKEND_URLS[0];
-const API_URL = `${BACKEND_BASE_URL}/api/chat`;
+
 /* =========================================================
    ISMAIL AI AUTOMATIC BACKEND FAILOVER
    Localhost → LAN → Render
@@ -76,22 +155,24 @@ async function requestBackend(url, options = {}) {
             );
             BACKEND_BASE_URL = backend;
             console.log(
-                "[ISMAIL AI] Backend connected:",
+                '[ISMAIL AI] Backend connected:',
                 backend
             );
             return response;
         } catch (error) {
             lastError = error;
             console.warn(
-                "[ISMAIL AI] Backend unavailable:",
+                '[ISMAIL AI] Backend unavailable:',
                 backend
             );
         }
     }
     throw lastError || new Error(
-        "No ISMAIL AI backend server is available."
+        'No ISMAIL AI backend server is available.'
     );
 }
+const API_URL = `${BACKEND_BASE_URL}/api/chat`;
+
 
 const SESSION_KEY = "ismail_ai_session";
 
@@ -1089,6 +1170,7 @@ async function loadCentralChatHistory() {
 
         const data = await response.json();
 
+
         const history = Array.isArray(data.history)
             ? data.history
             : [];
@@ -1398,6 +1480,8 @@ function formatAIText(text, type) {
 
     return formatted;
 }
+
+
 
 
 
@@ -1739,39 +1823,31 @@ async function regenerateAnswer(question, aiMessageElement) {
 // =========================================================
 
 function openVoiceScreen() {
-    if (!voiceScreen) return;
+    const voiceUrl =
+        `${window.location.origin}${window.location.pathname}#voice`;
 
-    if (attachMenuElement) {
-        attachMenuElement.setAttribute("hidden", "");
+    const voiceWindow = window.open(
+        voiceUrl,
+        "ISMAIL_AI_VOICE",
+        "width=520,height=900,resizable=yes,scrollbars=no"
+    );
+
+    if (voiceWindow) {
+        voiceWindow.focus();
+    } else {
+        console.warn(
+            "[ISMAIL AI] Voice window was blocked by the browser."
+        );
     }
-
-    voiceScreen.removeAttribute("hidden");
-    voiceScreen.setAttribute("aria-hidden", "false");
-
-    document.body.classList.add("voice-screen-open");
-
-    if (voiceStatus) {
-        voiceStatus.textContent = "Voice";
-    }
-
-    if (voiceSubtitle) {
-        voiceSubtitle.textContent =
-            "Tap the microphone to start a conversation.";
-    }
-
-    if (voiceHint) {
-        voiceHint.textContent = "Ready when you are";
-    }
-
-    setTimeout(() => {
-        if (voiceMicButton) {
-            voiceMicButton.focus();
-        }
-    }, 50);
 }
 
 
 function closeVoiceScreen() {
+    if (window.location.hash === "#voice") {
+        window.close();
+        return;
+    }
+
     if (!voiceScreen) return;
 
     voiceScreen.setAttribute("hidden", "");
@@ -1801,26 +1877,198 @@ if (voiceCloseButton) {
 }
 
 
+// ==========================================
+// MESSAGE BOX VOICE INPUT — SEPARATE SYSTEM
+// ==========================================
+
+let messageVoiceRecognition = null;
+let messageVoiceListening = false;
+
+const MessageSpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (voiceButton && MessageSpeechRecognition) {
+    messageVoiceRecognition = new MessageSpeechRecognition();
+
+    messageVoiceRecognition.continuous = false;
+    messageVoiceRecognition.interimResults = false;
+    messageVoiceRecognition.lang = "bn-BD";
+
+    messageVoiceRecognition.onstart = function () {
+        messageVoiceListening = true;
+
+        voiceButton.classList.add("recording");
+        voiceButton.textContent = "🔴";
+        voiceButton.setAttribute("aria-label", "Stop voice input");
+        voiceButton.title = "Stop voice input";
+
+        console.log("[ISMAIL AI] Message voice input started");
+    };
+
+    messageVoiceRecognition.onresult = function (event) {
+        const transcript =
+            event.results[0][0].transcript.trim();
+
+        if (transcript && messageInput) {
+            messageInput.value = transcript;
+
+            messageInput.style.height = "auto";
+            messageInput.style.height =
+                Math.min(messageInput.scrollHeight, 180) + "px";
+
+            console.log(
+                "[ISMAIL AI] Voice text:",
+                transcript
+            );
+
+            sendMessage();
+        }
+    };
+
+    messageVoiceRecognition.onerror = function (event) {
+        console.warn(
+            "[ISMAIL AI] Message voice error:",
+            event.error
+        );
+
+        messageVoiceListening = false;
+
+        voiceButton.classList.remove("recording");
+        voiceButton.textContent = "🎙️";
+        voiceButton.setAttribute("aria-label", "Voice input");
+        voiceButton.title = "Voice";
+    };
+
+    messageVoiceRecognition.onend = function () {
+        messageVoiceListening = false;
+
+        voiceButton.classList.remove("recording");
+        voiceButton.textContent = "🎙️";
+        voiceButton.setAttribute("aria-label", "Voice input");
+        voiceButton.title = "Voice";
+
+        console.log("[ISMAIL AI] Message voice input ended");
+    };
+
+    voiceButton.addEventListener("click", function () {
+        if (messageVoiceListening) {
+            messageVoiceRecognition.stop();
+            return;
+        }
+
+        try {
+            messageVoiceRecognition.start();
+        } catch (error) {
+            console.warn(
+                "[ISMAIL AI] Voice input start error:",
+                error
+            );
+        }
+    });
+
+} else if (voiceButton) {
+    console.warn(
+        "[ISMAIL AI] SpeechRecognition is not supported in this browser."
+    );
+}
+
+let ismailVoiceAI = null;
+
+if (window.ISMAILVoiceAI) {
+    ismailVoiceAI = new window.ISMAILVoiceAI();
+}
+
+
+if (ismailVoiceAI) {
+    ismailVoiceAI.onVoiceResponse(function (response) {
+
+        if (!response || !response.trim()) {
+            return;
+        }
+
+        console.log(
+            "ISMAIL AI Voice: SPEAKING RESPONSE:",
+            response
+        );
+
+        if ("speechSynthesis" in window) {
+            window.speechSynthesis.cancel();
+
+            const utterance =
+                new SpeechSynthesisUtterance(
+                    response.trim()
+                );
+
+            utterance.lang = "bn-BD";
+            utterance.rate = 1;
+            utterance.pitch = 1;
+
+            window.speechSynthesis.speak(
+                utterance
+            );
+        }
+    });
+}
+
+
+
+
 if (voiceMicButton) {
-    voiceMicButton.addEventListener("click", function () {
+    voiceMicButton.addEventListener("click", async function () {
 
-        if (voiceStatus) {
-            voiceStatus.textContent = "Voice";
+        if (!ismailVoiceAI) {
+            if (voiceStatus) {
+                voiceStatus.textContent = "Unavailable";
+            }
+
+            if (voiceHint) {
+                voiceHint.textContent =
+                    "Voice engine is not available.";
+            }
+
+            return;
         }
 
-        if (voiceSubtitle) {
-            voiceSubtitle.textContent =
-                "Voice conversation will start here.";
+        if (ismailVoiceAI.isListening) {
+            ismailVoiceAI.stop();
+
+            if (voiceStatus) {
+                voiceStatus.textContent = "Ready";
+            }
+
+            if (voiceSubtitle) {
+                voiceSubtitle.textContent =
+                    "Tap the microphone to speak.";
+            }
+
+            if (voiceHint) {
+                voiceHint.textContent =
+                    "Microphone is off.";
+            }
+
+            return;
         }
 
-        if (voiceHint) {
-            voiceHint.textContent =
-                "Voice engine coming in Task 2";
+        const started = await ismailVoiceAI.start();
+
+        if (started) {
+            if (voiceStatus) {
+                voiceStatus.textContent = "Listening";
+            }
+
+            if (voiceSubtitle) {
+                voiceSubtitle.textContent =
+                    "Speak now...";
+            }
+
+            if (voiceHint) {
+                voiceHint.textContent =
+                    "Microphone is active.";
+            }
         }
 
     });
 }
-
 
 document.addEventListener("keydown", function (event) {
 
@@ -1844,6 +2092,7 @@ const attachMenuElement =
 
 const fileOptionElement =
     document.getElementById("fileOption");
+
 
 
 if (attachButton && attachMenuElement) {
@@ -1880,9 +2129,14 @@ if (attachButton && attachMenuElement) {
                     ""
                 );
 
+                fileInput.accept =
+                    ".pdf,.doc,.docx,.txt";
+
                 fileInput.click();
             }
         );
+
+    
 
 
         // File selected
@@ -1937,6 +2191,53 @@ if (attachButton && attachMenuElement) {
                 messageInput.focus();
             }
         );
+    }
+
+
+
+
+
+
+
+    // Image selected
+    if (imageInput) {
+        imageInput.addEventListener("change", function () {
+
+            const file =
+                imageInput.files &&
+                imageInput.files[0];
+
+            if (!file) {
+                return;
+            }
+
+            const maxSize =
+                10 * 1024 * 1024;
+
+            if (file.size > maxSize) {
+                alert(
+                    "Image is too large. Maximum size is 10 MB."
+                );
+                imageInput.value = "";
+                return;
+            }
+
+            selectedFile = file;
+
+            if (attachmentPreview) {
+                attachmentPreview.hidden = false;
+            }
+
+            if (attachmentName) {
+                attachmentName.textContent =
+                    file.name;
+            }
+
+            messageInput.style.height =
+                "auto";
+
+            messageInput.focus();
+        });
     }
 
 
@@ -1997,14 +2298,19 @@ if (removeAttachment) {
 
 
 
-async function sendMessage() {
+async function sendMessage(isVoiceMessage = false) {
+
+    console.log(
+        "ISMAIL AI: sendMessage START",
+        { isVoiceMessage }
+    );
 
     const message =
         messageInput.value.trim();
 
     if (
         (!message && !selectedFile) ||
-        sendButton.disabled
+        (sendButton.disabled && !isVoiceMessage)
     ) {
         return;
     }
@@ -2021,112 +2327,210 @@ async function sendMessage() {
         const session =
             await getSession();
 
+        console.log(
+            "ISMAIL AI: getSession OK",
+            { isVoiceMessage, user_id: session.user_id }
+        );
+
         let fileContext = "";
+        let imageData = "";
+        let imageType = "";
         let displayMessage = message;
 
 
-        // =================================================
-        // FILE MODE
-        // =================================================
+// =================================================
+// FILE MODE
+// =================================================
 
-        if (selectedFile) {
+if (selectedFile) {
 
-            const formData =
-                new FormData();
-
-            formData.append(
-                "file",
-                selectedFile
-            );
+    const isImage =
+        selectedFile.type.startsWith("image/");
 
 
-            const uploadResponse =
-                await requestBackend(
-                    `${BACKEND_BASE_URL}/api/file/upload`,
-                    {
-                        method: "POST",
+    // =================================================
+    // IMAGE MODE
+    // =================================================
 
-                        headers: {
-                            "Authorization":
-                                `Bearer ${session.token}`
-                        },
+    if (isImage) {
 
-                        body: formData
-                    }
+        imageType =
+            selectedFile.type;
+
+        imageData =
+            await new Promise((resolve, reject) => {
+
+                const reader =
+                    new FileReader();
+
+                reader.onload = () => {
+
+                    const result =
+                        String(reader.result || "");
+
+                    const commaIndex =
+                        result.indexOf(",");
+
+                    resolve(
+                        commaIndex >= 0
+                            ? result.slice(commaIndex + 1)
+                            : result
+                    );
+                };
+
+                reader.onerror = () => {
+
+                    reject(
+                        new Error(
+                            "Unable to read image."
+                        )
+                    );
+                };
+
+                reader.readAsDataURL(
+                    selectedFile
                 );
+            });
 
 
-            if (!uploadResponse.ok) {
+        displayMessage =
+            `🖼️ ${selectedFile.name}\n${message || "Analyze this image."}`;
 
-                let errorMessage =
-                    "File upload failed.";
 
-                try {
+        addMessage(
+            displayMessage,
+            "user"
+        );
 
-                    const errorData =
-                        await uploadResponse.json();
 
-                    errorMessage =
-                        errorData.detail ||
-                        errorMessage;
+        syncChatMessage(
+            "user",
+            displayMessage
+        );
 
-                } catch (error) {
-                    // Ignore JSON parsing error.
+
+        selectedFile = null;
+
+
+        if (fileInput) {
+            fileInput.value = "";
+        }
+
+
+        if (attachmentPreview) {
+            attachmentPreview.hidden = true;
+        }
+
+
+    } else {
+
+
+        // =================================================
+        // DOCUMENT / FILE MODE
+        // =================================================
+
+        const formData =
+            new FormData();
+
+
+        formData.append(
+            "file",
+            selectedFile
+        );
+
+
+        const uploadResponse =
+            await requestBackend(
+                `${BACKEND_BASE_URL}/api/file/upload`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Authorization":
+                            `Bearer ${session.token}`
+                    },
+
+                    body: formData
                 }
-
-                throw new Error(
-                    errorMessage
-                );
-            }
-
-
-            const fileData =
-                await uploadResponse.json();
-
-
-            fileContext =
-                String(fileData.text || "");
-
-
-            displayMessage =
-                `📎 ${fileData.filename}\n${message || "Analyze this file."}`;
-
-
-            addMessage(
-                displayMessage,
-                "user"
             );
 
 
-            syncChatMessage(
-                "user",
-                displayMessage
-            );
+        if (!uploadResponse.ok) {
 
+            let errorMessage =
+                "File upload failed.";
 
-            selectedFile = null;
+            try {
 
-            if (fileInput) {
-                fileInput.value = "";
+                const errorData =
+                    await uploadResponse.json();
+
+                errorMessage =
+                    errorData.detail ||
+                    errorMessage;
+
+            } catch (error) {
+                // Ignore JSON parsing error.
             }
 
 
-            if (attachmentPreview) {
-                attachmentPreview.hidden = true;
-            }
-
-        } else {
-
-            addMessage(
-                message,
-                "user"
-            );
-
-            syncChatMessage(
-                "user",
-                message
+            throw new Error(
+                errorMessage
             );
         }
+
+
+        const fileData =
+            await uploadResponse.json();
+
+
+        fileContext =
+            String(fileData.text || "");
+
+
+        displayMessage =
+            `📎 ${fileData.filename}\n${message || "Analyze this file."}`;
+
+
+        addMessage(
+            displayMessage,
+            "user"
+        );
+
+
+        syncChatMessage(
+            "user",
+            displayMessage
+        );
+
+
+        selectedFile = null;
+
+
+        if (fileInput) {
+            fileInput.value = "";
+        }
+
+
+        if (attachmentPreview) {
+            attachmentPreview.hidden = true;
+        }
+    }
+
+
+} else {
+
+    addMessage(
+        message,
+        "user"
+    );
+
+
+    syncChatMessage(
+        "user",
+        message
+    );
+}
 
 
         messageInput.value = "";
@@ -2139,8 +2543,18 @@ async function sendMessage() {
         // SEND TO ISMAIL AI
         // =================================================
 
+
+        console.log(
+            "ISMAIL AI: SENDING AI REQUEST",
+            { isVoiceMessage, message }
+        );
+
+
         const response =
-            await requestBackend(API_URL,
+            await requestBackend(
+
+
+                API_URL,
                 {
                     method: "POST",
 
@@ -2154,10 +2568,11 @@ async function sendMessage() {
 
                     body: JSON.stringify({
 
-                        // User's actual question.
                         message:
                             message ||
-                            "Analyze this file.",
+                            (imageData
+                                ? "Analyze this image."
+                                : "Analyze this file."),
 
                         user_id:
                             USER_ID,
@@ -2165,10 +2580,23 @@ async function sendMessage() {
                         chat_id:
                             String(currentChat.id),
 
-                        // Extracted document content.
                         file_context:
-                            fileContext
+                            fileContext,
+
+                        image_data:
+                            imageData,
+
+                        image_type:
+                            imageType
                     })
+                }
+            );
+
+            console.log(
+                "ISMAIL AI: AI RESPONSE RECEIVED",
+                {
+                    ok: response.ok,
+                    status: response.status
                 }
             );
 
@@ -2235,7 +2663,8 @@ async function sendMessage() {
             assistantMessage
         );
 
-        speakAIResponse(assistantMessage);
+        // Automatic AI voice disabled
+        // speakAIResponse(assistantMessage);
 
 
         saveCurrentChat();
@@ -2272,141 +2701,19 @@ sendButton.addEventListener("click", sendMessage);
 
 
 /* =========================
-   ISMAIL AI VOICE SYSTEM
-========================= */
 
-let recognition = null;
-let isListening = false;
-
-const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
-
-if (voiceButton && SpeechRecognition) {
-
-    console.log("SpeechRecognition:", window.SpeechRecognition);
-    console.log("webkitSpeechRecognition:", window.webkitSpeechRecognition);
-
-    alert(
-        "SpeechRecognition = " +
-        (window.SpeechRecognition ? "YES" : "NO") +
-        "\nwebkitSpeechRecognition = " +
-        (window.webkitSpeechRecognition ? "YES" : "NO")
-    );
-
-    recognition = new SpeechRecognition();
-
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = "bn-BD";
-
-    recognition.onstart = function () {
-
-        isListening = true;
-
-        voiceButton.classList.add("recording");
-        voiceButton.textContent = "🔴";
-        voiceButton.title = "Listening...";
-    };
-
-    recognition.onresult = function (event) {
-
-        const transcript =
-            event.results[0][0].transcript;
-
-        messageInput.value = transcript;
-
-        messageInput.style.height = "auto";
-
-        messageInput.style.height =
-            `${Math.min(messageInput.scrollHeight, 150)}px`;
-
-        voiceButton.classList.remove("recording");
-        voiceButton.textContent = "🎙️";
-        voiceButton.title = "Voice";
-
-        isListening = false;
-
-        /*
-         * আপনার কথা বুঝে সরাসরি ISMAIL AI-তে পাঠাবে
-         */
-        sendMessage();
-    };
-
-    recognition.onerror = function (event) {
-
-        if (window.AndroidVoice) return;
-
-        console.error(
-            "Voice recognition error:",
-            event.error
-        );
-
-        isListening = false;
-
-        voiceButton.classList.remove("recording");
-
-        voiceButton.textContent = "🎙️";
-        voiceButton.title = "Voice";
-    };
-
-    recognition.onend = function () {
-
-        isListening = false;
-
-        voiceButton.classList.remove("recording");
-
-        voiceButton.textContent = "🎙️";
-        voiceButton.title = "Voice";
-    };
-
-voiceButton.addEventListener(
-    "click",
-    function () {
-
-        if (
-            window.AndroidVoice &&
-            window.AndroidVoice.startVoiceRecognition
-        ) {
-
-            window.AndroidVoice.startVoiceRecognition();
-            return;
-
-        }
-
-        try {
-
-            recognition.start();
-
-        } catch (error) {
-
-            console.error(error);
-
-        }
-
-    }
-);
-
-} else {
-
-    if (voiceButton) {
-
-        voiceButton.style.display = "none";
-    }
-
-}
-
-
-/* =========================
    ISMAIL AI SPEAK RESPONSE
+   DISABLED
 ========================= */
 
 function speakAIResponse(text) {
 
+    // Stop any speech that may already be playing
     if ("speechSynthesis" in window) {
         window.speechSynthesis.cancel();
     }
 
+    // Automatic AI response voice disabled
     return;
 }
 
@@ -3253,7 +3560,6 @@ clearAllHistoryMenuButton.addEventListener("click", function () {
 
 
 function speak(text) {
-
     if ("speechSynthesis" in window) {
         window.speechSynthesis.cancel();
     }
@@ -3280,8 +3586,7 @@ window.receiveNativeVoice = function (text) {
 
 
 
-
-
-
+// IMAGE PICKER DEBUG
+document.getElementById('imageOption')?.addEventListener('click', function () { console.log('IMAGE LABEL CLICKED'); });
 
 
