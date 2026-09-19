@@ -3,6 +3,7 @@ from typing import Optional
 from backend.youtube_growth import (
     get_channel,
     list_channels,
+    save_channel,
     analyze_topic_opportunities,
     detect_content_opportunities,
 )
@@ -38,14 +39,33 @@ class YouTubeAutopilot:
         self,
         channel_id: Optional[str] = None,
     ):
-        if channel_id:
-            channel = get_channel(channel_id)
+        resolved_channel_id = (
+            channel_id
+            or os.getenv(
+                "YOUTUBE_CHANNEL_ID",
+                "UCP75FPRq4DaMoe88G9R3heg",
+            )
+        ).strip()
+        if resolved_channel_id:
+            channel = get_channel(resolved_channel_id)
         else:
             channels = list_channels()
             channel = (
                 channels[0]
                 if channels
                 else None
+            )
+        if not channel:
+            channel = save_channel(
+                channel_id=resolved_channel_id,
+                channel_name="The Ismail Jr",
+                handle="@TheIsmailJr",
+                niche="Village Vlogs, Comedy, Family & Challenges",
+                language="bn",
+                country="BD",
+                subscriber_count=1790,
+                video_count=2640,
+                view_count=4007330,
             )
         if not channel:
             return {
